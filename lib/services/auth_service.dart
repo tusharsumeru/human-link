@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repository.dart';
 
-/// Authenticated user — mirrors the web app's VVUser shape.
+/// Authenticated user — mirrors the web app's VVUser shape, plus a few
+/// mobile-only fields (gender/bio/address/photo) the backend doesn't store.
 class AppUser {
   final String name;
   final String phone;
@@ -11,6 +13,18 @@ class AppUser {
   final String gotra;
   final String native;
   final String avatar;
+  // Extras — backend supports `bio`/`matrimonialOptIn`; the rest are local-only.
+  final String gender;
+  final String bio;
+  final String address;
+  final bool matrimonialOptIn;
+  final String photoPath; // local file path to the user's photo/selfie
+  final String photoUrl; // remote (MongoDB-served) photo URL
+  final bool onboardingComplete; // false only for a brand-new registration
+  // Aadhaar (DigiLocker) verified KYC — never store the full Aadhaar number.
+  final String dob;
+  final String maskedAadhaar;
+  final bool verified;
 
   const AppUser({
     required this.name,
@@ -19,6 +33,16 @@ class AppUser {
     required this.gotra,
     required this.native,
     required this.avatar,
+    this.gender = '',
+    this.bio = '',
+    this.address = '',
+    this.matrimonialOptIn = false,
+    this.photoPath = '',
+    this.photoUrl = '',
+    this.onboardingComplete = true,
+    this.dob = '',
+    this.maskedAadhaar = '',
+    this.verified = false,
   });
 
   bool get isElder => role == 'elder';
@@ -30,6 +54,16 @@ class AppUser {
         gotra: (m['gotra'] ?? '') as String,
         native: (m['native'] ?? '') as String,
         avatar: (m['avatar'] ?? '6') as String,
+        gender: (m['gender'] ?? '') as String,
+        bio: (m['bio'] ?? '') as String,
+        address: (m['address'] ?? '') as String,
+        matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
+        photoPath: (m['photoPath'] ?? '') as String,
+        photoUrl: (m['photoUrl'] ?? '') as String,
+        onboardingComplete: (m['onboardingComplete'] ?? true) as bool,
+        dob: (m['dob'] ?? '') as String,
+        maskedAadhaar: (m['masked_aadhaar'] ?? m['maskedAadhaar'] ?? '') as String,
+        verified: (m['verified'] ?? false) as bool,
       );
 
   Map<String, dynamic> toMap() => {
@@ -39,7 +73,54 @@ class AppUser {
         'gotra': gotra,
         'native': native,
         'avatar': avatar,
+        'gender': gender,
+        'bio': bio,
+        'address': address,
+        'matrimonialOptIn': matrimonialOptIn,
+        'photoPath': photoPath,
+        'photoUrl': photoUrl,
+        'onboardingComplete': onboardingComplete,
+        'dob': dob,
+        'masked_aadhaar': maskedAadhaar,
+        'verified': verified,
       };
+
+  AppUser copyWith({
+    String? name,
+    String? phone,
+    String? role,
+    String? gotra,
+    String? native,
+    String? avatar,
+    String? gender,
+    String? bio,
+    String? address,
+    bool? matrimonialOptIn,
+    String? photoPath,
+    String? photoUrl,
+    bool? onboardingComplete,
+    String? dob,
+    String? maskedAadhaar,
+    bool? verified,
+  }) =>
+      AppUser(
+        name: name ?? this.name,
+        phone: phone ?? this.phone,
+        role: role ?? this.role,
+        gotra: gotra ?? this.gotra,
+        native: native ?? this.native,
+        avatar: avatar ?? this.avatar,
+        gender: gender ?? this.gender,
+        bio: bio ?? this.bio,
+        address: address ?? this.address,
+        matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
+        photoPath: photoPath ?? this.photoPath,
+        photoUrl: photoUrl ?? this.photoUrl,
+        onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+        dob: dob ?? this.dob,
+        maskedAadhaar: maskedAadhaar ?? this.maskedAadhaar,
+        verified: verified ?? this.verified,
+      );
 }
 
 /// Holds the current session, persisted to SharedPreferences under `vv_user`
@@ -79,8 +160,11 @@ class AuthService extends ChangeNotifier {
     return user;
   }
 
-  /// Logs in directly with a known demo profile (the "Demo Profiles" tab).
+  /// Logs in directly with a known profile.
   Future<void> loginWithUser(AppUser user) => _persist(user);
+
+  /// Persists an updated profile (after edits in onboarding / verify).
+  Future<void> updateUser(AppUser user) => _persist(user);
 
   Future<void> _persist(AppUser user) async {
     _user = user;
@@ -91,6 +175,9 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     _user = null;
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {/* ignore if Firebase isn't signed in */}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
     notifyListeners();

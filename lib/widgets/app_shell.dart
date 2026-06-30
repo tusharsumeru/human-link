@@ -1,9 +1,46 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'pexels_image.dart';
+
+/// Avatar for the logged-in user: prefers the uploaded photo (remote URL, then
+/// local file), falling back to name initials.
+Widget userAvatar(AppUser user,
+    {double size = 40, Color? borderColor, double borderWidth = 0}) {
+  if (user.photoUrl.isNotEmpty) {
+    return PexelsImage(
+        url: user.photoUrl,
+        name: user.name,
+        size: size,
+        borderColor: borderColor,
+        borderWidth: borderWidth);
+  }
+  if (user.photoPath.isNotEmpty) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: borderWidth > 0
+            ? Border.all(
+                color: borderColor ?? AppColors.forest700, width: borderWidth)
+            : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.file(File(user.photoPath), fit: BoxFit.cover),
+    );
+  }
+  return AvatarImage(
+      avatarKey: user.avatar,
+      name: user.name,
+      size: size,
+      borderColor: borderColor,
+      borderWidth: borderWidth);
+}
 
 class NavDest {
   final IconData icon;
@@ -94,13 +131,12 @@ class AppShell extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
               child: GestureDetector(
-                onTap: () => context.go(
-                    '/profile/${user.avatar == "elder" ? "3" : user.avatar}'),
-                child: AvatarImage(
-                  avatarKey: user.avatar,
-                  name: user.name,
+                onTap: () => context.go('/profile/me'),
+                child: userAvatar(
+                  user,
                   size: 34,
-                  borderColor: isElder ? AppColors.gold500 : AppColors.forest700,
+                  borderColor:
+                      isElder ? AppColors.gold500 : AppColors.forest700,
                   borderWidth: 2,
                 ),
               ),
@@ -209,10 +245,7 @@ class _Sidebar extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            AvatarImage(
-                                avatarKey: user.avatar,
-                                name: user.name,
-                                size: 38),
+                            userAvatar(user, size: 38),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -269,7 +302,7 @@ class _Sidebar extends StatelessWidget {
                           style: body(13, color: Colors.white70)),
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/profile/${user?.avatar ?? "6"}');
+                        context.go('/profile/me');
                       },
                     ),
                     ListTile(
@@ -278,8 +311,11 @@ class _Sidebar extends StatelessWidget {
                       title: Text('Logout',
                           style: body(13, color: const Color(0xFFFCA5A5))),
                       onTap: () async {
-                        await context.read<AuthService>().logout();
-                        if (context.mounted) context.go('/login');
+                        final auth = context.read<AuthService>();
+                        final router = GoRouter.of(context);
+                        Navigator.pop(context); // close the drawer first
+                        await auth.logout();
+                        router.go('/login');
                       },
                     ),
                   ],

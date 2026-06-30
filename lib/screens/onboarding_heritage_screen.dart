@@ -1,16 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
+import '../data/repository.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/place_field.dart';
 import '../widgets/ui_kit.dart';
 import 'onboarding_identity_screen.dart';
 
 /// Onboarding step 3 — Heritage.
 ///
-/// Ported from `src/app/onboarding/heritage/page.tsx`, adapted to the mobile
-/// brief: family occupation / heritage notes, a mock family-photo upload and an
-/// "I agree to Samaj heritage guidelines" checkbox. Complete shows a success
-/// dialog then routes to `/dashboard`; Back returns to lineage.
+/// Ported from `src/app/onboarding/heritage/page.tsx` — "Cultural Profile &
+/// Heritage": Gotra, Native Place, Professional Bio, matrimonial opt-in and an
+/// optional family-documents upload. Complete saves the profile and routes to
+/// the dashboard; Back returns to lineage.
 class OnboardingHeritageScreen extends StatefulWidget {
   const OnboardingHeritageScreen({super.key});
 
@@ -20,67 +27,92 @@ class OnboardingHeritageScreen extends StatefulWidget {
 }
 
 class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
-  final _heritage = TextEditingController();
+  final _gotra = TextEditingController(text: 'Kashyap');
+  final _native = TextEditingController(text: 'Udupi, Karnataka');
+  final _bio = TextEditingController();
+  final _picker = ImagePicker();
 
-  bool _photoUploaded = false;
+  XFile? _document;
   bool _matrimonial = false;
-  bool _agreed = false;
+  bool _saving = false;
+  bool _initialised = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialised) {
+      final user = context.read<AuthService>().user;
+      if (user != null) {
+        if (user.gotra.isNotEmpty) _gotra.text = user.gotra;
+        if (user.native.isNotEmpty) _native.text = user.native;
+      }
+      _initialised = true;
+    }
+  }
 
   @override
   void dispose() {
-    _heritage.dispose();
+    _gotra.dispose();
+    _native.dispose();
+    _bio.dispose();
     super.dispose();
   }
 
-  void _complete() {
-    if (!_agreed) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please agree to the Samaj heritage guidelines'),
-      ));
-      return;
+  Future<void> _pickDocument() async {
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (picked != null && mounted) setState(() => _document = picked);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not pick file: $e')),
+      );
     }
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  gradient: AppGradients.forest,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 38),
-              ),
-              const SizedBox(height: 18),
-              Text('Welcome to the Samaj',
-                  textAlign: TextAlign.center,
-                  style: display(20, color: AppColors.forest900)),
-              const SizedBox(height: 8),
-              Text(
-                'Your profile is complete. You are now a verified member of our living digital tree.',
-                textAlign: TextAlign.center,
-                style: body(13, color: AppColors.textMuted, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              ForestButton(
-                label: 'Enter Portal',
-                expand: true,
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  context.go('/dashboard');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  }
+
+  Future<void> _complete() async {
+    setState(() => _saving = true);
+    final auth = context.read<AuthService>();
+    final current = auth.user;
+    if (current != null) {
+      final gotra =
+          _gotra.text.trim().isEmpty ? current.gotra : _gotra.text.trim();
+      final native =
+          _native.text.trim().isEmpty ? current.native : _native.text.trim();
+      final bio = _bio.text.trim();
+
+      // Upload the optional family document (best-effort).
+      if (_document != null) {
+        final bytes = await File(_document!.path).readAsBytes();
+        await Repository.instance
+            .uploadImage(phone: current.phone, type: 'familyDoc', bytes: bytes);
+      }
+
+      // Save to the backend (best-effort).
+      await Repository.instance.updateProfile(
+        phone: current.phone,
+        gotra: gotra,
+        native: native,
+        bio: bio,
+        matrimonialOptIn: _matrimonial,
+      );
+
+      // Persist locally so it shows immediately on the profile, and mark
+      // onboarding complete so the router stops redirecting here.
+      await auth.updateUser(current.copyWith(
+        gotra: gotra,
+        native: native,
+        bio: bio,
+        matrimonialOptIn: _matrimonial,
+        onboardingComplete: true,
+      ));
+    }
+    if (!mounted) return;
+    context.go('/dashboard');
   }
 
   @override
@@ -103,7 +135,8 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                 style: display(28, color: AppColors.forest900)),
             const SizedBox(height: 8),
             Text(
-              'The final step to documenting your legacy within the Daivajna community.',
+              'The final step to documenting your legacy within the Daivajna '
+              'community.',
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 18),
@@ -112,94 +145,48 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OnboardingField(
-                    label: 'Family Occupation & Heritage Notes',
-                    controller: _heritage,
-                    hint:
-                        'Tell the community about your family\'s craft, work and traditions.',
+                      label: 'Gotra', controller: _gotra, hint: 'e.g. Kashyap'),
+                  const SizedBox(height: 14),
+                  PlaceField(
+                      label: 'Native Place (Kula Devata Location)',
+                      controller: _native,
+                      hint: 'e.g. Gokarna'),
+                  const SizedBox(height: 14),
+                  OnboardingField(
+                    label: 'Professional Bio',
+                    controller: _bio,
+                    hint: 'Tell the community about your work and skills.',
                     maxLines: 4,
                   ),
-                  const SizedBox(height: 16),
-                  Text('Family Photo',
-                      style: body(12,
-                          weight: FontWeight.w600,
-                          color: AppColors.forest800)),
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: () => setState(() => _photoUploaded = true),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 22),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        color: _photoUploaded
-                            ? AppColors.forest600.withValues(alpha: 0.08)
-                            : Colors.white,
-                        border: Border.all(
-                          color: _photoUploaded
-                              ? AppColors.forest600
-                              : AppColors.border,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            _photoUploaded
-                                ? Icons.check_circle
-                                : Icons.add_a_photo_outlined,
-                            size: 30,
-                            color: _photoUploaded
-                                ? AppColors.forest700
-                                : AppColors.gold700,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _photoUploaded
-                                ? 'family_photo.jpg · Uploaded'
-                                : 'Upload a family photo',
-                            style: body(13,
-                                weight: FontWeight.w600,
-                                color: _photoUploaded
-                                    ? AppColors.forest700
-                                    : AppColors.label),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 14),
-                  _checkTile(
-                    value: _matrimonial,
-                    onTap: () => setState(() => _matrimonial = !_matrimonial),
-                    title: 'Opt-in to Matrimonial Hub',
-                    subtitle:
-                        'Make your profile discoverable to families seeking matrimonial connections. You can change this anytime.',
+                  _matrimonialTile(),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Optional: Upload Family Documents (birth certificate, old '
+                    'letters or heirlooms — JPG / PNG)',
+                    style: body(11, color: AppColors.textMuted, height: 1.4),
                   ),
-                  const SizedBox(height: 4),
-                  _checkTile(
-                    value: _agreed,
-                    onTap: () => setState(() => _agreed = !_agreed),
-                    title: 'I agree to Samaj heritage guidelines',
-                    subtitle:
-                        'I confirm the information provided is accurate and consent to elder verification of my lineage.',
-                  ),
+                  const SizedBox(height: 6),
+                  _document == null ? _uploadPrompt() : _documentPreview(),
                 ],
               ),
             ),
+            const SizedBox(height: 14),
+            _welcomePanel(),
             const SizedBox(height: 18),
             Row(
               children: [
                 OutlineButtonX(
-                  label: 'Back',
+                  label: 'Back to Lineage',
                   onPressed: () => context.go('/onboarding/lineage'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ForestButton(
-                    label: 'Complete & Enter Portal',
-                    icon: Icons.check,
+                    label: 'Complete Profile ✓',
                     expand: true,
-                    onPressed: _complete,
+                    loading: _saving,
+                    onPressed: _saving ? null : _complete,
                   ),
                 ),
               ],
@@ -210,17 +197,12 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     );
   }
 
-  Widget _checkTile({
-    required bool value,
-    required VoidCallback onTap,
-    required String title,
-    required String subtitle,
-  }) {
+  Widget _matrimonialTile() {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
+      onTap: () => setState(() => _matrimonial = !_matrimonial),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -230,13 +212,13 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
-                color: value ? AppColors.forest700 : Colors.white,
+                color: _matrimonial ? AppColors.forest700 : Colors.white,
                 border: Border.all(
-                  color: value ? AppColors.forest700 : AppColors.border,
+                  color: _matrimonial ? AppColors.forest700 : AppColors.border,
                   width: 1.5,
                 ),
               ),
-              child: value
+              child: _matrimonial
                   ? const Icon(Icons.check, size: 16, color: Colors.white)
                   : null,
             ),
@@ -245,18 +227,123 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
+                  Text('Opt-in to Matrimonial Hub',
                       style: body(13,
                           weight: FontWeight.w600, color: AppColors.ink)),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: body(11,
-                          color: AppColors.textMuted, height: 1.4)),
+                  Text(
+                    'Make your profile discoverable to families seeking '
+                    'matrimonial connections within the Samaj. You can change '
+                    'this preference anytime.',
+                    style: body(11, color: AppColors.textMuted, height: 1.4),
+                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _uploadPrompt() {
+    return GestureDetector(
+      onTap: _pickDocument,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 22),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: Colors.white,
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.upload_file, size: 28, color: AppColors.gold700),
+            const SizedBox(height: 8),
+            Text('Click to upload family documents',
+                style: body(12, color: AppColors.label)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _documentPreview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.file(File(_document!.path),
+              height: 150, width: double.infinity, fit: BoxFit.cover),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Icon(Icons.check_circle, size: 16, color: AppColors.forest700),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(_document!.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(12,
+                      weight: FontWeight.w600, color: AppColors.forest700)),
+            ),
+            TextButton(
+              onPressed: _pickDocument,
+              child: Text('Change',
+                  style: body(13,
+                      weight: FontWeight.w700, color: AppColors.gold700)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _welcomePanel() {
+    const benefits = [
+      'Access to the Global Lineage Directory',
+      'Participation in Samaja Governance',
+      'Community Welfare Program Eligibility',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppGradients.deepForest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Welcome to the Samaj',
+              style: body(12,
+                  weight: FontWeight.w700, color: AppColors.forest300)),
+          const SizedBox(height: 6),
+          Text(
+            'By completing this step, you become a verified member in our '
+            'living digital tree. You help maintain the cultural integrity and '
+            'social fabric of the Daivajna community.',
+            style: body(13, color: Colors.white, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          for (final b in benefits)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle,
+                      size: 15, color: AppColors.forest500),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(b,
+                        style: body(12, color: AppColors.forest300)),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

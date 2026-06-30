@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -58,13 +60,24 @@ class ProfileScreen extends StatelessWidget {
     final String relation = member?['relation'] as String? ??
         (user?.isElder == true ? 'Elder & Samaj Admin' : 'Samaj Member');
     final String occupation = member?['occupation'] as String? ?? '—';
-    final String birthYear = member?['birthYear'] as String? ?? '—';
+    final String birthYear = member?['birthYear'] as String? ??
+        (isCurrentUser && (user?.dob.isNotEmpty ?? false) ? user!.dob : '—');
     final String status = member?['status'] as String? ?? 'Active';
     final bool isLate = status == 'Late';
+
+    // Aadhaar (DigiLocker) verification — for the current user.
+    final bool isVerified =
+        isCurrentUser ? (user?.verified ?? false) : (status == 'Active');
+    final String maskedAadhaar =
+        isCurrentUser ? (user?.maskedAadhaar ?? '') : '';
 
     // Avatar: family ids "1".."6" map directly; user uses their avatar key.
     final String? avatarKey = member != null ? id : user?.avatar;
     final String avatarUrlStr = avatarUrl(avatarKey);
+    // The current user's photo: prefer the uploaded (remote) URL, fall back to
+    // the locally-saved selfie file.
+    final String photoPath = isCurrentUser ? (user?.photoPath ?? '') : '';
+    final String photoUrl = isCurrentUser ? (user?.photoUrl ?? '') : '';
 
     // Lineage resolution from kFamilyMembers.
     final String? parentId = member?['parent'] as String?;
@@ -77,7 +90,8 @@ class ProfileScreen extends StatelessWidget {
     final Map<String, dynamic>? spouse =
         spouseId != null ? _byId(spouseId) : null;
 
-    final String? archive = _lifeArchives[id];
+    final String? archive = _lifeArchives[id] ??
+        (isCurrentUser && (user?.bio.isNotEmpty ?? false) ? user!.bio : null);
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -90,14 +104,20 @@ class ProfileScreen extends StatelessWidget {
             gotra: gotra,
             native: native,
             avatarUrl: avatarUrlStr,
+            photoPath: photoPath,
+            photoUrl: photoUrl,
             isLate: isLate,
-            verified: status == 'Active',
+            verified: isVerified,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (isCurrentUser && isVerified) ...[
+                  _aadhaarVerifiedCard(maskedAadhaar),
+                  const SizedBox(height: 16),
+                ],
                 _aboutCard(occupation, birthYear, status),
                 const SizedBox(height: 16),
                 _lineageCard(context, parent, children, spouse),
@@ -136,6 +156,50 @@ class ProfileScreen extends StatelessWidget {
       if (m['id'] == mid) return m;
     }
     return null;
+  }
+
+  Widget _aadhaarVerifiedCard(String maskedAadhaar) {
+    return AppCard(
+      color: const Color(0xFFF0FBF4),
+      border: true,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              gradient: AppGradients.forest,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.verified_user, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Aadhaar Verified',
+                        style: display(16, color: AppColors.forest900)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.check_circle,
+                        size: 16, color: AppColors.forest700),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  maskedAadhaar.isEmpty
+                      ? 'Verified via DigiLocker'
+                      : 'via DigiLocker · $maskedAadhaar',
+                  style: body(12, color: AppColors.forest700),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _aboutCard(String occupation, String birthYear, String status) {
@@ -362,6 +426,8 @@ class _Header extends StatelessWidget {
     required this.gotra,
     required this.native,
     required this.avatarUrl,
+    required this.photoPath,
+    required this.photoUrl,
     required this.isLate,
     required this.verified,
   });
@@ -371,8 +437,24 @@ class _Header extends StatelessWidget {
   final String gotra;
   final String native;
   final String avatarUrl;
+  final String photoPath;
+  final String photoUrl;
   final bool isLate;
   final bool verified;
+
+  Widget _avatar() {
+    // Prefer the uploaded (remote) photo, then the local selfie, then initials.
+    if (photoUrl.isNotEmpty) {
+      return PexelsImage(url: photoUrl, name: name, size: 104);
+    }
+    if (photoPath.isNotEmpty) {
+      return ClipOval(
+        child: Image.file(File(photoPath),
+            width: 104, height: 104, fit: BoxFit.cover),
+      );
+    }
+    return PexelsImage(url: avatarUrl, name: name, size: 104);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -417,9 +499,9 @@ class _Header extends StatelessWidget {
                           0.6, 0.3, 0.1, 0, 0,
                           0, 0, 0, 1, 0,
                         ]),
-                        child: PexelsImage(url: avatarUrl, name: name, size: 104),
+                        child: _avatar(),
                       )
-                    : PexelsImage(url: avatarUrl, name: name, size: 104),
+                    : _avatar(),
               ),
               if (verified)
                 Positioned(

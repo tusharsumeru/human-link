@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "332800778213",
+    "project_id": "daivajna-samaj",
+    "storage_bucket": "daivajna-samaj.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332800778213:android:833a794a828f1764bd590c",
+        "android_client_info": {
+          "package_name": "com.daivajna.daivajna_census"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZbQrH_TBos7JxT0rnatjcRMFVQfNCHJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

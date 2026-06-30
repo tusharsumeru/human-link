@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../data/demo_data.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
@@ -23,10 +22,8 @@ class LandingScreen extends StatelessWidget {
             children: [
               _TopBar(),
               const _Hero(),
-              const _StatsBand(),
               const _Pillars(),
               const _TrustSection(),
-              const _Cta(),
               const _Footer(),
             ],
           ),
@@ -46,40 +43,7 @@ class _TopBar extends StatelessWidget {
         border: const Border(bottom: BorderSide(color: AppColors.goldSoft)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const _Logo(),
-          const Spacer(),
-          GestureDetector(
-            onTap: () => context.go('/login'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.forest800),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text('Sign In',
-                  style: body(13,
-                      weight: FontWeight.w600, color: AppColors.forest800)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => context.go('/register'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: AppGradients.forest,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: AppShadows.soft,
-              ),
-              child: Text('Join Samaj →',
-                  style:
-                      body(13, weight: FontWeight.w600, color: Colors.white)),
-            ),
-          ),
-        ],
-      ),
+      child: const _Logo(),
     );
   }
 }
@@ -103,9 +67,13 @@ class _Logo extends StatelessWidget {
           child: const Icon(Icons.park_rounded, size: 18, color: Colors.white),
         ),
         const SizedBox(width: 10),
-        Text('Daivajna Samaja',
-            style: display(17,
-                color: onDark ? Colors.white : AppColors.forest800)),
+        Flexible(
+          child: Text('Daivajna Samaja',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: display(17,
+                  color: onDark ? Colors.white : AppColors.forest800)),
+        ),
       ],
     );
   }
@@ -175,19 +143,6 @@ class _Hero extends StatelessWidget {
               OutlineButtonX(
                 label: 'Access Portal',
                 onPressed: () => context.go('/login'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Text('1,428+',
-                  style:
-                      body(14, weight: FontWeight.w800, color: AppColors.ink)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text('families already connected',
-                    style: body(13, color: AppColors.textMuted)),
               ),
             ],
           ),
@@ -341,44 +296,6 @@ class _TreePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ─── Stats band ──────────────────────────────────────────────────────────────
-class _StatsBand extends StatelessWidget {
-  const _StatsBand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(gradient: AppGradients.deepForest),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Wrap(
-        alignment: WrapAlignment.spaceEvenly,
-        runSpacing: 28,
-        children: kLandingStats.map((s) {
-          final value = s['value'] as int;
-          final isLakh = s['lakh'] == true;
-          final prefix = (s['prefix'] as String?) ?? '';
-          final suffix = (s['suffix'] as String?) ?? '';
-          final display0 =
-              isLakh ? formatLakh(value) : '$prefix${formatIndian(value)}$suffix';
-          return SizedBox(
-            width: (MediaQuery.of(context).size.width - 40) / 2 - 8,
-            child: Column(
-              children: [
-                Text(display0,
-                    textAlign: TextAlign.center,
-                    style: display(30, color: AppColors.gold500)),
-                const SizedBox(height: 4),
-                Text(s['label'] as String,
-                    textAlign: TextAlign.center,
-                    style: body(12, color: AppColors.forest300)),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
 
 // ─── Pillars ─────────────────────────────────────────────────────────────────
 class _Pillars extends StatelessWidget {
@@ -423,23 +340,15 @@ class _Pillars extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 48, 20, 48),
       child: Column(
         children: [
-          const SectionHeader(
-            eyebrow: 'The Pillars of our Samaj',
-            title: 'Everything our community needs',
-            subtitle:
-                'Four interconnected pillars that preserve heritage, build '
-                'welfare, and connect generations.',
-            center: true,
-            titleSize: 28,
-          ),
-          const SizedBox(height: 28),
           ..._pillars.map((p) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: _PillarCard(
                   icon: p.$1,
                   title: p.$2,
                   desc: p.$3,
-                  onTap: () => context.go(p.$4),
+                  // Public landing page: pillars are gated behind auth, so
+                  // send visitors to sign in first (matches the router guard).
+                  onTap: () => context.go('/login'),
                 ),
               )),
         ],
@@ -598,49 +507,6 @@ class _TrustSection extends StatelessWidget {
                     style: body(13, color: AppColors.forest500)),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── CTA ─────────────────────────────────────────────────────────────────────
-class _Cta extends StatelessWidget {
-  const _Cta();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 48, 20, 48),
-      child: Column(
-        children: [
-          Text('Join 1,428 families\nalready connected',
-              textAlign: TextAlign.center,
-              style: display(32, color: AppColors.forest900, height: 1.15)),
-          const SizedBox(height: 14),
-          Text(
-            'Start your lineage journey today. Connect with your ancestors, '
-            'verify your heritage, and contribute to community welfare.',
-            textAlign: TextAlign.center,
-            style: body(15, color: AppColors.textMuted, height: 1.55),
-          ),
-          const SizedBox(height: 24),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              ForestButton(
-                label: 'Begin Your Journey',
-                icon: Icons.arrow_forward_rounded,
-                onPressed: () => context.go('/register'),
-              ),
-              GoldButton(
-                label: 'Access Portal',
-                onPressed: () => context.go('/login'),
-              ),
-            ],
           ),
         ],
       ),

@@ -36,6 +36,17 @@ class ApiClient {
     return _decode(res);
   }
 
+  Future<dynamic> patchJson(String path, Map<String, dynamic> body) async {
+    final res = await _client
+        .patch(
+          _uri(path),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(ApiConfig.timeout);
+    return _decode(res);
+  }
+
   dynamic _decode(http.Response res) {
     dynamic data;
     try {

@@ -37,18 +37,25 @@ GoRouter buildRouter(AuthService auth) {
     redirect: (context, state) {
       if (!auth.loaded) return null;
       final loggedIn = auth.isLoggedIn;
+      final user = auth.user;
       final path = state.uri.path;
-      final isPublic =
-          _publicPaths.contains(path) || path.startsWith('/onboarding');
+      final inOnboarding = path.startsWith('/onboarding');
+      final isPublic = _publicPaths.contains(path) || inOnboarding;
+      final needsOnboarding = loggedIn && !(user?.onboardingComplete ?? true);
 
       if (!loggedIn && !isPublic) return '/login';
+
+      // A freshly-registered user must finish onboarding before anything else.
+      if (needsOnboarding && !inOnboarding) return '/onboarding/identity';
+
       if (loggedIn && (path == '/login' || path == '/register')) {
-        return auth.user!.isElder ? '/elder' : '/dashboard';
+        if (needsOnboarding) return '/onboarding/identity';
+        return user!.isElder ? '/elder' : '/dashboard';
       }
       // Elder-only area: send members back to their dashboard.
       if (loggedIn &&
           path.startsWith('/elder') &&
-          !(auth.user?.isElder ?? false)) {
+          !(user?.isElder ?? false)) {
         return '/dashboard';
       }
       return null;

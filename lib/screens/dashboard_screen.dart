@@ -39,8 +39,7 @@ class DashboardScreen extends StatelessWidget {
             },
           ),
           const SizedBox(height: 24),
-          Text('Quick Access',
-              style: display(18, color: AppColors.forest900)),
+          Text('Quick Access', style: display(18, color: AppColors.forest900)),
           const SizedBox(height: 16),
           const _QuickActions(),
           const SizedBox(height: 24),
@@ -89,11 +88,15 @@ class _WelcomeBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('WELCOME BACK',
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest300,
-                  letterSpacing: 2.5)),
+          Text(
+            'WELCOME BACK',
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+              letterSpacing: 2.5,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             name != null && name!.isNotEmpty
@@ -113,13 +116,17 @@ class _WelcomeBanner extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                Pill('✦ Gotra: ${gotra ?? ''}',
-                    bg: AppColors.gold500.withValues(alpha: 0.2),
-                    fg: AppColors.gold500),
-                Pill(nativeShort.isEmpty ? '—' : nativeShort,
-                    icon: Icons.location_on_outlined,
-                    bg: AppColors.forest500.withValues(alpha: 0.2),
-                    fg: AppColors.forest300),
+                Pill(
+                  '✦ Gotra: ${gotra ?? ''}',
+                  bg: AppColors.gold500.withValues(alpha: 0.2),
+                  fg: AppColors.gold500,
+                ),
+                Pill(
+                  nativeShort.isEmpty ? '—' : nativeShort,
+                  icon: Icons.location_on_outlined,
+                  bg: AppColors.forest500.withValues(alpha: 0.2),
+                  fg: AppColors.forest300,
+                ),
               ],
             ),
           ],
@@ -137,16 +144,22 @@ class _WelcomeBanner extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 13),
+                    horizontal: 18,
+                    vertical: 13,
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.favorite_rounded, size: 16),
-                label: Text('Donate',
-                    style:
-                        body(14, weight: FontWeight.w600, color: Colors.white)),
+                label: Text(
+                  'Donate',
+                  style: body(14, weight: FontWeight.w600, color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -177,7 +190,8 @@ class _StatsGrid extends StatelessWidget {
     final activeTrees = (stats?['activeTrees'] as num?) ?? 86;
     final pending = (stats?['pendingVerifications'] as num?) ?? 0;
     final matrimonial =
-        (stats?['matrimonialProfiles'] as num?) ?? kMatrimonialCandidates.length;
+        (stats?['matrimonialProfiles'] as num?) ??
+        kMatrimonialCandidates.length;
     final donations = (stats?['totalDonationAmount'] as num?) ?? 0;
 
     final items = <_StatItem>[
@@ -216,16 +230,18 @@ class _StatsGrid extends StatelessWidget {
         for (var i = 0; i < items.length; i += 2)
           Padding(
             padding: EdgeInsets.only(bottom: i + 2 < items.length ? 12 : 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _StatCard(item: items[i])),
-                const SizedBox(width: 12),
-                if (i + 1 < items.length)
-                  Expanded(child: _StatCard(item: items[i + 1]))
-                else
-                  const Expanded(child: SizedBox()),
-              ],
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _StatCard(item: items[i])),
+                  const SizedBox(width: 12),
+                  if (i + 1 < items.length)
+                    Expanded(child: _StatCard(item: items[i + 1]))
+                  else
+                    const Expanded(child: SizedBox()),
+                ],
+              ),
             ),
           ),
       ],
@@ -252,22 +268,24 @@ class _StatCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: item.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: item.color.withValues(alpha: 0.2)),
+                  border: Border.all(color: item.color.withValues(alpha: 0.2)),
                 ),
                 child: Icon(item.icon, size: 20, color: item.color),
               ),
-              const Icon(Icons.trending_up_rounded,
-                  size: 14, color: AppColors.forest500),
+              const Icon(
+                Icons.trending_up_rounded,
+                size: 14,
+                color: AppColors.forest500,
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(item.value,
-              style: display(26, color: AppColors.forest900)),
+          Text(item.value, style: display(26, color: AppColors.forest900)),
           const SizedBox(height: 4),
-          Text(item.label,
-              style: body(13,
-                  weight: FontWeight.w600, color: AppColors.label)),
+          Text(
+            item.label,
+            style: body(13, weight: FontWeight.w600, color: AppColors.label),
+          ),
           const SizedBox(height: 2),
           Text(item.sub, style: body(11, color: AppColors.hint)),
         ],
@@ -286,15 +304,35 @@ class _QuickAction {
 
 const _quickActions = <_QuickAction>[
   _QuickAction(
-      'View Family Tree', Icons.park_rounded, '/family-tree', 'Explore your lineage'),
+    'View Family Tree',
+    Icons.park_rounded,
+    '/family-tree',
+    'Explore your lineage',
+  ),
   _QuickAction(
-      'Matrimonial Hub', Icons.favorite_rounded, '/matrimonial', '47 active profiles'),
-  _QuickAction('Plan Invitations', Icons.navigation_rounded, '/invitations',
-      'Route planner & map'),
+    'Matrimonial Hub',
+    Icons.favorite_rounded,
+    '/matrimonial',
+    '47 active profiles',
+  ),
   _QuickAction(
-      'Welfare Portal', Icons.groups_rounded, '/welfare', '₹42.5L raised'),
+    'Plan Invitations',
+    Icons.navigation_rounded,
+    '/invitations',
+    'Route planner & map',
+  ),
   _QuickAction(
-      'Member Directory', Icons.map_rounded, '/directory', 'Find Samaj members'),
+    'Welfare Portal',
+    Icons.groups_rounded,
+    '/welfare',
+    '₹42.5L raised',
+  ),
+  _QuickAction(
+    'Member Directory',
+    Icons.map_rounded,
+    '/directory',
+    'Find Samaj members',
+  ),
 ];
 
 class _QuickActions extends StatelessWidget {
@@ -326,17 +364,24 @@ class _QuickActions extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(a.label,
-                            style: body(14,
-                                weight: FontWeight.w600,
-                                color: AppColors.forest900)),
+                        Text(
+                          a.label,
+                          style: body(
+                            14,
+                            weight: FontWeight.w600,
+                            color: AppColors.forest900,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(a.desc, style: body(12, color: AppColors.hint)),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_rounded,
-                      size: 16, color: AppColors.hint),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: AppColors.hint,
+                  ),
                 ],
               ),
             ),
@@ -366,19 +411,26 @@ class _InvitationPlannerCard extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.navigation_rounded,
-                size: 22, color: Colors.white),
+            child: const Icon(
+              Icons.navigation_rounded,
+              size: 22,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Invitation Planner',
-                    style: display(15, color: Colors.white)),
+                Text(
+                  'Invitation Planner',
+                  style: display(15, color: Colors.white),
+                ),
                 const SizedBox(height: 2),
-                Text('Plan your visit route for the Annual Reunion',
-                    style: body(12, color: AppColors.forest300)),
+                Text(
+                  'Plan your visit route for the Annual Reunion',
+                  style: body(12, color: AppColors.forest300),
+                ),
               ],
             ),
           ),
@@ -427,30 +479,41 @@ class _CampaignRow extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Text(campaign['image'] as String,
-              style: const TextStyle(fontSize: 30)),
+          Text(
+            campaign['image'] as String,
+            style: const TextStyle(fontSize: 30),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(campaign['title'] as String,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.forest900)),
+                Text(
+                  campaign['title'] as String,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(
+                    13,
+                    weight: FontWeight.w600,
+                    color: AppColors.forest900,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 ProgressBar(
                   value: pct,
                   height: 6,
-                  gradient: LinearGradient(colors: [
-                    Color(campaign['colorA'] as int),
-                    Color(campaign['colorB'] as int),
-                  ]),
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(campaign['colorA'] as int),
+                      Color(campaign['colorB'] as int),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 6),
-                Text('$pctLabel% · ${campaign['daysLeft']} days left',
-                    style: body(11, color: AppColors.hint)),
+                Text(
+                  '$pctLabel% · ${campaign['daysLeft']} days left',
+                  style: body(11, color: AppColors.hint),
+                ),
               ],
             ),
           ),
@@ -501,9 +564,11 @@ class _ActivityFeed extends StatelessWidget {
                             children: [
                               TextSpan(
                                 text: item['user'] as String,
-                                style: body(13,
-                                    weight: FontWeight.w700,
-                                    color: AppColors.ink),
+                                style: body(
+                                  13,
+                                  weight: FontWeight.w700,
+                                  color: AppColors.ink,
+                                ),
                               ),
                               TextSpan(
                                 text: ' ${item['action']} ',
@@ -513,16 +578,20 @@ class _ActivityFeed extends StatelessWidget {
                                   false)
                                 TextSpan(
                                   text: item['detail'] as String,
-                                  style: body(13,
-                                      weight: FontWeight.w700,
-                                      color: AppColors.forest800),
+                                  style: body(
+                                    13,
+                                    weight: FontWeight.w700,
+                                    color: AppColors.forest800,
+                                  ),
                                 ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(item['time'] as String,
-                            style: body(11, color: AppColors.hint)),
+                        Text(
+                          item['time'] as String,
+                          style: body(11, color: AppColors.hint),
+                        ),
                       ],
                     ),
                   ),
@@ -573,17 +642,25 @@ class _FeaturedMatrimonial extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(c['name'] as String,
-                        style: body(13,
-                            weight: FontWeight.w600,
-                            color: AppColors.forest900)),
+                    Text(
+                      c['name'] as String,
+                      style: body(
+                        13,
+                        weight: FontWeight.w600,
+                        color: AppColors.forest900,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('${c['age']} yrs · ${c['location']}',
-                        style: body(12, color: AppColors.textMuted)),
+                    Text(
+                      '${c['age']} yrs · ${c['location']}',
+                      style: body(12, color: AppColors.textMuted),
+                    ),
                     const SizedBox(height: 6),
-                    Pill('✓ Verified',
-                        bg: const Color(0xFFD1FAE5),
-                        fg: const Color(0xFF065F46)),
+                    Pill(
+                      '✓ Verified',
+                      bg: const Color(0xFFD1FAE5),
+                      fg: const Color(0xFF065F46),
+                    ),
                   ],
                 ),
               ),
@@ -615,9 +692,14 @@ class _SectionHeaderRow extends StatelessWidget {
         Text(title, style: display(titleSize, color: AppColors.forest900)),
         GestureDetector(
           onTap: onAction,
-          child: Text(actionLabel,
-              style: body(12,
-                  weight: FontWeight.w600, color: AppColors.forest800)),
+          child: Text(
+            actionLabel,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: AppColors.forest800,
+            ),
+          ),
         ),
       ],
     );

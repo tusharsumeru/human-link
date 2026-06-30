@@ -232,8 +232,8 @@ class _Donor {
   final int photoId;
 }
 
-String _px(int id) =>
-    'https://images.pexels.com/photos/$id/pexels-photo-$id.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop';
+// Empty URL → initials fallback instead of a dummy stock photo.
+String _px(int id) => '';
 
 class _StatCard extends StatelessWidget {
   const _StatCard({

@@ -1,23 +1,11 @@
-/// Real Indian portrait photos from Pexels — ported from lib/avatarSvgs.ts.
-String px(int id) =>
-    'https://images.pexels.com/photos/$id/pexels-photo-$id.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+/// Portrait photos are no longer stock/dummy images. We return an empty URL so
+/// [PexelsImage]/[AvatarImage] fall back to clean name initials over a forest
+/// gradient. Real photos come from user uploads, not Pexels.
+String px(int id) => '';
 
-const Map<String, int> _avatarIds = {
-  '1': 4053536,
-  '2': 11138457,
-  '3': 2601464,
-  '4': 5746790,
-  '5': 34515496,
-  '6': 7485047,
-  'elder': 17815020,
-};
-
-/// Maps an avatar key (e.g. "6", "elder") to a Pexels portrait URL.
-String avatarUrl(String? key) {
-  final id = _avatarIds[key ?? ''];
-  if (id != null) return px(id);
-  return px(7485047); // default portrait
-}
+/// Maps an avatar key to a portrait URL. Returns empty so the initials
+/// fallback is shown instead of a dummy stock photo.
+String avatarUrl(String? key) => '';
 
 /// Returns initials for a name, used as an avatar fallback.
 String initialsOf(String name) {
