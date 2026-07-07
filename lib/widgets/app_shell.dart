@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../screens/create_post_flow.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'pexels_image.dart';
@@ -386,20 +387,26 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = isElder
+    final path = current ?? GoRouterState.of(context).uri.path;
+
+    // Tabs shown to the left of the center action, and to the right.
+    final leftItems = isElder
         ? const [
             NavDest(Icons.park_rounded, 'Tree', '/elder'),
             NavDest(Icons.shield_rounded, 'Requests', '/elder/verifications'),
-            NavDest(Icons.groups_rounded, 'Members', '/elder/members'),
-            NavDest(Icons.inventory_2_rounded, 'Archive', '/elder/archive'),
           ]
         : const [
             NavDest(Icons.grid_view_rounded, 'Home', '/dashboard'),
             NavDest(Icons.park_rounded, 'Tree', '/family-tree'),
-            NavDest(Icons.favorite_rounded, 'Matches', '/matrimonial'),
-            NavDest(Icons.groups_rounded, 'Welfare', '/welfare'),
           ];
-    final path = current ?? GoRouterState.of(context).uri.path;
+    final rightItems = isElder
+        ? const [
+            NavDest(Icons.groups_rounded, 'Members', '/elder/members'),
+            NavDest(Icons.inventory_2_rounded, 'Archive', '/elder/archive'),
+          ]
+        : const [
+            NavDest(Icons.navigation_rounded, 'Invitations', '/invitations'),
+          ];
 
     return Container(
       decoration: const BoxDecoration(
@@ -409,50 +416,85 @@ class _BottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60,
+          height: 62,
           child: Row(
             children: [
-              for (final d in items)
-                Expanded(
-                  child: InkWell(
-                    onTap: () => context.go(d.route),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(d.icon,
-                            size: 20,
-                            color: path == d.route
-                                ? AppColors.forest800
-                                : const Color(0xFF9CA3AF)),
-                        const SizedBox(height: 3),
-                        Text(d.label,
-                            style: body(11,
-                                color: path == d.route
-                                    ? AppColors.forest800
-                                    : const Color(0xFF9CA3AF))),
-                      ],
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: Builder(
-                  builder: (ctx) => InkWell(
-                    onTap: () => Scaffold.of(ctx).openDrawer(),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.menu_rounded,
-                            size: 20, color: Color(0xFF9CA3AF)),
-                        const SizedBox(height: 3),
-                        Text('More',
-                            style: body(11, color: const Color(0xFF9CA3AF))),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              for (final d in leftItems) _tab(context, d, path),
+              // Center create button — members only.
+              if (!isElder) _createButton(context),
+              for (final d in rightItems) _tab(context, d, path),
+              _moreTab(context),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tab(BuildContext context, NavDest d, String path) {
+    final active = path == d.route;
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.go(d.route),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(d.icon,
+                size: 20,
+                color: active ? AppColors.forest800 : const Color(0xFF9CA3AF)),
+            const SizedBox(height: 3),
+            Text(d.label,
+                style: body(11,
+                    color:
+                        active ? AppColors.forest800 : const Color(0xFF9CA3AF))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _moreTab(BuildContext context) {
+    return Expanded(
+      child: Builder(
+        builder: (ctx) => InkWell(
+          onTap: () => Scaffold.of(ctx).openDrawer(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.menu_rounded,
+                  size: 20, color: Color(0xFF9CA3AF)),
+              const SizedBox(height: 3),
+              Text('More', style: body(11, color: const Color(0xFF9CA3AF))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _createButton(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => showCreateOptions(context),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 42,
+              height: 30,
+              decoration: BoxDecoration(
+                gradient: AppGradients.forest,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: AppShadows.soft,
+              ),
+              child: const Icon(Icons.add_rounded,
+                  size: 22, color: Colors.white),
+            ),
+            const SizedBox(height: 2),
+            Text('Create',
+                style: body(11,
+                    weight: FontWeight.w600, color: AppColors.forest800)),
+          ],
         ),
       ),
     );

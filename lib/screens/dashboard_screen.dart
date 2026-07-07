@@ -1,526 +1,548 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'dart:async';
+import 'dart:io';
 
-import '../data/demo_data.dart';
-import '../data/repository.dart';
-import '../services/auth_service.dart';
+import 'package:flutter/material.dart';
+
+import '../data/feed_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
-import '../widgets/ui_kit.dart';
 
-/// Dashboard — ported from `src/app/dashboard/page.tsx`.
+/// Dashboard — an Instagram-style Samaj feed: stories, reels, and posts.
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthService>().user;
-
-    return AppShell(
-      title: 'Dashboard',
+    return const AppShell(
+      title: 'Samaj Feed',
       currentRoute: '/dashboard',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _WelcomeBanner(
-            name: user?.name,
-            gotra: user?.gotra,
-            native: user?.native,
-          ),
-          const SizedBox(height: 24),
-          // Stats grid — driven by Repository.instance.stats().
-          FutureBuilder<Map<String, dynamic>>(
-            future: Repository.instance.stats(),
-            builder: (context, snapshot) {
-              final stats = snapshot.data;
-              return _StatsGrid(stats: stats);
-            },
-          ),
-          const SizedBox(height: 24),
-          Text('Quick Access', style: display(18, color: AppColors.forest900)),
-          const SizedBox(height: 16),
-          const _QuickActions(),
-          const SizedBox(height: 24),
-          const _InvitationPlannerCard(),
-          const SizedBox(height: 24),
-          _SectionHeaderRow(
-            title: 'Active Campaigns',
-            actionLabel: 'View All →',
-            onAction: () => context.go('/welfare'),
-          ),
-          const SizedBox(height: 16),
-          const _ActiveCampaigns(),
-          const SizedBox(height: 24),
-          _SectionHeaderRow(
-            title: 'Family Activity',
-            actionLabel: 'View All',
-            onAction: () => context.go('/family-tree'),
-          ),
-          const SizedBox(height: 16),
-          const _ActivityFeed(),
-          const SizedBox(height: 24),
-          const _FeaturedMatrimonial(),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      child: _Feed(),
     );
   }
 }
 
-class _WelcomeBanner extends StatelessWidget {
-  const _WelcomeBanner({this.name, this.gotra, this.native});
-  final String? name;
-  final String? gotra;
-  final String? native;
+// ─────────────────────────────────────────────────────────────────────────────
+// Feed content
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Feed extends StatelessWidget {
+  const _Feed();
 
   @override
   Widget build(BuildContext context) {
-    final firstName = (name ?? '').split(' ').first;
-    final nativeShort = (native ?? '').split(',').first;
+    return ListenableBuilder(
+      listenable: FeedStore.instance,
+      builder: (context, _) {
+        // User-uploaded posts (newest first) sit above the seeded demo posts.
+        final userPosts =
+            FeedStore.instance.posts.map(_Post.fromUser).toList();
+        final all = <_Post>[...userPosts, ..._posts];
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppGradients.deepForest,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'WELCOME BACK',
-            style: body(
-              11,
-              weight: FontWeight.w700,
-              color: AppColors.forest300,
-              letterSpacing: 2.5,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 8),
+            // Interleave posts with a reels shelf after the second post.
+            for (var i = 0; i < all.length; i++) ...[
+              _PostCard(post: all[i]),
+              if (i == 1) const _ReelsShelf(),
+            ],
+            const SizedBox(height: 24),
+            Center(
+              child: Text('You\'re all caught up ✦',
+                  style: body(12, color: AppColors.hint)),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            name != null && name!.isNotEmpty
-                ? 'Namaskara, $firstName!'
-                : 'Namaskara!',
-            style: display(28, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Explore your lineage, connect with family, and contribute to '
-            'the Samaj community. Your heritage is preserved here.',
-            style: body(14, color: AppColors.forest300, height: 1.5),
-          ),
-          if (name != null && name!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Pill(
-                  '✦ Gotra: ${gotra ?? ''}',
-                  bg: AppColors.gold500.withValues(alpha: 0.2),
-                  fg: AppColors.gold500,
-                ),
-                Pill(
-                  nativeShort.isEmpty ? '—' : nativeShort,
-                  icon: Icons.location_on_outlined,
-                  bg: AppColors.forest500.withValues(alpha: 0.2),
-                  fg: AppColors.forest300,
-                ),
-              ],
-            ),
+            const SizedBox(height: 32),
           ],
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              GoldButton(
-                label: 'View Tree',
-                icon: Icons.park_rounded,
-                onPressed: () => context.go('/family-tree'),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/welfare'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 13,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.favorite_rounded, size: 16),
-                label: Text(
-                  'Donate',
-                  style: body(14, weight: FontWeight.w600, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _StatItem {
-  const _StatItem(this.icon, this.value, this.label, this.sub, this.color);
-  final IconData icon;
-  final String value;
-  final String label;
-  final String sub;
-  final Color color;
+// ─────────────────────────────────────────────────────────────────────────────
+// Reels
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Reel {
+  const _Reel(this.title, this.emoji, this.views, this.gradient);
+  final String title;
+  final String emoji;
+  final String views;
+  final List<Color> gradient;
 }
 
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({this.stats});
-  final Map<String, dynamic>? stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final loading = stats == null;
-    final totalMembers = (stats?['totalMembers'] as num?) ?? 1428;
-    final familyMembers = (stats?['familyMembers'] as num?) ?? 0;
-    final activeTrees = (stats?['activeTrees'] as num?) ?? 86;
-    final pending = (stats?['pendingVerifications'] as num?) ?? 0;
-    final matrimonial =
-        (stats?['matrimonialProfiles'] as num?) ??
-        kMatrimonialCandidates.length;
-    final donations = (stats?['totalDonationAmount'] as num?) ?? 0;
-
-    final items = <_StatItem>[
-      _StatItem(
-        Icons.groups_rounded,
-        loading ? '—' : formatIndian(totalMembers),
-        'Total Members',
-        loading ? 'Loading…' : '$familyMembers family records',
-        AppColors.forest800,
-      ),
-      _StatItem(
-        Icons.park_rounded,
-        loading ? '—' : '$activeTrees',
-        'Active Trees',
-        'Lineage connections mapped',
-        AppColors.forest700,
-      ),
-      _StatItem(
-        Icons.favorite_rounded,
-        loading ? '—' : formatLakh(donations),
-        'Welfare Raised',
-        '$matrimonial matrimonial profiles',
-        AppColors.gold500,
-      ),
-      _StatItem(
-        Icons.shield_rounded,
-        loading ? '—' : '$pending',
-        'Pending Verifications',
-        'Awaiting elder approval',
-        AppColors.gold700,
-      ),
-    ];
-
-    return Column(
-      children: [
-        for (var i = 0; i < items.length; i += 2)
-          Padding(
-            padding: EdgeInsets.only(bottom: i + 2 < items.length ? 12 : 0),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: _StatCard(item: items[i])),
-                  const SizedBox(width: 12),
-                  if (i + 1 < items.length)
-                    Expanded(child: _StatCard(item: items[i + 1]))
-                  else
-                    const Expanded(child: SizedBox()),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.item});
-  final _StatItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: item.color.withValues(alpha: 0.2)),
-                ),
-                child: Icon(item.icon, size: 20, color: item.color),
-              ),
-              const Icon(
-                Icons.trending_up_rounded,
-                size: 14,
-                color: AppColors.forest500,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(item.value, style: display(26, color: AppColors.forest900)),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: body(13, weight: FontWeight.w600, color: AppColors.label),
-          ),
-          const SizedBox(height: 2),
-          Text(item.sub, style: body(11, color: AppColors.hint)),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction {
-  const _QuickAction(this.label, this.icon, this.route, this.desc);
-  final String label;
-  final IconData icon;
-  final String route;
-  final String desc;
-}
-
-const _quickActions = <_QuickAction>[
-  _QuickAction(
-    'View Family Tree',
-    Icons.park_rounded,
-    '/family-tree',
-    'Explore your lineage',
-  ),
-  _QuickAction(
-    'Matrimonial Hub',
-    Icons.favorite_rounded,
-    '/matrimonial',
-    '47 active profiles',
-  ),
-  _QuickAction(
-    'Plan Invitations',
-    Icons.navigation_rounded,
-    '/invitations',
-    'Route planner & map',
-  ),
-  _QuickAction(
-    'Welfare Portal',
-    Icons.groups_rounded,
-    '/welfare',
-    '₹42.5L raised',
-  ),
-  _QuickAction(
-    'Member Directory',
-    Icons.map_rounded,
-    '/directory',
-    'Find Samaj members',
-  ),
+const _reels = <_Reel>[
+  _Reel('Samaj Utsava 2025', '🪔', '12.4K', [Color(0xFF92400E), Color(0xFFD97706)]),
+  _Reel('Chickpete Goldsmiths', '💛', '8.1K', [AppColors.gold700, AppColors.gold500]),
+  _Reel('Kumta Temple Yatra', '🛕', '5.9K', [AppColors.forest800, AppColors.forest600]),
+  _Reel('Bhajan Sandhya', '🎶', '3.2K', [Color(0xFF3B4C8A), Color(0xFF1B4332)]),
 ];
 
-class _QuickActions extends StatelessWidget {
-  const _QuickActions();
+class _ReelsShelf extends StatelessWidget {
+  const _ReelsShelf();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final a in _quickActions)
+    return Container(
+      color: AppColors.cream,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              padding: const EdgeInsets.all(18),
-              onTap: () => context.go(a.route),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: AppGradients.forest,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(a.icon, size: 22, color: Colors.white),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Row(
+              children: [
+                const Icon(Icons.movie_creation_outlined,
+                    size: 18, color: AppColors.forest800),
+                const SizedBox(width: 8),
+                Text('Reels', style: display(16, color: AppColors.forest900)),
+                const Spacer(),
+                Text('See all',
+                    style: body(12,
+                        weight: FontWeight.w600, color: AppColors.forest700)),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _reels.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) => _ReelCard(reel: _reels[i]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReelCard extends StatelessWidget {
+  const _ReelCard({required this.reel});
+  final _Reel reel;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showSnack(context, 'Playing "${reel.title}"'),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          width: 140,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: reel.gradient,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a.label,
-                          style: body(
-                            14,
-                            weight: FontWeight.w600,
-                            color: AppColors.forest900,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(a.desc, style: body(12, color: AppColors.hint)),
+                ),
+              ),
+              Center(
+                  child:
+                      Text(reel.emoji, style: const TextStyle(fontSize: 52))),
+              // Play glyph
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded,
+                      color: Colors.white, size: 26),
+                ),
+              ),
+              // Gradient scrim + caption
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 24, 10, 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.55),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 16,
-                    color: AppColors.hint,
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _InvitationPlannerCard extends StatelessWidget {
-  const _InvitationPlannerCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppGradients.deepForest,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.navigation_rounded,
-              size: 22,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Invitation Planner',
-                  style: display(15, color: Colors.white),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Plan your visit route for the Annual Reunion',
-                  style: body(12, color: AppColors.forest300),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          GoldButton(
-            label: 'Plan',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: () => context.go('/invitations'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveCampaigns extends StatelessWidget {
-  const _ActiveCampaigns();
-
-  @override
-  Widget build(BuildContext context) {
-    final campaigns = kWelfareCampaigns.take(2).toList();
-    return Column(
-      children: [
-        for (final c in campaigns)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _CampaignRow(campaign: c),
-          ),
-      ],
-    );
-  }
-}
-
-class _CampaignRow extends StatelessWidget {
-  const _CampaignRow({required this.campaign});
-  final Map<String, dynamic> campaign;
-
-  @override
-  Widget build(BuildContext context) {
-    final raised = (campaign['raised'] as num).toDouble();
-    final goal = (campaign['goal'] as num).toDouble();
-    final pct = goal == 0 ? 0.0 : (raised / goal);
-    final pctLabel = (pct * 100).round();
-
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Text(
-            campaign['image'] as String,
-            style: const TextStyle(fontSize: 30),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  campaign['title'] as String,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: body(
-                    13,
-                    weight: FontWeight.w600,
-                    color: AppColors.forest900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ProgressBar(
-                  value: pct,
-                  height: 6,
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(campaign['colorA'] as int),
-                      Color(campaign['colorB'] as int),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(reel.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: body(12,
+                              weight: FontWeight.w700, color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.play_arrow_rounded,
+                              size: 13, color: Colors.white70),
+                          const SizedBox(width: 2),
+                          Text('${reel.views} plays',
+                              style: body(10, color: Colors.white70)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  '$pctLabel% · ${campaign['daysLeft']} days left',
-                  style: body(11, color: AppColors.hint),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Posts
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Post {
+  const _Post({
+    required this.author,
+    required this.subtitle,
+    required this.emoji,
+    required this.gradient,
+    required this.caption,
+    required this.likes,
+    required this.comments,
+    required this.time,
+    this.imagePath,
+    this.isReel = false,
+  });
+
+  final String author;
+  final String subtitle;
+  final String emoji;
+  final List<Color> gradient;
+  final String caption;
+  final int likes;
+  final int comments;
+  final String time;
+  final String? imagePath; // real photo (user upload); null → gradient+emoji
+  final bool isReel;
+
+  /// Builds a feed card from a user-created upload.
+  factory _Post.fromUser(UserPost p) => _Post(
+        author: p.author,
+        subtitle: p.subtitle,
+        emoji: p.isReel ? '🎬' : '🖼️',
+        gradient: const [AppColors.forest800, AppColors.forest600],
+        caption: p.caption,
+        likes: 0,
+        comments: 0,
+        time: 'Just now',
+        imagePath: p.imagePath,
+        isReel: p.isReel,
+      );
+}
+
+const _posts = <_Post>[
+  _Post(
+    author: 'Venkatesh Haldankar',
+    subtitle: 'Basavanagudi, Bengaluru',
+    emoji: '📜',
+    gradient: [Color(0xFF8B5E3C), Color(0xFFC4823A)],
+    caption:
+        'Sharing a treasured memory from the 1968 Samaj Utsava in Kumta. Our elders in their prime — the goldsmith community stood tall. 🙏',
+    likes: 214,
+    comments: 18,
+    time: '2 hours ago',
+  ),
+  _Post(
+    author: 'Shri Narayanarao Suvarna',
+    subtitle: 'Elder & Admin · Rajajinagar',
+    emoji: '🌳',
+    gradient: [AppColors.forest800, AppColors.forest600],
+    caption:
+        'Verified the lineage of the Chickpete branch today. Three generations of the Suvarna family now mapped on the tree. Heritage preserved. ✅',
+    likes: 342,
+    comments: 27,
+    time: 'Yesterday',
+  ),
+  _Post(
+    author: 'Rekha Diwakar',
+    subtitle: 'Jayanagar, Bengaluru',
+    emoji: '🎂',
+    gradient: [Color(0xFFB05E7A), Color(0xFFC4823A)],
+    caption:
+        'Thank you all for the birthday wishes from the Samaj family! Blessed to celebrate with our community. 🎉❤️',
+    likes: 489,
+    comments: 63,
+    time: 'Today',
+  ),
+  _Post(
+    author: 'Daivajna Samaja Bhavan',
+    subtitle: 'Samaj Bhavan Renovation · Fundraiser',
+    emoji: '🏛️',
+    gradient: [Color(0xFF166534), Color(0xFF16A34A)],
+    caption:
+        '85% funded! The new 500-seat auditorium is taking shape. Thank you to our 328 backers. Every contribution builds our future. 🙏',
+    likes: 176,
+    comments: 12,
+    time: '2 days ago',
+  ),
+  _Post(
+    author: 'Karthik Revankar',
+    subtitle: 'Jayanagar, Bengaluru',
+    emoji: '🎶',
+    gradient: [Color(0xFF3B4C8A), Color(0xFF1B4332)],
+    caption:
+        'Carnatic vocal session at this year\'s cultural evening. Nothing like our traditions coming alive on stage. 🎵',
+    likes: 231,
+    comments: 21,
+    time: '3 days ago',
+  ),
+];
+
+class _PostCard extends StatefulWidget {
+  const _PostCard({required this.post});
+  final _Post post;
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  bool _liked = false;
+  bool _saved = false;
+  bool _burst = false;
+  Timer? _burstTimer;
+
+  @override
+  void dispose() {
+    _burstTimer?.cancel();
+    super.dispose();
+  }
+
+  int get _likeCount => widget.post.likes + (_liked ? 1 : 0);
+
+  void _toggleLike() => setState(() => _liked = !_liked);
+
+  void _doubleTapLike() {
+    setState(() {
+      _liked = true;
+      _burst = true;
+    });
+    _burstTimer?.cancel();
+    _burstTimer = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _burst = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.post;
+    return Container(
+      color: AppColors.cream,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.gold500, AppColors.forest600],
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle, color: AppColors.cream),
+                    child: _Avatar(name: p.author, size: 36),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.author,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: body(13,
+                              weight: FontWeight.w700,
+                              color: AppColors.forest900)),
+                      Text(p.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: body(11, color: AppColors.hint)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.more_horiz_rounded,
+                      color: AppColors.label),
+                  onPressed: () => _showSnack(context, 'Post options'),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          ForestButton(
-            label: 'Donate',
-            onPressed: () => context.go('/welfare'),
+          // Media
+          GestureDetector(
+            onDoubleTap: _doubleTapLike,
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (p.imagePath != null)
+                    Image.file(File(p.imagePath!), fit: BoxFit.cover)
+                  else ...[
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: p.gradient,
+                        ),
+                      ),
+                    ),
+                    Center(
+                        child: Text(p.emoji,
+                            style: const TextStyle(fontSize: 96))),
+                  ],
+                  // Reel badge (top-right)
+                  if (p.isReel)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.play_arrow_rounded,
+                                size: 14, color: Colors.white),
+                            const SizedBox(width: 2),
+                            Text('Reel',
+                                style: body(10,
+                                    weight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // Double-tap heart burst
+                  Center(
+                    child: AnimatedScale(
+                      scale: _burst ? 1 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutBack,
+                      child: AnimatedOpacity(
+                        opacity: _burst ? 1 : 0,
+                        duration: const Duration(milliseconds: 220),
+                        child: Icon(Icons.favorite,
+                            size: 110,
+                            color: Colors.white.withValues(alpha: 0.9)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Action row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+            child: Row(
+              children: [
+                _ActionIcon(
+                  icon: _liked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: _liked ? const Color(0xFFE0245E) : AppColors.label,
+                  onTap: _toggleLike,
+                ),
+                _ActionIcon(
+                  icon: Icons.mode_comment_outlined,
+                  onTap: () => _showSnack(context, 'View comments'),
+                ),
+                _ActionIcon(
+                  icon: Icons.send_outlined,
+                  onTap: () => _showSnack(context, 'Share post'),
+                ),
+                const Spacer(),
+                _ActionIcon(
+                  icon: _saved
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: _saved ? AppColors.gold700 : AppColors.label,
+                  onTap: () => setState(() => _saved = !_saved),
+                ),
+              ],
+            ),
+          ),
+          // Likes
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
+            child: Text('$_likeCount likes',
+                style: body(13,
+                    weight: FontWeight.w700, color: AppColors.forest900)),
+          ),
+          // Caption
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: '${p.author}  ',
+                    style: body(13,
+                        weight: FontWeight.w700, color: AppColors.ink)),
+                TextSpan(
+                    text: p.caption,
+                    style: body(13, color: AppColors.label, height: 1.35)),
+              ]),
+            ),
+          ),
+          // Comments + time
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => _showSnack(context, 'View comments'),
+                  child: Text('View all ${p.comments} comments',
+                      style: body(12, color: AppColors.hint)),
+                ),
+                const SizedBox(height: 4),
+                Text(p.time.toUpperCase(),
+                    style: body(10,
+                        color: AppColors.hint, letterSpacing: 0.4)),
+              ],
+            ),
           ),
         ],
       ),
@@ -528,180 +550,50 @@ class _CampaignRow extends StatelessWidget {
   }
 }
 
-const _activityIcons = <String, String>{
-  'archive': '📜',
-  'tree': '🌳',
-  'birthday': '🎂',
-};
-
-class _ActivityFeed extends StatelessWidget {
-  const _ActivityFeed();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final item in kDashboardActivity)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  PexelsImage(
-                    url: item['photo'] as String?,
-                    name: item['user'] as String,
-                    size: 40,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: item['user'] as String,
-                                style: body(
-                                  13,
-                                  weight: FontWeight.w700,
-                                  color: AppColors.ink,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' ${item['action']} ',
-                                style: body(13, color: AppColors.textMuted),
-                              ),
-                              if ((item['detail'] as String?)?.isNotEmpty ??
-                                  false)
-                                TextSpan(
-                                  text: item['detail'] as String,
-                                  style: body(
-                                    13,
-                                    weight: FontWeight.w700,
-                                    color: AppColors.forest800,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item['time'] as String,
-                          style: body(11, color: AppColors.hint),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _activityIcons[item['type']] ?? '🌳',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _FeaturedMatrimonial extends StatelessWidget {
-  const _FeaturedMatrimonial();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = kMatrimonialCandidates.first;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeaderRow(
-          title: 'Featured Matrimonial',
-          actionLabel: 'See all →',
-          onAction: () => context.go('/matrimonial'),
-          titleSize: 15,
-        ),
-        const SizedBox(height: 12),
-        AppCard(
-          padding: const EdgeInsets.all(16),
-          onTap: () => context.go('/matrimonial'),
-          child: Row(
-            children: [
-              PexelsImage(
-                url: c['photo'] as String?,
-                name: c['name'] as String,
-                size: 48,
-                borderColor: AppColors.gold500,
-                borderWidth: 2,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c['name'] as String,
-                      style: body(
-                        13,
-                        weight: FontWeight.w600,
-                        color: AppColors.forest900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${c['age']} yrs · ${c['location']}',
-                      style: body(12, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 6),
-                    Pill(
-                      '✓ Verified',
-                      bg: const Color(0xFFD1FAE5),
-                      fg: const Color(0xFF065F46),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeaderRow extends StatelessWidget {
-  const _SectionHeaderRow({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-    this.titleSize = 18,
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({
+    required this.icon,
+    required this.onTap,
+    this.color = AppColors.label,
   });
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
-  final double titleSize;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: display(titleSize, color: AppColors.forest900)),
-        GestureDetector(
-          onTap: onAction,
-          child: Text(
-            actionLabel,
-            style: body(
-              12,
-              weight: FontWeight.w600,
-              color: AppColors.forest800,
-            ),
-          ),
-        ),
-      ],
+    return IconButton(
+      icon: Icon(icon, size: 26, color: color),
+      onPressed: onTap,
+      splashRadius: 22,
     );
   }
+}
+
+/// Initials avatar on a forest gradient (matches the app's no-stock-photo look).
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.name, this.size = 36});
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // Reuse PexelsImage's initials fallback by passing an empty url.
+    return PexelsImage(url: '', name: name, size: size);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+void _showSnack(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(message, style: body(13, color: Colors.white)),
+      backgroundColor: AppColors.forest800,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 1),
+    ));
 }

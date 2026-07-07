@@ -1,0 +1,34 @@
+import 'package:flutter/foundation.dart';
+
+/// A post/reel the user created this session. Held in memory only — there is no
+/// feed backend yet, so uploads live until the app is restarted.
+class UserPost {
+  UserPost({
+    required this.author,
+    required this.subtitle,
+    required this.imagePath,
+    required this.caption,
+    required this.isReel,
+  });
+
+  final String author;
+  final String subtitle;
+  final String imagePath; // local file path from the image picker
+  final String caption;
+  final bool isReel;
+}
+
+/// Global, app-wide store of user-created feed items. The Dashboard listens to
+/// it so a new post/reel appears the moment it's uploaded from the bottom bar.
+class FeedStore extends ChangeNotifier {
+  FeedStore._();
+  static final FeedStore instance = FeedStore._();
+
+  final List<UserPost> _posts = <UserPost>[];
+  List<UserPost> get posts => List.unmodifiable(_posts);
+
+  void add(UserPost post) {
+    _posts.insert(0, post); // newest first
+    notifyListeners();
+  }
+}
