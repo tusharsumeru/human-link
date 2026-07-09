@@ -108,7 +108,7 @@ class _CreateTile extends StatelessWidget {
   }
 }
 
-/// Picks an image, then opens the caption composer.
+/// Picks a photo (post) or video (reel), then opens the caption composer.
 Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
   final auth = sheetCtx.read<AuthService>();
   final router = GoRouter.of(sheetCtx);
@@ -116,11 +116,13 @@ Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
 
   XFile? picked;
   try {
-    picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 88,
-    );
+    picked = isReel
+        ? await _picker.pickVideo(source: ImageSource.gallery)
+        : await _picker.pickImage(
+            source: ImageSource.gallery,
+            maxWidth: 1600,
+            imageQuality: 88,
+          );
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
     return;
@@ -133,7 +135,7 @@ Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
   final user = auth.user;
   final caption = await _composeCaption(
     router.routerDelegate.navigatorKey.currentContext ?? sheetCtx,
-    imagePath: picked.path,
+    mediaPath: picked.path,
     isReel: isReel,
   );
   if (caption == null) return; // cancelled at composer
@@ -143,7 +145,7 @@ Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
     subtitle: (user?.native.split(',').first.trim().isNotEmpty ?? false)
         ? user!.native.split(',').first.trim()
         : 'Daivajna Samaja',
-    imagePath: picked.path,
+    mediaPath: picked.path,
     caption: caption,
     isReel: isReel,
   ));
@@ -163,7 +165,7 @@ Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
 /// null if the user backed out.
 Future<String?> _composeCaption(
   BuildContext context, {
-  required String imagePath,
+  required String mediaPath,
   required bool isReel,
 }) {
   final controller = TextEditingController();
@@ -201,19 +203,18 @@ Future<String?> _composeCaption(
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        children: [
-                          Image.file(File(imagePath),
-                              width: 84, height: 84, fit: BoxFit.cover),
-                          if (isReel)
-                            const Positioned.fill(
-                              child: Center(
+                      child: isReel
+                          ? Container(
+                              width: 84,
+                              height: 84,
+                              color: AppColors.forest900,
+                              child: const Center(
                                 child: Icon(Icons.play_circle_fill_rounded,
-                                    color: Colors.white70, size: 28),
+                                    color: Colors.white70, size: 30),
                               ),
-                            ),
-                        ],
-                      ),
+                            )
+                          : Image.file(File(mediaPath),
+                              width: 84, height: 84, fit: BoxFit.cover),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
