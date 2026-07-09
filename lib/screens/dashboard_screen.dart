@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 import '../data/feed_store.dart';
 import '../theme/app_theme.dart';
@@ -224,7 +225,7 @@ class _Post {
     required this.likes,
     required this.comments,
     required this.time,
-    this.imagePath,
+    this.mediaPath,
     this.isReel = false,
   });
 
@@ -236,8 +237,8 @@ class _Post {
   final int likes;
   final int comments;
   final String time;
-  final String? imagePath; // real photo (user upload); null → gradient+emoji
-  final bool isReel;
+  final String? mediaPath; // real upload; null → gradient+emoji placeholder
+  final bool isReel; // true → mediaPath is a video
 
   /// Builds a feed card from a user-created upload.
   factory _Post.fromUser(UserPost p) => _Post(
@@ -249,7 +250,7 @@ class _Post {
         likes: 0,
         comments: 0,
         time: 'Just now',
-        imagePath: p.imagePath,
+        mediaPath: p.mediaPath,
         isReel: p.isReel,
       );
 }
@@ -412,8 +413,10 @@ class _PostCardState extends State<_PostCard> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (p.imagePath != null)
-                    Image.file(File(p.imagePath!), fit: BoxFit.cover)
+                  if (p.mediaPath != null && p.isReel)
+                    _VideoTile(path: p.mediaPath!)
+                  else if (p.mediaPath != null)
+                    Image.file(File(p.mediaPath!), fit: BoxFit.cover)
                   else ...[
                     DecoratedBox(
                       decoration: BoxDecoration(
@@ -542,6 +545,108 @@ class _PostCardState extends State<_PostCard> {
                     style: body(10,
                         color: AppColors.hint, letterSpacing: 0.4)),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Autoplaying, looping, muted video for a reel post (tap to mute/unmute).
+class _VideoTile extends StatefulWidget {
+  const _VideoTile({required this.path});
+  final String path;
+
+  @override
+  State<_VideoTile> createState() => _VideoTileState();
+}
+
+class _VideoTileState extends State<_VideoTile> {
+  VideoPlayerController? _controller;
+  bool _muted = true;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = VideoPlayerController.file(File(widget.path));
+    _controller = c;
+    c.initialize().then((_) {
+      if (!mounted) return;
+      c
+        ..setLooping(true)
+        ..setVolume(0)
+        ..play();
+      setState(() {});
+    }).catchError((_) {
+      if (mounted) setState(() => _error = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _toggleMute() {
+    final c = _controller;
+    if (c == null) return;
+    setState(() => _muted = !_muted);
+    c.setVolume(_muted ? 0 : 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _controller;
+    if (_error) {
+      return Container(
+        color: AppColors.forest900,
+        alignment: Alignment.center,
+        child: const Icon(Icons.videocam_off_rounded,
+            color: Colors.white54, size: 48),
+      );
+    }
+    if (c == null || !c.value.isInitialized) {
+      return Container(
+        color: AppColors.forest900,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(
+            color: Colors.white54, strokeWidth: 2),
+      );
+    }
+    return GestureDetector(
+      onTap: _toggleMute,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Cover-fit the video within the square frame.
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: c.value.size.width,
+                height: c.value.size.height,
+                child: VideoPlayer(c),
+              ),
+            ),
+          ),
+          // Mute indicator
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

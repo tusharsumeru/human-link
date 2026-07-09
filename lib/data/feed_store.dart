@@ -6,16 +6,16 @@ class UserPost {
   UserPost({
     required this.author,
     required this.subtitle,
-    required this.imagePath,
+    required this.mediaPath,
     required this.caption,
     required this.isReel,
   });
 
   final String author;
   final String subtitle;
-  final String imagePath; // local file path from the image picker
+  final String mediaPath; // local file path (image, or video when isReel)
   final String caption;
-  final bool isReel;
+  final bool isReel; // true → a video reel; false → a photo post
 }
 
 /// Global, app-wide store of user-created feed items. The Dashboard listens to
