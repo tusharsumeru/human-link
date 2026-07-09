@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../screens/create_post_flow.dart';
@@ -98,7 +99,25 @@ class AppShell extends StatelessWidget {
 
     final body = Padding(padding: padding, child: child);
 
-    return Scaffold(
+    // Device back-button policy: pop a drilled-in page if there is one; from a
+    // non-home top-level tab, go back to the home tab; only on the home tab does
+    // back exit the app.
+    final homeRoute = isElder ? '/elder' : '/dashboard';
+    final path = GoRouterState.of(context).uri.path;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else if (path != homeRoute) {
+          context.go(homeRoute);
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
       drawer: _Sidebar(nav: nav, isElder: isElder),
       appBar: AppBar(
         backgroundColor: AppColors.cream.withValues(alpha: 0.95),
@@ -132,7 +151,7 @@ class AppShell extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
               child: GestureDetector(
-                onTap: () => context.go('/profile/me'),
+                onTap: () => context.push('/profile/me'),
                 child: userAvatar(
                   user,
                   size: 34,
@@ -144,9 +163,10 @@ class AppShell extends StatelessWidget {
             ),
         ],
       ),
-      floatingActionButton: floatingActionButton,
-      bottomNavigationBar: _BottomBar(isElder: isElder, current: currentRoute),
-      body: scrollable ? SingleChildScrollView(child: body) : body,
+        floatingActionButton: floatingActionButton,
+        bottomNavigationBar: _BottomBar(isElder: isElder, current: currentRoute),
+        body: scrollable ? SingleChildScrollView(child: body) : body,
+      ),
     );
   }
 }
@@ -303,7 +323,7 @@ class _Sidebar extends StatelessWidget {
                           style: body(13, color: Colors.white70)),
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/profile/me');
+                        context.push('/profile/me');
                       },
                     ),
                     ListTile(

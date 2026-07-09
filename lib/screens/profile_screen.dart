@@ -5,93 +5,101 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/avatars.dart';
-import '../data/demo_data.dart';
+import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
-/// Member profile — ported from `src/app/profile/[id]/page.tsx`.
+/// Member profile — mirrors `src/app/profile/[id]/page.tsx`.
 ///
-/// The [id] may be a [kFamilyMembers] id ("1".."6"); if no member matches we
-/// fall back to the currently authenticated user mapped into a profile shape.
-/// Rendered as a polished drill-down page: a forest-gradient header with a big
-/// avatar + verified badge + gotra/native pills, then About, Lineage, Life
-/// Archive and Quick-stats cards.
-class ProfileScreen extends StatelessWidget {
+/// When [id] is a MongoDB id (24 hex chars) the real member is loaded from
+/// `/api/family` and shown with their DB details + lineage (parent/children by
+/// `parentId`). Otherwise the currently authenticated user's own profile is
+/// rendered. No demo data is used.
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.id});
 
   final String id;
 
-  // Life-archive blurbs ported verbatim from the web page's LIFE_ARCHIVES.
-  static const Map<String, String> _lifeArchives = {
-    '1':
-        'Ramachandra Suvarna was the patriarch of our Kundapura branch and a master goldsmith. He established the family jewellery tradition in 1942 and his 47-year handwritten ledger is the foundation of our digital tree today.',
-    '2':
-        "Savitribai Suvarna was the matriarch renowned for her devotion to Samaj seva and Sanskrit shlokas. She organised the first Samaj women's collective in Kundapura and raised funds for the community temple.",
-    '3':
-        'Venkatesh Haldankar migrated from Kumta to Bengaluru in 1975 to expand the jewellery business to Commercial Street. His descendants now span Bengaluru, Mangaluru, Singapore, and Dubai.',
-    '4':
-        'Suresh Haldankar is the first in the family to enter software engineering — bridging the goldsmith legacy with the Bengaluru IT boom. He co-founded the Daivajna Samaja IT professionals\' network.',
-    '5':
-        'Rekha Diwakar is a distinguished educator and Samaj community leader. She established the Daivajna Samaja annual scholarship fund in 2008, mentoring over 300 students from the community.',
-    '6':
-        'Priya Haldankar represents the new generation — digitising 500+ family photos, creating this Daivajna Samaja platform, and connecting 1,400+ families across the Daivajna Samaja worldwide.',
-  };
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+bool _isMongoId(String id) => RegExp(r'^[a-f0-9]{24}$').hasMatch(id);
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _loading = false;
+  Map<String, dynamic>? _member;
+  Map<String, dynamic>? _parent;
+  List<Map<String, dynamic>> _children = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isMongoId(widget.id)) {
+      _loading = true;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    try {
+      final all = await Repository.instance.familyTree();
+      final member = all
+          .cast<Map<String, dynamic>?>()
+          .firstWhere((m) => m!['_id'].toString() == widget.id,
+              orElse: () => null);
+      if (member != null) {
+        final parentId = (member['parentId'] ?? '').toString();
+        _parent = parentId.isEmpty
+            ? null
+            : all.cast<Map<String, dynamic>?>().firstWhere(
+                (m) => m!['_id'].toString() == parentId,
+                orElse: () => null);
+        _children = all
+            .where((m) => (m['parentId'] ?? '').toString() == widget.id)
+            .toList();
+      }
+      if (!mounted) return;
+      setState(() {
+        _member = member;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  static bool _isLate(Map<String, dynamic> m) =>
+      (m['dod'] ?? '').toString().trim().isNotEmpty;
+
+  static String _dash(Object? v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? '—' : s;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Try resolve as a family member.
-    Map<String, dynamic>? member;
-    for (final m in kFamilyMembers) {
-      if (m['id'] == id) {
-        member = m;
-        break;
-      }
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: AppColors.cream,
+        body: Center(
+            child: CircularProgressIndicator(color: AppColors.forest700)),
+      );
     }
+    if (_member != null) return _dbMemberProfile(_member!);
+    return _selfProfile();
+  }
 
-    // 2. Fall back to the current user (avatar-key based profile).
-    final user = context.watch<AuthService>().user;
-    final bool isCurrentUser = member == null;
-
-    final String name = member?['name'] as String? ?? user?.name ?? 'Samaj Member';
-    final String gotra = member?['gotra'] as String? ?? user?.gotra ?? '—';
-    final String native = member?['native'] as String? ?? user?.native ?? 'Karnataka';
-    final String relation = member?['relation'] as String? ??
-        (user?.isElder == true ? 'Elder & Samaj Admin' : 'Samaj Member');
-    final String occupation = member?['occupation'] as String? ?? '—';
-    final String birthYear = member?['birthYear'] as String? ??
-        (isCurrentUser && (user?.dob.isNotEmpty ?? false) ? user!.dob : '—');
-    final String status = member?['status'] as String? ?? 'Active';
-    final bool isLate = status == 'Late';
-
-    // Aadhaar (DigiLocker) verification — for the current user.
-    final bool isVerified =
-        isCurrentUser ? (user?.verified ?? false) : (status == 'Active');
-    final String maskedAadhaar =
-        isCurrentUser ? (user?.maskedAadhaar ?? '') : '';
-
-    // Avatar: family ids "1".."6" map directly; user uses their avatar key.
-    final String? avatarKey = member != null ? id : user?.avatar;
-    final String avatarUrlStr = avatarUrl(avatarKey);
-    // The current user's photo: prefer the uploaded (remote) URL, fall back to
-    // the locally-saved selfie file.
-    final String photoPath = isCurrentUser ? (user?.photoPath ?? '') : '';
-    final String photoUrl = isCurrentUser ? (user?.photoUrl ?? '') : '';
-
-    // Lineage resolution from kFamilyMembers.
-    final String? parentId = member?['parent'] as String?;
-    final Map<String, dynamic>? parent =
-        parentId != null ? _byId(parentId) : null;
-    final children = member != null
-        ? kFamilyMembers.where((m) => m['parent'] == id).toList()
-        : const <Map<String, dynamic>>[];
-    final String? spouseId = member?['spouse'] as String?;
-    final Map<String, dynamic>? spouse =
-        spouseId != null ? _byId(spouseId) : null;
-
-    final String? archive = _lifeArchives[id] ??
-        (isCurrentUser && (user?.bio.isNotEmpty ?? false) ? user!.bio : null);
+  // ── DB member profile ──────────────────────────────────────────────────────
+  Widget _dbMemberProfile(Map<String, dynamic> m) {
+    final isLate = _isLate(m);
+    final gen = ((m['generation'] ?? 1) as num).toInt();
+    final branch = _dash(m['branch']);
+    final relation = 'Gen $gen · $branch Branch';
+    final notes = (m['notes'] ?? '').toString().trim();
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -99,49 +107,38 @@ class ProfileScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           _Header(
-            name: name,
+            name: _dash(m['name']),
             relation: relation,
-            gotra: gotra,
-            native: native,
-            avatarUrl: avatarUrlStr,
-            photoPath: photoPath,
-            photoUrl: photoUrl,
+            gotra: _dash(m['gotra']),
+            native: _dash(m['native']),
+            avatarUrl: '',
+            photoPath: '',
+            photoUrl: (m['photoUrl'] ?? '').toString(),
             isLate: isLate,
-            verified: isVerified,
+            verified: !isLate,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (isCurrentUser && isVerified) ...[
-                  _aadhaarVerifiedCard(maskedAadhaar),
-                  const SizedBox(height: 16),
-                ],
-                _aboutCard(occupation, birthYear, status),
+                _aboutCard(_dash(m['occupation']), _dash(m['dob']),
+                    isLate ? 'Late' : 'Active'),
                 const SizedBox(height: 16),
-                _lineageCard(context, parent, children, spouse),
-                if (archive != null) ...[
+                _lineageCard(_parent, _children),
+                if (notes.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  _archiveCard(archive),
+                  _archiveCard(notes),
                 ],
                 const SizedBox(height: 16),
-                _statsCard(gotra, native, status),
+                _statsCard(_dash(m['gotra']), _dash(m['native']),
+                    isLate ? 'Late' : 'Active'),
                 const SizedBox(height: 24),
                 ForestButton(
                   label: 'View in Family Tree',
                   icon: Icons.account_tree_outlined,
                   expand: true,
                   onPressed: () => context.go('/family-tree'),
-                ),
-                const SizedBox(height: 12),
-                OutlineButtonX(
-                  label: isCurrentUser
-                      ? 'Verify Identity'
-                      : 'Verify & Update Info',
-                  expand: true,
-                  color: AppColors.gold700,
-                  onPressed: () => context.go('/profile/verify'),
                 ),
               ],
             ),
@@ -151,11 +148,82 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  static Map<String, dynamic>? _byId(String mid) {
-    for (final m in kFamilyMembers) {
-      if (m['id'] == mid) return m;
+  // ── Current-user (self) profile ─────────────────────────────────────────────
+  Widget _selfProfile() {
+    final user = context.watch<AuthService>().user;
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.cream,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Please sign in to view your profile.',
+                  style: body(14, color: AppColors.textMuted)),
+              const SizedBox(height: 12),
+              ForestButton(
+                  label: 'Go to Login',
+                  onPressed: () => context.go('/login')),
+            ],
+          ),
+        ),
+      );
     }
-    return null;
+
+    final archive = user.bio.trim();
+    return Scaffold(
+      backgroundColor: AppColors.cream,
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          _Header(
+            name: user.name,
+            relation: user.isElder ? 'Elder & Samaj Admin' : 'Samaj Member',
+            gotra: _dash(user.gotra),
+            native: _dash(user.native),
+            avatarUrl: avatarUrl(user.avatar),
+            photoPath: user.photoPath,
+            photoUrl: user.photoUrl,
+            isLate: false,
+            verified: user.verified,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (user.verified) ...[
+                  _aadhaarVerifiedCard(user.maskedAadhaar),
+                  const SizedBox(height: 16),
+                ],
+                _aboutCard('—', _dash(user.dob.isEmpty ? null : user.dob),
+                    'Active'),
+                if (archive.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _archiveCard(archive),
+                ],
+                const SizedBox(height: 16),
+                _statsCard(_dash(user.gotra), _dash(user.native), 'Active'),
+                const SizedBox(height: 24),
+                ForestButton(
+                  label: 'View in Family Tree',
+                  icon: Icons.account_tree_outlined,
+                  expand: true,
+                  onPressed: () => context.go('/family-tree'),
+                ),
+                const SizedBox(height: 12),
+                OutlineButtonX(
+                  label: 'Verify Identity',
+                  expand: true,
+                  color: AppColors.gold700,
+                  onPressed: () => context.push('/profile/verify'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _aadhaarVerifiedCard(String maskedAadhaar) {
@@ -221,7 +289,9 @@ class ProfileScreen extends StatelessWidget {
           _detailRow(Icons.cake_outlined, 'Birth Year', birthYear),
           const Divider(height: 22, color: AppColors.creamDark),
           _detailRow(
-            status == 'Late' ? Icons.local_florist_outlined : Icons.verified_user_outlined,
+            status == 'Late'
+                ? Icons.local_florist_outlined
+                : Icons.verified_user_outlined,
             'Status',
             status == 'Late' ? 'In Memoriam' : 'Active Member',
           ),
@@ -231,12 +301,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _lineageCard(
-    BuildContext context,
     Map<String, dynamic>? parent,
     List<Map<String, dynamic>> children,
-    Map<String, dynamic>? spouse,
   ) {
-    final hasAny = parent != null || children.isNotEmpty || spouse != null;
+    final hasAny = parent != null || children.isNotEmpty;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,29 +336,26 @@ class ProfileScreen extends StatelessWidget {
               child: Text('No connected relations yet',
                   style: body(13, color: AppColors.textMuted)),
             ),
-          if (spouse != null)
-            _relationTile(context, spouse, 'Spouse'),
-          if (parent != null) _relationTile(context, parent, 'Parent'),
-          for (final c in children) _relationTile(context, c, 'Child'),
+          if (parent != null) _relationTile(parent, 'Parent'),
+          for (final c in children) _relationTile(c, 'Child'),
         ],
       ),
     );
   }
 
-  Widget _relationTile(
-      BuildContext context, Map<String, dynamic> m, String label) {
-    final mid = m['id'] as String;
-    final late = m['status'] == 'Late';
+  Widget _relationTile(Map<String, dynamic> m, String label) {
+    final mid = m['_id'].toString();
+    final late = _isLate(m);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.go('/profile/$mid'),
+      onTap: () => context.push('/profile/$mid'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            AvatarImage(
-              avatarKey: mid,
-              name: m['name'] as String,
+            PexelsImage(
+              url: (m['photoUrl'] ?? '').toString(),
+              name: (m['name'] ?? '').toString(),
               size: 44,
               borderColor: AppColors.border,
               borderWidth: 2,
@@ -303,7 +368,8 @@ class ProfileScreen extends StatelessWidget {
                   Text('${late ? 'Late ' : ''}${m['name']}',
                       style: body(14,
                           weight: FontWeight.w600, color: AppColors.ink)),
-                  Text(label,
+                  Text(
+                      '$label · Gen ${((m['generation'] ?? 1) as num).toInt()}',
                       style: body(11, color: AppColors.textMuted)),
                 ],
               ),
@@ -338,9 +404,9 @@ class ProfileScreen extends StatelessWidget {
             ),
             child: Text('“$archive”',
                 style: display(14,
-                    weight: FontWeight.w400,
-                    color: AppColors.textMuted,
-                    height: 1.6)
+                        weight: FontWeight.w400,
+                        color: AppColors.textMuted,
+                        height: 1.6)
                     .copyWith(fontStyle: FontStyle.italic)),
           ),
         ],
@@ -361,7 +427,7 @@ class ProfileScreen extends StatelessWidget {
             children: [
               _stat('Gotra', gotra),
               _stat('Native', native.split(',').first.trim()),
-              _stat('Standing', status == 'Late' ? 'Ancestor' : 'Verified'),
+              _stat('Standing', status == 'Late' ? 'Ancestor' : 'Member'),
             ],
           ),
         ],
@@ -381,8 +447,7 @@ class ProfileScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(label,
-                style: body(10, color: AppColors.textMuted)),
+            Text(label, style: body(10, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             Text(value,
                 textAlign: TextAlign.center,
@@ -443,7 +508,8 @@ class _Header extends StatelessWidget {
   final bool verified;
 
   Widget _avatar() {
-    // Prefer the uploaded (remote) photo, then the local selfie, then initials.
+    // Prefer the uploaded (remote) photo, then a local selfie file, then
+    // initials (via PexelsImage's fallback on an empty/avatar URL).
     if (photoUrl.isNotEmpty) {
       return PexelsImage(url: photoUrl, name: name, size: 104);
     }
@@ -465,7 +531,6 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(20, top + 8, 20, 28),
       child: Column(
         children: [
-          // Back row.
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
@@ -483,7 +548,6 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Avatar + verified badge.
           Stack(
             children: [
               Container(
@@ -538,8 +602,7 @@ class _Header extends StatelessWidget {
               textAlign: TextAlign.center,
               style: display(24, color: Colors.white)),
           const SizedBox(height: 4),
-          Text(relation,
-              style: body(13, color: AppColors.forest300)),
+          Text(relation, style: body(13, color: AppColors.forest300)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,

@@ -29,7 +29,7 @@ class _WelfareListScreenState extends State<WelfareListScreen> {
       title: 'Welfare',
       currentRoute: '/welfare',
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/welfare/new'),
+        onPressed: () => context.push('/welfare/new'),
         backgroundColor: AppColors.gold500,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded, size: 20),
@@ -231,7 +231,7 @@ class _CampaignCard extends StatelessWidget {
                     icon: Icons.volunteer_activism_rounded,
                     expand: true,
                     onPressed: () =>
-                        context.go('/welfare/donate/${c['id']}'),
+                        context.push('/welfare/donate/${c['id']}'),
                   ),
                 ),
               ],
@@ -268,7 +268,7 @@ class _ImpactCta extends StatelessWidget {
           GoldButton(
             label: 'View Impact Report',
             icon: Icons.arrow_forward_rounded,
-            onPressed: () => context.go('/welfare/impact'),
+            onPressed: () => context.push('/welfare/impact'),
           ),
         ],
       ),

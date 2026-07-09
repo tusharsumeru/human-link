@@ -176,7 +176,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     final genderLabel = r['gender'] == 'M' ? 'Male' : 'Female';
 
     return AppCard(
-      onTap: () => context.go('/elder/verifications/${r['id']}'),
+      onTap: () => context.push('/elder/verifications/${r['id']}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

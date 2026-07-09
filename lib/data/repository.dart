@@ -7,7 +7,7 @@ import 'demo_data.dart';
 /// Single data source for the app.
 ///
 /// Mirrors how the web app sources data: auth + headline stats come from the
-/// Next.js API (`/api/auth/login`, `/api/stats`); the rich content (family,
+/// Next.js API (`/api/user/login`, `/api/stats`); the rich content (family,
 /// matrimonial, welfare, directory, verifications, conflicts, invitations) is
 /// the same embedded demo dataset the React pages render from `lib/data.ts`.
 /// Every network call degrades gracefully to embedded data so the app always
@@ -18,71 +18,25 @@ class Repository {
 
   static final Repository instance = Repository();
 
-  /// POST /api/auth/login — returns the authenticated user map, or throws
-  /// [ApiException] with a human message ("Phone number not registered",
-  /// "Invalid OTP"). Falls back to the embedded demo users on network failure.
+  /// POST /api/user/login — returns the authenticated user map from MongoDB,
+  /// or throws [ApiException] with a human message ("Phone number not
+  /// registered", "Invalid OTP"). No demo fallback — login requires the backend.
   Future<Map<String, dynamic>> login(String phone, String otp) async {
     if (otp != '121212') {
       throw ApiException('Invalid OTP. Use 121212 for this demo.',
           statusCode: 401);
     }
-    try {
-      final data = await _api.postJson('/api/auth/login', {
-        'phone': phone,
-        'otp': otp,
-      });
-      if (data is Map && data['user'] is Map) {
-        return Map<String, dynamic>.from(data['user'] as Map);
-      }
-      throw ApiException('Login failed');
-    } on ApiException catch (e) {
-      // 404 = genuinely not registered; surface that. Other statuses too.
-      if (e.statusCode != null) rethrow;
-      return _demoLogin(phone);
-    } catch (_) {
-      return _demoLogin(phone);
+    final data = await _api.postJson('/api/user/login', {
+      'phone': phone,
+      'otp': otp,
+    });
+    if (data is Map && data['user'] is Map) {
+      return Map<String, dynamic>.from(data['user'] as Map);
     }
+    throw ApiException('Login failed');
   }
 
-  /// Resolves the member profile for a phone number, after the OTP has already
-  /// been verified externally (e.g. Firebase phone auth). Fetches the real
-  /// profile from MongoDB via the login API; falls back to embedded demo data
-  /// if the backend is unreachable or the number isn't registered.
-  Future<Map<String, dynamic>> profileForPhone(String phone) async {
-    try {
-      // The backend login still uses the fixed demo OTP; Firebase has already
-      // done the real verification, so we use it purely to fetch the profile.
-      final data = await _api.postJson('/api/auth/login', {
-        'phone': phone,
-        'otp': '121212',
-      });
-      if (data is Map && data['user'] is Map) {
-        return Map<String, dynamic>.from(data['user'] as Map);
-      }
-    } catch (_) {/* 404 / offline → fall back below */}
-    return _demoLogin(phone);
-  }
-
-  Map<String, dynamic> _demoLogin(String phone) {
-    final user = kTestUsers.cast<Map<String, dynamic>?>().firstWhere(
-          (u) => u!['phone'] == phone,
-          orElse: () => null,
-        );
-    if (user == null) {
-      // Mirror lib/auth.ts: unknown number + correct OTP → default member.
-      return {
-        'name': 'Samaj Member',
-        'phone': phone,
-        'role': 'member',
-        'gotra': 'Kashyap',
-        'native': 'Karnataka',
-        'avatar': '6',
-      };
-    }
-    return Map<String, dynamic>.from(user)..remove('otp');
-  }
-
-  /// POST /api/auth/register — creates the member in MongoDB and returns the
+  /// POST /api/user/register — creates the member in MongoDB and returns the
   /// user map. Throws [ApiException] on failure: status 409 means the phone is
   /// already registered; other codes / network errors propagate to the caller.
   Future<Map<String, dynamic>> register({
@@ -92,14 +46,16 @@ class Repository {
     required String native,
     String role = 'member',
     String avatar = '6',
+    String gender = '',
   }) async {
-    final data = await _api.postJson('/api/auth/register', {
+    final data = await _api.postJson('/api/user/register', {
       'name': name,
       'phone': phone,
       'gotra': gotra,
       'native': native,
       'role': role,
       'avatar': avatar,
+      'gender': gender,
     });
     if (data is Map && data['user'] is Map) {
       return Map<String, dynamic>.from(data['user'] as Map);
@@ -107,7 +63,7 @@ class Repository {
     throw ApiException('Registration failed');
   }
 
-  /// POST /api/auth/upload — uploads an image (base64) to MongoDB, keyed by
+  /// POST /api/user/upload — uploads an image (base64) to MongoDB, keyed by
   /// phone + type ("selfie" | "id" | "familyDoc"). Returns the absolute URL to
   /// load it back, or null if the backend is unreachable.
   Future<String?> uploadImage({
@@ -117,7 +73,7 @@ class Repository {
     String contentType = 'image/jpeg',
   }) async {
     try {
-      final res = await _api.postJson('/api/auth/upload', {
+      final res = await _api.postJson('/api/user/upload', {
         'phone': phone,
         'type': type,
         'data': base64Encode(bytes),
@@ -130,7 +86,7 @@ class Repository {
     return null;
   }
 
-  /// PATCH /api/auth/profile — saves editable profile fields. Best-effort:
+  /// PATCH /api/user/profile — saves editable profile fields. Best-effort:
   /// returns true on success, false if the backend is unreachable.
   Future<bool> updateProfile({
     required String phone,
@@ -145,7 +101,7 @@ class Repository {
     bool? verified,
   }) async {
     try {
-      await _api.patchJson('/api/auth/profile', {
+      await _api.patchJson('/api/user/profile', {
         'phone': phone,
         'gotra': ?gotra,
         'native': ?native,
@@ -246,6 +202,58 @@ class Repository {
       'totalDonationAmount': donations,
       'activeTrees': 86,
     };
+  }
+
+  /// GET /api/family — the real family-tree members from MongoDB (same source
+  /// the web family-tree/profile pages render). Each map follows the DB shape:
+  /// `_id`, `name`, `gender`, `dob`, `dod`, `gotra`, `native`, `occupation`,
+  /// `photoUrl`, `generation`, `branch`, `notes`, `parentId`. Throws
+  /// [ApiException] on a non-2xx response; returns [] when the collection is
+  /// empty.
+  Future<List<Map<String, dynamic>>> familyTree() async {
+    final data = await _api.getJson('/api/family');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/family — create a family-tree node (a "person", not an account).
+  /// Placement is derived from the relationship by the caller (parentId /
+  /// spouseId / generation). Returns the new `id` and `matchedExistingUser`
+  /// (true when the phone already belongs to a registered account, in which
+  /// case a pending link request was auto-created server-side).
+  Future<Map<String, dynamic>> addFamilyMember(Map<String, dynamic> body) async {
+    final data = await _api.postJson('/api/family', body);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not add member');
+  }
+
+  /// PUT /api/family/:id — patch a node. Used to re-link an anchor to a newly
+  /// added ancestor (set the anchor's parentId) or spouse.
+  Future<void> updateFamilyMember(String id, Map<String, dynamic> patch) async {
+    await _api.putJson('/api/family/$id', patch);
+  }
+
+  /// POST /api/family/connect — request to link the current account to an
+  /// existing (accountless) node. Sits pending until an elder approves it.
+  Future<void> requestConnect({
+    required String memberId,
+    required String requesterPhone,
+    required String requesterName,
+    String relation = 'self',
+    String note = '',
+  }) async {
+    await _api.postJson('/api/family/connect', {
+      'memberId': memberId,
+      'requesterPhone': requesterPhone,
+      'requesterName': requesterName,
+      'relation': relation,
+      'note': note,
+    });
   }
 
   // ── Embedded content (same dataset the web pages use) ───────────────────────

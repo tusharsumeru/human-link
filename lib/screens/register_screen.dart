@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -6,14 +8,15 @@ import 'package:provider/provider.dart';
 import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
-import '../services/phone_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/place_field.dart';
 import '../widgets/ui_kit.dart';
 
-/// Register screen — ported from web `src/app/register/page.tsx`.
-/// Collects member details (name, phone, gotra, native, optional Aadhaar),
-/// creates a member [AppUser] and flows into onboarding.
+/// Register screen — mirrors web `src/app/register/page.tsx`.
+/// Collects member details (name, phone, gender, gotra, native), verifies the
+/// fixed demo OTP (121212), creates a member and lands on the dashboard —
+/// identity/lineage/heritage onboarding is optional, done later at the
+/// member's own pace.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -36,13 +39,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneCtrl = TextEditingController();
   final _nativeCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
-  final _phoneAuth = PhoneAuthService();
   String _gotra = 'Kashyap';
   String _gender = 'M';
   String _step = 'details'; // 'details' | 'otp'
   String _error = '';
   bool _loading = false;
-  bool _sending = false;
 
   @override
   void dispose() {
@@ -53,7 +54,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _handleNext() async {
+  /// Validate the details and advance to OTP entry. No SMS is sent — the
+  /// backend accepts the fixed demo OTP (matches the web register flow).
+  void _handleNext() {
     if (_nameCtrl.text.trim().isEmpty) {
       setState(() => _error = 'Please enter your full name');
       return;
@@ -64,86 +67,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() {
       _error = '';
-      _sending = true;
+      _step = 'otp';
     });
-    try {
-      await _phoneAuth.sendCode(
-        _phoneCtrl.text,
-        onCodeSent: () {
-          if (!mounted) return;
-          setState(() {
-            _sending = false;
-            _step = 'otp';
-          });
-        },
-        onFailed: (msg) {
-          if (!mounted) return;
-          setState(() {
-            _sending = false;
-            _error = msg;
-          });
-        },
-        onAutoVerified: () => _completeRegistration(),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _sending = false;
-        _error = PhoneAuthService.humanError(e);
-      });
-    }
   }
 
   Future<void> _handleVerify() async {
+    if (_otpCtrl.text != '121212') {
+      setState(() => _error = 'Invalid OTP. Please try again.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = '';
     });
-    try {
-      await _phoneAuth.verify(_otpCtrl.text);
-      await _completeRegistration();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e is ApiException ? e.message : PhoneAuthService.humanError(e);
-        _loading = false;
-      });
-    }
+    await _completeRegistration();
   }
 
-  /// Registers the member in the backend (MongoDB) after the phone number is
-  /// verified, then persists the profile locally (with the chosen gender).
-  /// If the phone is already registered (409), signs the existing user in.
+  /// Registers the member in the backend (MongoDB), then persists the profile
+  /// locally and lands on the dashboard. Onboarding stays optional. A phone
+  /// that's already registered (409) surfaces an error (matches the web flow).
   Future<void> _completeRegistration() async {
     final auth = context.read<AuthService>();
     final phone = _phoneCtrl.text;
     final native =
         _nativeCtrl.text.trim().isEmpty ? 'Karnataka' : _nativeCtrl.text.trim();
+    // Assign a random avatar (1–8), as the web register page does.
+    final avatar = (Random().nextInt(8) + 1).toString();
     try {
       final map = await Repository.instance.register(
         name: _nameCtrl.text.trim(),
         phone: phone,
         gotra: _gotra,
         native: native,
+        avatar: avatar,
+        gender: _gender,
       );
-      final user = AppUser.fromMap(map)
-          .copyWith(gender: _gender, onboardingComplete: false);
+      final user = AppUser.fromMap(map).copyWith(gender: _gender);
       if (!mounted) return;
       await auth.loginWithUser(user);
       if (!mounted) return;
-      context.go('/onboarding/identity');
+      context.go('/dashboard');
     } on ApiException catch (e) {
-      if (e.statusCode == 409) {
-        // Already registered — fetch the existing profile and sign in.
-        final map = await Repository.instance.profileForPhone(phone);
-        final user = AppUser.fromMap(map).copyWith(gender: _gender);
-        if (!mounted) return;
-        await auth.loginWithUser(user);
-        if (!mounted) return;
-        context.go('/dashboard');
-      } else {
-        rethrow;
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.message.isNotEmpty
+            ? e.message
+            : 'Registration failed. Please try again.';
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Network error. Please check your connection.';
+        _loading = false;
+      });
     }
   }
 
@@ -264,8 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           label: 'Continue',
           icon: Icons.arrow_forward_rounded,
           expand: true,
-          loading: _sending,
-          onPressed: _sending ? null : _handleNext,
+          onPressed: _handleNext,
         ),
         const SizedBox(height: 14),
         Center(
@@ -314,7 +290,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: const Color(0xFFEAF7EE),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('Enter the 6-digit code sent via SMS',
+          child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
               style: body(12,
                   weight: FontWeight.w600, color: AppColors.forest700)),
         ),
@@ -331,7 +307,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (_error.isNotEmpty) _error = '';
           }),
           decoration: InputDecoration(
-            hintText: '0 0 0 0 0 0',
+            hintText: '1 2 1 2 1 2',
             counterText: '',
             filled: true,
             fillColor: Colors.white,

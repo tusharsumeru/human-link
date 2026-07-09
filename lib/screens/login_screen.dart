@@ -3,14 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../data/repository.dart';
+import '../data/api_client.dart';
 import '../services/auth_service.dart';
-import '../services/phone_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
-/// Login screen — ported from web `src/app/login/page.tsx`.
-/// Phone → OTP login.
+/// Login screen — mirrors web `src/app/login/page.tsx`.
+/// Phone → OTP login using the fixed demo OTP (121212) verified by the backend.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,10 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String _phoneStep = 'phone'; // 'phone' | 'otp'
   final _phoneCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
-  final _phoneAuth = PhoneAuthService();
   String _error = '';
   bool _loading = false;
-  bool _sending = false;
 
   @override
   void dispose() {
@@ -34,79 +31,60 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handlePhoneNext() async {
+  /// Validate the number and advance to OTP entry. No SMS is sent — the
+  /// backend accepts the fixed demo OTP (matches the web login flow).
+  void _handlePhoneNext() {
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = 'Enter a valid 10-digit phone number');
       return;
     }
     setState(() {
       _error = '';
-      _sending = true;
+      _phoneStep = 'otp';
     });
-    try {
-      await _phoneAuth.sendCode(
-        _phoneCtrl.text,
-        onCodeSent: () {
-          if (!mounted) return;
-          setState(() {
-            _sending = false;
-            _phoneStep = 'otp';
-          });
-        },
-        onFailed: (msg) {
-          if (!mounted) return;
-          setState(() {
-            _sending = false;
-            _error = msg;
-          });
-        },
-        onAutoVerified: () => _completeLogin(),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _sending = false;
-        _error = PhoneAuthService.humanError(e);
-      });
-    }
   }
 
+  /// Verifies the OTP against the backend (`/api/user/login`) and signs in.
+  /// Server fields (name/gotra/native/bio/…) come from MongoDB; local-only
+  /// fields (photo/gender/address) are preserved from the existing session.
   Future<void> _handleOtpVerify() async {
+    if (_otpCtrl.text.length != 6) {
+      setState(() => _error = 'Enter the 6-digit OTP');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = '';
     });
+    final auth = context.read<AuthService>();
+    final existing = auth.user;
     try {
-      await _phoneAuth.verify(_otpCtrl.text);
-      await _completeLogin();
-    } catch (e) {
+      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text);
+      if (existing != null && existing.phone == user.phone) {
+        user = user.copyWith(
+          photoPath: existing.photoPath.isNotEmpty ? existing.photoPath : null,
+          gender: existing.gender.isNotEmpty ? existing.gender : null,
+          address: existing.address.isNotEmpty ? existing.address : null,
+        );
+        await auth.updateUser(user);
+      }
+      if (!mounted) return;
+      context.go(user.isElder ? '/elder' : '/dashboard');
+    } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = PhoneAuthService.humanError(e);
+        _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
+            ? "This number isn't registered. Please create an account first."
+            : e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Network error. Please try again.';
         _loading = false;
       });
     }
-  }
-
-  /// Resolves the member profile for the verified phone and signs in.
-  /// Server fields (name/gotra/native/bio/…) come from MongoDB; local-only
-  /// fields (photo/gender/address) are preserved from the existing session.
-  Future<void> _completeLogin() async {
-    final auth = context.read<AuthService>();
-    final existing = auth.user;
-    final map = await Repository.instance.profileForPhone(_phoneCtrl.text);
-    var user = AppUser.fromMap(map);
-    if (existing != null && existing.phone == user.phone) {
-      user = user.copyWith(
-        photoPath: existing.photoPath.isNotEmpty ? existing.photoPath : null,
-        gender: existing.gender.isNotEmpty ? existing.gender : null,
-        address: existing.address.isNotEmpty ? existing.address : null,
-      );
-    }
-    if (!mounted) return;
-    await auth.loginWithUser(user);
-    if (!mounted) return;
-    context.go(user.isElder ? '/elder' : '/dashboard');
   }
 
   @override
@@ -122,7 +100,23 @@ class _LoginScreenState extends State<LoginScreen> {
               _HeaderCard(onLogoTap: () => context.go('/')),
               const SizedBox(height: 16),
               _FormCard(child: _buildForm()),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              // Read about the community (the landing/about page). Opens on top
+              // of login so the back button returns here.
+              OutlinedButton.icon(
+                onPressed: () => context.push('/'),
+                icon: const Icon(Icons.auto_stories_rounded, size: 16),
+                label: Text('About the Daivajna Samaja',
+                    style: body(14, weight: FontWeight.w600, color: AppColors.gold500)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.gold500,
+                  side: const BorderSide(color: AppColors.gold500, width: 1.4),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 14),
               Center(
                 child: Wrap(
                   alignment: WrapAlignment.center,
@@ -199,8 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
               label: 'Send OTP',
               icon: Icons.arrow_forward_rounded,
               expand: true,
-              loading: _sending,
-              onPressed: _sending ? null : _handlePhoneNext,
+              onPressed: _handlePhoneNext,
             ),
           ],
         ),
@@ -225,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: const Color(0xFFEAF7EE),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('Enter the 6-digit code sent via SMS',
+            child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
                 style: body(12,
                     weight: FontWeight.w600, color: AppColors.forest700)),
           ),

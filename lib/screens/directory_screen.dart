@@ -352,7 +352,7 @@ class _MemberCard extends StatelessWidget {
 
     return AppCard(
       padding: const EdgeInsets.all(14),
-      onTap: () => context.go('/profile/6'),
+      onTap: () => context.push('/profile/6'),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

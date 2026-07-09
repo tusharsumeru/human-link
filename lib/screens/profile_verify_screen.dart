@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../data/api_client.dart';
+import '../data/repository.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
+import 'digilocker_webview_screen.dart';
 
-/// Identity verification — a 3-step flow (Aadhaar → Peer Vouch → Elder
-/// Approval) shown as a vertical stepper with a progress indicator.
+/// Verify Identity — real Aadhaar KYC via SurePass DigiLocker.
 ///
-/// Inspired by `src/app/profile/verify/page.tsx` (the web "Verify & Update"
-/// security flow) but reframed per the mobile brief into the Samaj's actual
-/// 3-stage onboarding verification. All actions are mocked client-side.
+/// Mirrors the web's DigiLocker verification (`/onboarding/identity`): initialize
+/// a DigiLocker session → open the hosted consent page in a WebView → download
+/// the verified Aadhaar → persist the masked KYC to MongoDB and the local
+/// session. No mock data — the profile's verified badge reflects a real check.
 class ProfileVerifyScreen extends StatefulWidget {
   const ProfileVerifyScreen({super.key});
 
@@ -19,84 +23,90 @@ class ProfileVerifyScreen extends StatefulWidget {
 }
 
 class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
-  final _aadhaarCtrl = TextEditingController();
-
-  bool _aadhaarVerified = false;
-  bool _docUploaded = false;
-
-  // Three peer-vouch slots; each becomes 'Requested' when invited.
-  final List<_Vouch> _vouches = [
-    _Vouch('Shri Narayanarao Suvarna', 'Elder, Kumta Branch'),
-    _Vouch('Gopalakrishna Suvarna', 'Member, Kundapura Branch'),
-    _Vouch('Invite a peer to vouch', '3rd vouch required'),
-  ];
+  bool _busy = false;
+  String _error = '';
+  bool _verified = false;
+  String _verifiedName = '';
+  String _maskedAadhaar = '';
 
   @override
-  void dispose() {
-    _aadhaarCtrl.dispose();
-    super.dispose();
-  }
-
-  bool get _step1Done => _aadhaarVerified && _docUploaded;
-  int get _vouchCount => _vouches.where((v) => v.requested).length;
-  bool get _step2Done => _vouchCount >= 3;
-  // Elder approval is always pending until submission.
-  int get _completed => (_step1Done ? 1 : 0) + (_step2Done ? 1 : 0);
-
-  void _verifyAadhaar() {
-    final digits = _aadhaarCtrl.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 12) {
-      setState(() => _aadhaarVerified = true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Enter a valid 12-digit Aadhaar number'),
-      ));
+  void initState() {
+    super.initState();
+    // Reflect an already-verified member.
+    final user = context.read<AuthService>().user;
+    if (user?.verified ?? false) {
+      _verified = true;
+      _maskedAadhaar = user?.maskedAadhaar ?? '';
     }
   }
 
-  void _submit() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  gradient: AppGradients.forest,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 38),
-              ),
-              const SizedBox(height: 18),
-              Text('Submitted for Verification',
-                  textAlign: TextAlign.center,
-                  style: display(20, color: AppColors.forest900)),
-              const SizedBox(height: 8),
-              Text(
-                'Your identity has been submitted. The Elder committee has been notified and will review your lineage shortly.',
-                textAlign: TextAlign.center,
-                style: body(13, color: AppColors.textMuted, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              ForestButton(
-                label: 'Back to Dashboard',
-                expand: true,
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  context.go('/dashboard');
-                },
-              ),
-            ],
-          ),
+  /// Starts SurePass DigiLocker: init → open the hosted page in a WebView →
+  /// on completion, download and persist the verified Aadhaar data.
+  Future<void> _startDigilocker() async {
+    final auth = context.read<AuthService>();
+    setState(() {
+      _busy = true;
+      _error = '';
+    });
+    try {
+      final init = await Repository.instance.digilockerInitialize();
+      final url = (init['url'] ?? '').toString();
+      final clientId = (init['client_id'] ?? '').toString();
+      final redirect = (init['redirect_url'] ?? '').toString();
+      if (url.isEmpty || clientId.isEmpty) {
+        throw ApiException('DigiLocker link unavailable');
+      }
+      if (!mounted) return;
+      final ok = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) =>
+              DigilockerWebViewScreen(url: url, redirectUrl: redirect),
         ),
-      ),
-    );
+      );
+      if (ok != true) {
+        if (mounted) setState(() => _busy = false);
+        return;
+      }
+      final data = await Repository.instance.digilockerAadhaar(clientId);
+      final fullName = (data['full_name'] ?? '').toString();
+      final dob = (data['dob'] ?? '').toString();
+      final gender = (data['gender'] ?? '').toString();
+      final masked = (data['masked_aadhaar'] ?? '').toString();
+      final address = (data['full_address'] ?? '').toString();
+
+      final user = auth.user;
+      if (user != null) {
+        await Repository.instance.updateProfile(
+          phone: user.phone,
+          dob: dob,
+          gender: gender,
+          address: address,
+          maskedAadhaar: masked,
+          verified: true,
+        );
+        await auth.updateUser(user.copyWith(
+          dob: dob,
+          gender: gender.isEmpty ? null : gender,
+          address: address,
+          maskedAadhaar: masked,
+          verified: true,
+        ));
+      }
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _verified = true;
+        _verifiedName = fullName;
+        _maskedAadhaar = masked;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error =
+            e is ApiException ? e.message : 'DigiLocker verification failed.';
+      });
+    }
   }
 
   @override
@@ -117,8 +127,7 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
             }
           },
         ),
-        title: Text('Verify Identity',
-            style: display(18, color: Colors.white)),
+        title: Text('Verify Identity', style: display(18, color: Colors.white)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
@@ -127,345 +136,140 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
               style: display(24, color: AppColors.forest900)),
           const SizedBox(height: 6),
           Text(
-            'Complete the three stages below to verify your place in the Daivajna Samaja lineage tree.',
+            'Verify your Aadhaar securely through the government DigiLocker. Your '
+            'profile stays Not Verified until this is complete. We never see or '
+            'store your full Aadhaar number — only a masked reference.',
             style: body(13, color: AppColors.textMuted, height: 1.5),
           ),
-          const SizedBox(height: 16),
-          _progress(),
+          const SizedBox(height: 18),
+          AppCard(child: _digilockerCard()),
+          const SizedBox(height: 14),
+          _trustPanel(),
           const SizedBox(height: 20),
-          _stepCard(
-            index: 1,
-            title: 'Aadhaar Verification',
-            done: _step1Done,
-            child: _aadhaarStep(),
+          if (_verified)
+            ForestButton(
+              label: 'Back to Dashboard',
+              icon: Icons.check_circle_outline_rounded,
+              expand: true,
+              onPressed: () => context.go('/dashboard'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _digilockerCard() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.verified_user_outlined,
+                size: 18, color: AppColors.forest700),
+            const SizedBox(width: 8),
+            Text('Aadhaar via DigiLocker',
+                style: display(16, color: AppColors.forest900)),
+            const Spacer(),
+            if (_verified)
+              Pill('Verified',
+                  icon: Icons.check_circle,
+                  bg: AppColors.forest600.withValues(alpha: 0.14),
+                  fg: AppColors.forest700),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_verified)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FBF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFB7E4C7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle,
+                    size: 18, color: AppColors.forest700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _verifiedName.isNotEmpty
+                        ? 'Verified: $_verifiedName'
+                        : _maskedAadhaar.isNotEmpty
+                            ? 'Aadhaar verified · $_maskedAadhaar'
+                            : 'Aadhaar verified successfully.',
+                    style: body(13,
+                        weight: FontWeight.w600, color: AppColors.forest700),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          Text(
+            'You\'ll sign in to the official DigiLocker portal and consent to '
+            'share your Aadhaar. We confirm verification automatically.',
+            style: body(12, color: AppColors.textMuted, height: 1.4),
           ),
-          const SizedBox(height: 14),
-          _stepCard(
-            index: 2,
-            title: 'Peer Vouch',
-            done: _step2Done,
-            child: _vouchStep(),
-          ),
-          const SizedBox(height: 14),
-          _stepCard(
-            index: 3,
-            title: 'Elder Approval',
-            done: false,
-            pending: true,
-            child: _elderStep(),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 10),
           ForestButton(
-            label: 'Submit for Verification',
+            label: 'Verify with DigiLocker',
             icon: Icons.shield_outlined,
             expand: true,
-            onPressed: _submit,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Your documents are AES-256 encrypted and only visible to the Elder verification committee.',
-            textAlign: TextAlign.center,
-            style: body(11, color: AppColors.hint, height: 1.5),
+            loading: _busy,
+            onPressed: _busy ? null : _startDigilocker,
           ),
         ],
-      ),
+        if (_error.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(_error, style: body(12, color: Colors.red)),
+        ],
+      ],
     );
   }
 
-  Widget _progress() {
-    return AppCard(
+  Widget _trustPanel() {
+    const items = [
+      (Icons.lock_outline, 'Government-backed DigiLocker consent'),
+      (Icons.visibility_off_outlined, 'Full Aadhaar number is never stored'),
+      (Icons.verified_user_outlined, 'Only a masked reference is kept'),
+    ];
+    return Container(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          ProgressBar(value: _completed / 3, height: 8),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('$_completed of 3 stages complete',
-                  style: body(12,
-                      weight: FontWeight.w600, color: AppColors.forest800)),
-              Text('Elder approval pending',
-                  style: body(11, color: AppColors.gold700)),
-            ],
-          ),
-        ],
+      decoration: BoxDecoration(
+        gradient: AppGradients.deepForest,
+        borderRadius: BorderRadius.circular(16),
       ),
-    );
-  }
-
-  Widget _stepCard({
-    required int index,
-    required String title,
-    required bool done,
-    bool pending = false,
-    required Widget child,
-  }) {
-    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: done ? AppGradients.forest : null,
-                  color: done
-                      ? null
-                      : (pending
-                          ? AppColors.gold500.withValues(alpha: 0.18)
-                          : AppColors.creamDark),
-                ),
-                child: done
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
-                    : Text('$index',
-                        style: body(13,
-                            weight: FontWeight.w700,
-                            color: pending
-                                ? AppColors.gold700
-                                : AppColors.forest800)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(title,
-                    style: display(16, color: AppColors.forest900)),
-              ),
-              if (done)
-                Pill('Verified',
-                    icon: Icons.check_circle,
-                    bg: AppColors.forest600.withValues(alpha: 0.14),
-                    fg: AppColors.forest700)
-              else if (pending)
-                Pill('Pending', fg: AppColors.gold700),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _aadhaarStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Aadhaar Number',
-            style: body(12, weight: FontWeight.w600, color: AppColors.forest800)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _aadhaarCtrl,
-          enabled: !_aadhaarVerified,
-          keyboardType: TextInputType.number,
-          maxLength: 14,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
-          ],
-          decoration: _fieldDecoration('1234 5678 9012'),
-          onSubmitted: (_) => _verifyAadhaar(),
-        ),
-        const SizedBox(height: 4),
-        if (!_aadhaarVerified)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlineButtonX(
-              label: 'Verify Aadhaar',
-              onPressed: _verifyAadhaar,
-            ),
-          )
-        else
-          Row(
-            children: [
-              const Icon(Icons.check_circle,
-                  size: 16, color: AppColors.forest700),
-              const SizedBox(width: 6),
-              Text('Aadhaar number verified',
-                  style: body(12,
-                      weight: FontWeight.w600, color: AppColors.forest700)),
-            ],
-          ),
-        const SizedBox(height: 14),
-        GestureDetector(
-          onTap: () => setState(() => _docUploaded = true),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 22),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: _docUploaded
-                  ? AppColors.forest600.withValues(alpha: 0.08)
-                  : Colors.white,
-              border: Border.all(
-                color: _docUploaded ? AppColors.forest600 : AppColors.border,
-                width: 1.5,
-              ),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  _docUploaded ? Icons.check_circle : Icons.upload_file,
-                  size: 30,
-                  color: _docUploaded
-                      ? AppColors.forest700
-                      : AppColors.gold700,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _docUploaded
-                      ? 'aadhaar_document.pdf · Uploaded'
-                      : 'Upload Aadhaar (PDF / JPG)',
+              const Icon(Icons.shield_outlined,
+                  size: 16, color: AppColors.gold500),
+              const SizedBox(width: 8),
+              Text('Trust & Security',
                   style: body(13,
-                      weight: FontWeight.w600,
-                      color: _docUploaded
-                          ? AppColors.forest700
-                          : AppColors.label),
-                ),
-              ],
-            ),
+                      weight: FontWeight.w700, color: AppColors.gold500)),
+            ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _vouchStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$_vouchCount of 3 peers have vouched for you.',
-            style: body(12, color: AppColors.textMuted)),
-        const SizedBox(height: 12),
-        for (int i = 0; i < _vouches.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
-          _vouchTile(i),
-        ],
-      ],
-    );
-  }
-
-  Widget _vouchTile(int i) {
-    final v = _vouches[i];
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: v.requested ? AppColors.forest300 : AppColors.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.forest700,
-            child: Text(_initials(v.name),
-                style: body(12, weight: FontWeight.w700, color: Colors.white)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(v.name,
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.ink)),
-                Text(v.role, style: body(11, color: AppColors.textMuted)),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => setState(() => v.requested = !v.requested),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: v.requested
-                    ? AppColors.forest600.withValues(alpha: 0.14)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color:
-                      v.requested ? AppColors.forest600 : AppColors.forest800,
-                ),
-              ),
-              child: Text(
-                v.requested ? '✓ Requested' : 'Invite',
-                style: body(11,
-                    weight: FontWeight.w700,
-                    color: v.requested
-                        ? AppColors.forest700
-                        : AppColors.forest800),
+          const SizedBox(height: 12),
+          for (final (icon, text) in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(icon, size: 14, color: AppColors.forest500),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child:
+                        Text(text, style: body(12, color: AppColors.forest300)),
+                  ),
+                ],
               ),
             ),
-          ),
         ],
       ),
     );
   }
-
-  Widget _elderStep() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.gold500.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.goldSoft),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.hourglass_bottom,
-              size: 20, color: AppColors.gold700),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Awaiting Elder committee approval. Once your Aadhaar and peer vouches are submitted, an elder will review and approve your lineage.',
-              style: body(12, color: AppColors.gold700, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _fieldDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        counterText: '',
-        hintStyle: body(14, color: AppColors.hint),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-      );
-
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-    return (parts.first[0] + parts.last[0]).toUpperCase();
-  }
-}
-
-class _Vouch {
-  _Vouch(this.name, this.role);
-  final String name;
-  final String role;
-  bool requested = false;
 }

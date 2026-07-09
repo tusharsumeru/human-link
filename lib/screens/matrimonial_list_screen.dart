@@ -247,7 +247,7 @@ class _CandidateCard extends StatelessWidget {
 
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => context.go('/matrimonial/$id'),
+      onTap: () => context.push('/matrimonial/$id'),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: Column(
@@ -352,7 +352,7 @@ class _CandidateCard extends StatelessWidget {
                       ForestButton(
                         label: 'View Profile',
                         icon: Icons.favorite_rounded,
-                        onPressed: () => context.go('/matrimonial/$id'),
+                        onPressed: () => context.push('/matrimonial/$id'),
                       ),
                     ],
                   ),

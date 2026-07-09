@@ -32,7 +32,10 @@ const _publicPaths = {'/', '/login', '/register'};
 
 GoRouter buildRouter(AuthService auth) {
   return GoRouter(
-    initialLocation: '/',
+    // App opens on the login page when signed out (not the marketing landing).
+    // The landing/about page stays reachable at '/' via the "About the Samaja"
+    // link on login, and logged-in users are redirected on to their dashboard.
+    initialLocation: '/login',
     refreshListenable: auth,
     redirect: (context, state) {
       if (!auth.loaded) return null;

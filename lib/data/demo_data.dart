@@ -4,24 +4,6 @@
 // values the same way the React pages do.
 import 'avatars.dart';
 
-const List<Map<String, dynamic>> kTestUsers = [
-  {
-    'phone': '9876543210', 'otp': '121212',
-    'name': 'Priya Haldankar', 'role': 'member',
-    'gotra': 'Kashyap', 'native': 'Bengaluru, Karnataka', 'avatar': '6',
-  },
-  {
-    'phone': '9999999999', 'otp': '121212',
-    'name': 'Shri Narayanarao Suvarna', 'role': 'elder',
-    'gotra': 'Bharadwaja', 'native': 'Kumta, Uttara Kannada', 'avatar': 'elder',
-  },
-  {
-    'phone': '9871234567', 'otp': '121212',
-    'name': 'Akhilesh Revankar', 'role': 'member',
-    'gotra': 'Kashyap', 'native': 'Udupi, Karnataka', 'avatar': '4',
-  },
-];
-
 // Goldsmith lineage from Kundapura/Kumta, now rooted in Bengaluru.
 const List<Map<String, dynamic>> kFamilyMembers = [
   {

@@ -221,7 +221,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
     final color = _riskColor(risk);
     final required = (r['vouchesRequired'] as int?) ?? 0;
     return InkWell(
-      onTap: () => context.go('/elder/verifications/${r['id']}'),
+      onTap: () => context.push('/elder/verifications/${r['id']}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Row(
@@ -268,7 +268,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   // ── Alerts / conflicts card ──────────────────────────────────────────────
   Widget _alertsCard() {
     return AppCard(
-      onTap: () => context.go('/elder/conflict/ck-1'),
+      onTap: () => context.push('/elder/conflict/ck-1'),
       child: Row(
         children: [
           Container(
