@@ -4,10 +4,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../data/comment_store.dart';
 import '../data/feed_store.dart';
+import '../data/repository.dart';
+import '../data/saved_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
+import 'comments_sheet.dart';
+import 'full_screen_reel.dart';
+import 'share_sheet.dart';
 
 /// Dashboard — an Instagram-style Samaj feed: stories, reels, and posts.
 class DashboardScreen extends StatelessWidget {
@@ -28,23 +34,67 @@ class DashboardScreen extends StatelessWidget {
 // Feed content
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Feed extends StatelessWidget {
+class _Feed extends StatefulWidget {
   const _Feed();
+
+  @override
+  State<_Feed> createState() => _FeedState();
+}
+
+class _FeedState extends State<_Feed> {
+  List<_Post> _backendPosts = const [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFeed();
+  }
+
+  /// Pulls the real feed from the backend. On failure/empty we fall back to the
+  /// embedded demo posts so the screen is never blank (the app's usual pattern).
+  Future<void> _loadFeed() async {
+    try {
+      final data = await Repository.instance.feed(limit: 20);
+      final raw = (data['posts'] as List?) ?? const [];
+      final posts = raw
+          .whereType<Map>()
+          .map((m) => _Post.fromBackend(Map<String, dynamic>.from(m)))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _backendPosts = posts;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false); // keep _backendPosts empty → demo fallback
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: FeedStore.instance,
       builder: (context, _) {
-        // User-uploaded posts (newest first) sit above the seeded demo posts.
+        // Locally-uploaded posts (this session) sit on top; then the real
+        // backend feed; demo posts only fill in when the backend has none.
         final userPosts =
             FeedStore.instance.posts.map(_Post.fromUser).toList();
-        final all = <_Post>[...userPosts, ..._posts];
+        final base = _backendPosts.isNotEmpty ? _backendPosts : _posts;
+        final all = <_Post>[...userPosts, ...base];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 28),
+                child: Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.forest700, strokeWidth: 2)),
+              ),
             // Interleave posts with a reels shelf after the second post.
             for (var i = 0; i < all.length; i++) ...[
               _PostCard(post: all[i]),
@@ -217,6 +267,7 @@ class _ReelCard extends StatelessWidget {
 
 class _Post {
   const _Post({
+    required this.id,
     required this.author,
     required this.subtitle,
     required this.emoji,
@@ -226,9 +277,11 @@ class _Post {
     required this.comments,
     required this.time,
     this.mediaPath,
+    this.mediaUrl,
     this.isReel = false,
   });
 
+  final String id;
   final String author;
   final String subtitle;
   final String emoji;
@@ -237,11 +290,13 @@ class _Post {
   final int likes;
   final int comments;
   final String time;
-  final String? mediaPath; // real upload; null → gradient+emoji placeholder
-  final bool isReel; // true → mediaPath is a video
+  final String? mediaPath; // local upload file; null → use mediaUrl / placeholder
+  final String? mediaUrl; // remote (Cloudinary) media from the backend feed
+  final bool isReel; // true → the media is a video
 
   /// Builds a feed card from a user-created upload.
   factory _Post.fromUser(UserPost p) => _Post(
+        id: p.id,
         author: p.author,
         subtitle: p.subtitle,
         emoji: p.isReel ? '🎬' : '🖼️',
@@ -253,10 +308,61 @@ class _Post {
         mediaPath: p.mediaPath,
         isReel: p.isReel,
       );
+
+  /// Builds a feed card from a backend `/feed` post (Cloudinary-hosted media).
+  factory _Post.fromBackend(Map<String, dynamic> m) {
+    final urls = m['mediaUrls'];
+    final mediaUrl = (urls is List && urls.isNotEmpty) ? urls.first.toString() : null;
+    final isVideo = (m['postType'] ?? '').toString() == 'video';
+    final userField = m['userId'];
+    final author = (m['userName'] ??
+            (userField is Map ? userField['userName'] : null) ??
+            'Samaj Member')
+        .toString();
+    return _Post(
+      id: (m['_id'] ?? '').toString(),
+      author: author,
+      subtitle: 'Samaj Member',
+      emoji: isVideo ? '🎬' : '🖼️',
+      gradient: const [AppColors.forest800, AppColors.forest600],
+      caption: (m['caption'] ?? '').toString(),
+      likes: (m['likeCount'] as num?)?.toInt() ?? 0,
+      comments: (m['commentCount'] as num?)?.toInt() ?? 0,
+      time: _timeAgo(m['createdAt']?.toString()),
+      mediaUrl: mediaUrl,
+      isReel: isVideo,
+    );
+  }
+
+  /// The bookmarkable form of this post/reel for the app-wide [SavedStore].
+  SavedItem toSavedItem() => SavedItem(
+        id: id,
+        author: author,
+        caption: caption,
+        mediaPath: mediaPath,
+        mediaUrl: mediaUrl,
+        isReel: isReel,
+        emoji: emoji,
+        gradient: gradient,
+      );
+}
+
+/// "3h", "2d", "Just now" — a compact relative time from an ISO-8601 string.
+String _timeAgo(String? iso) {
+  if (iso == null || iso.isEmpty) return 'Recently';
+  final t = DateTime.tryParse(iso);
+  if (t == null) return 'Recently';
+  final d = DateTime.now().difference(t);
+  if (d.inMinutes < 1) return 'Just now';
+  if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+  if (d.inHours < 24) return '${d.inHours}h ago';
+  if (d.inDays < 7) return '${d.inDays}d ago';
+  return '${(d.inDays / 7).floor()}w ago';
 }
 
 const _posts = <_Post>[
   _Post(
+    id: 'seed-0',
     author: 'Venkatesh Haldankar',
     subtitle: 'Basavanagudi, Bengaluru',
     emoji: '📜',
@@ -268,6 +374,7 @@ const _posts = <_Post>[
     time: '2 hours ago',
   ),
   _Post(
+    id: 'seed-1',
     author: 'Shri Narayanarao Suvarna',
     subtitle: 'Elder & Admin · Rajajinagar',
     emoji: '🌳',
@@ -279,6 +386,7 @@ const _posts = <_Post>[
     time: 'Yesterday',
   ),
   _Post(
+    id: 'seed-2',
     author: 'Rekha Diwakar',
     subtitle: 'Jayanagar, Bengaluru',
     emoji: '🎂',
@@ -290,6 +398,7 @@ const _posts = <_Post>[
     time: 'Today',
   ),
   _Post(
+    id: 'seed-3',
     author: 'Daivajna Samaja Bhavan',
     subtitle: 'Samaj Bhavan Renovation · Fundraiser',
     emoji: '🏛️',
@@ -301,6 +410,7 @@ const _posts = <_Post>[
     time: '2 days ago',
   ),
   _Post(
+    id: 'seed-4',
     author: 'Karthik Revankar',
     subtitle: 'Jayanagar, Bengaluru',
     emoji: '🎶',
@@ -323,7 +433,6 @@ class _PostCard extends StatefulWidget {
 
 class _PostCardState extends State<_PostCard> {
   bool _liked = false;
-  bool _saved = false;
   bool _burst = false;
   Timer? _burstTimer;
 
@@ -405,16 +514,43 @@ class _PostCardState extends State<_PostCard> {
               ],
             ),
           ),
-          // Media
+          // Media. Reels handle their own tap (→ full screen), so we don't
+          // attach double-tap-to-like on them to avoid a gesture conflict.
           GestureDetector(
-            onDoubleTap: _doubleTapLike,
+            onDoubleTap: p.isReel ? null : _doubleTapLike,
             child: AspectRatio(
               aspectRatio: 1,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (p.mediaPath != null && p.isReel)
-                    _VideoTile(path: p.mediaPath!)
+                  if (p.mediaUrl != null && p.isReel)
+                    _VideoTile(
+                        url: p.mediaUrl!,
+                        author: p.author,
+                        caption: p.caption,
+                        saved: p.toSavedItem())
+                  else if (p.mediaUrl != null)
+                    Image.network(p.mediaUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null
+                                ? child
+                                : const ColoredBox(
+                                    color: AppColors.forest900,
+                                    child: Center(
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white54,
+                                            strokeWidth: 2))),
+                        errorBuilder: (_, __, ___) => const ColoredBox(
+                            color: AppColors.forest900,
+                            child: Icon(Icons.broken_image_outlined,
+                                color: Colors.white54, size: 48)))
+                  else if (p.mediaPath != null && p.isReel)
+                    _VideoTile(
+                        path: p.mediaPath!,
+                        author: p.author,
+                        caption: p.caption,
+                        saved: p.toSavedItem())
                   else if (p.mediaPath != null)
                     Image.file(File(p.mediaPath!), fit: BoxFit.cover)
                   else ...[
@@ -490,19 +626,38 @@ class _PostCardState extends State<_PostCard> {
                 ),
                 _ActionIcon(
                   icon: Icons.mode_comment_outlined,
-                  onTap: () => _showSnack(context, 'View comments'),
+                  onTap: () => showCommentsSheet(context, postId: p.id),
                 ),
                 _ActionIcon(
                   icon: Icons.send_outlined,
-                  onTap: () => _showSnack(context, 'Share post'),
+                  onTap: () => showShareSheet(
+                    context,
+                    author: p.author,
+                    caption: p.caption,
+                    isReel: p.isReel,
+                  ),
                 ),
                 const Spacer(),
-                _ActionIcon(
-                  icon: _saved
-                      ? Icons.bookmark_rounded
-                      : Icons.bookmark_border_rounded,
-                  color: _saved ? AppColors.gold700 : AppColors.label,
-                  onTap: () => setState(() => _saved = !_saved),
+                ListenableBuilder(
+                  listenable: SavedStore.instance,
+                  builder: (context, _) {
+                    final saved = SavedStore.instance.isSaved(p.id);
+                    return _ActionIcon(
+                      icon: saved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      color: saved ? AppColors.gold700 : AppColors.label,
+                      onTap: () {
+                        final nowSaved =
+                            SavedStore.instance.toggle(p.toSavedItem());
+                        _showSnack(
+                            context,
+                            nowSaved
+                                ? 'Saved to your profile'
+                                : 'Removed from saved');
+                      },
+                    );
+                  },
                 ),
               ],
             ),
@@ -535,10 +690,20 @@ class _PostCardState extends State<_PostCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => _showSnack(context, 'View comments'),
-                  child: Text('View all ${p.comments} comments',
-                      style: body(12, color: AppColors.hint)),
+                ListenableBuilder(
+                  listenable: CommentStore.instance,
+                  builder: (context, _) {
+                    final count = CommentStore.instance.countFor(p.id);
+                    return GestureDetector(
+                      onTap: () => showCommentsSheet(context, postId: p.id),
+                      child: Text(
+                        count == 0
+                            ? 'Add a comment…'
+                            : 'View all $count comment${count == 1 ? '' : 's'}',
+                        style: body(12, color: AppColors.hint),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 4),
                 Text(p.time.toUpperCase(),
@@ -555,8 +720,14 @@ class _PostCardState extends State<_PostCard> {
 
 /// Autoplaying, looping, muted video for a reel post (tap to mute/unmute).
 class _VideoTile extends StatefulWidget {
-  const _VideoTile({required this.path});
-  final String path;
+  const _VideoTile(
+      {this.path, this.url, this.author = '', this.caption = '', this.saved})
+      : assert(path != null || url != null, 'need a local path or a remote url');
+  final String? path; // local file
+  final String? url; // remote (Cloudinary) video
+  final String author;
+  final String caption;
+  final SavedItem? saved;
 
   @override
   State<_VideoTile> createState() => _VideoTileState();
@@ -570,7 +741,9 @@ class _VideoTileState extends State<_VideoTile> {
   @override
   void initState() {
     super.initState();
-    final c = VideoPlayerController.file(File(widget.path));
+    final c = widget.url != null
+        ? VideoPlayerController.networkUrl(Uri.parse(widget.url!))
+        : VideoPlayerController.file(File(widget.path!));
     _controller = c;
     c.initialize().then((_) {
       if (!mounted) return;
@@ -597,6 +770,31 @@ class _VideoTileState extends State<_VideoTile> {
     c.setVolume(_muted ? 0 : 1);
   }
 
+  // Tap the reel → open the immersive full-screen player (keeps playing from
+  // the current spot). Pause the inline copy while away, resume on return.
+  Future<void> _openFullScreen() async {
+    final c = _controller;
+    if (c == null || !c.value.isInitialized) return;
+    final pos = c.value.position;
+    c.pause();
+    await Navigator.of(context).push(PageRouteBuilder(
+      opaque: false, // lets the feed show through while swiping to dismiss
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, __, ___) => FullScreenReelPage(
+        path: widget.path,
+        url: widget.url,
+        startAt: pos,
+        author: widget.author,
+        caption: widget.caption,
+        saved: widget.saved,
+      ),
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+    ));
+    if (mounted) c.play(); // resume inline playback when the user comes back
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = _controller;
@@ -617,7 +815,8 @@ class _VideoTileState extends State<_VideoTile> {
       );
     }
     return GestureDetector(
-      onTap: _toggleMute,
+      behavior: HitTestBehavior.opaque,
+      onTap: _openFullScreen,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -632,20 +831,37 @@ class _VideoTileState extends State<_VideoTile> {
               ),
             ),
           ),
-          // Mute indicator
+          // Tap-to-expand hint
           Positioned(
-            bottom: 10,
-            right: 10,
+            top: 10,
+            left: 10,
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                size: 16,
-                color: Colors.white,
+              child: const Icon(Icons.fullscreen_rounded,
+                  size: 16, color: Colors.white),
+            ),
+          ),
+          // Mute toggle (its own tap target, doesn't trigger full-screen)
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: _toggleMute,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

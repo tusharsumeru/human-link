@@ -6,10 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../data/avatars.dart';
 import '../data/repository.dart';
+import '../data/saved_store.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
+import 'full_screen_reel.dart';
 
 /// Member profile — mirrors `src/app/profile/[id]/page.tsx`.
 ///
@@ -204,6 +206,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
                 const SizedBox(height: 16),
                 _statsCard(_dash(user.gotra), _dash(user.native), 'Active'),
+                const SizedBox(height: 16),
+                const _SavedCard(),
                 const SizedBox(height: 24),
                 ForestButton(
                   label: 'View in Family Tree',
@@ -625,6 +629,179 @@ class _Header extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Saved" shelf on the profile — a grid of the posts/reels the user has
+/// bookmarked from the feed or the full-screen reel player. Live-updates as
+/// the app-wide [SavedStore] changes; tapping a saved reel re-opens it.
+class _SavedCard extends StatelessWidget {
+  const _SavedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: SavedStore.instance,
+      builder: (context, _) {
+        final items = SavedStore.instance.items;
+        return AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.bookmark_rounded,
+                      size: 18, color: AppColors.gold700),
+                  const SizedBox(width: 8),
+                  Text('Saved', style: display(18, color: AppColors.forest900)),
+                  const Spacer(),
+                  if (items.isNotEmpty)
+                    Text('${items.length}',
+                        style: body(13,
+                            weight: FontWeight.w700,
+                            color: AppColors.textMuted)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No saved posts yet. Tap the bookmark on any reel or post '
+                    'to keep it here.',
+                    style: body(13, color: AppColors.textMuted, height: 1.4),
+                  ),
+                )
+              else
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.72,
+                  children: [
+                    for (final item in items) _SavedTile(item: item),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SavedTile extends StatelessWidget {
+  const _SavedTile({required this.item});
+  final SavedItem item;
+
+  void _open(BuildContext context) {
+    // Only reels re-open into the immersive player; image posts just sit in
+    // the shelf. Tapping either does nothing destructive.
+    if (!item.isReel || (item.mediaPath == null && item.mediaUrl == null)) {
+      return;
+    }
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, __, ___) => FullScreenReelPage(
+        path: item.mediaPath,
+        url: item.mediaUrl,
+        author: item.author,
+        caption: item.caption,
+        saved: item,
+      ),
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFileImage = item.mediaPath != null && !item.isReel;
+    final hasUrlImage = item.mediaUrl != null && !item.isReel;
+    return GestureDetector(
+      onTap: () => _open(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (hasFileImage)
+              Image.file(File(item.mediaPath!), fit: BoxFit.cover)
+            else if (hasUrlImage)
+              Image.network(item.mediaUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const ColoredBox(
+                      color: AppColors.forest900,
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.white54, size: 24)))
+            else ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: item.gradient,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(item.emoji,
+                    style: const TextStyle(fontSize: 34)),
+              ),
+            ],
+            // Reel play badge (top-left)
+            if (item.isReel)
+              const Positioned(
+                top: 6,
+                left: 6,
+                child: Icon(Icons.play_circle_fill_rounded,
+                    size: 18, color: Colors.white),
+              ),
+            // Un-save (top-right)
+            Positioned(
+              top: 2,
+              right: 2,
+              child: GestureDetector(
+                onTap: () => SavedStore.instance.remove(item.id),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  child: const Icon(Icons.bookmark_rounded,
+                      size: 18, color: AppColors.gold500),
+                ),
+              ),
+            ),
+            // Author scrim
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(6, 14, 6, 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.6),
+                    ],
+                  ),
+                ),
+                child: Text(item.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(10,
+                        weight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

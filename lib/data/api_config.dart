@@ -8,9 +8,9 @@ class ApiConfig {
 
   /// Deployed Next.js backend (Vercel). Verified working: `/api/user/login`,
   /// `/api/stats` return live data from MongoDB.
-  static const String _deployed =
-      'https://d74c-2409-4091-9008-ae00-754b-ee2b-764b-eb86.ngrok-free.app';
-
+  // NOTE: no trailing `/api` — every request path already begins with `/api`
+  // (e.g. `/api/user/login`), so keeping it here would double it.
+  static const String _deployed ="https://53d3-2409-4091-9008-ae00-79a7-65ca-8d56-307e.ngrok-free.app";
   static const String _override = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',

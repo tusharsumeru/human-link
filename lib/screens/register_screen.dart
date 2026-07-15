@@ -102,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         avatar: avatar,
         gender: _gender,
       );
-      final user = AppUser.fromMap(map).copyWith(gender: _gender);
+      final user = AppUser.fromMap(map).copyWith(gender: _gender, avatar: avatar);
       if (!mounted) return;
       await auth.loginWithUser(user);
       if (!mounted) return;

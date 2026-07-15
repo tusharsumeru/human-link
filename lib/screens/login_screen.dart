@@ -209,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('OTP sent to +91 ${_phoneCtrl.text}',
+          Text('OTP sent to ${_phoneCtrl.text}',
               style: body(13, color: AppColors.textMuted)),
           const SizedBox(height: 8),
           Container(

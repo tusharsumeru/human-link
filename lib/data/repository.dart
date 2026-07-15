@@ -18,49 +18,159 @@ class Repository {
 
   static final Repository instance = Repository();
 
-  /// POST /api/user/login — returns the authenticated user map from MongoDB,
-  /// or throws [ApiException] with a human message ("Phone number not
-  /// registered", "Invalid OTP"). No demo fallback — login requires the backend.
+  /// POST /api/user/login — returns `{user, token}`: the authenticated user map
+  /// from MongoDB plus the JWT bearer token for subsequent protected requests.
+  /// Throws [ApiException] with the server's message ("Phone number not
+  /// registered", "Invalid OTP") — the backend validates the OTP.
   Future<Map<String, dynamic>> login(String phone, String otp) async {
-    if (otp != '121212') {
-      throw ApiException('Invalid OTP. Use 121212 for this demo.',
-          statusCode: 401);
-    }
     final data = await _api.postJson('/api/user/login', {
       'phone': phone,
       'otp': otp,
     });
     if (data is Map && data['user'] is Map) {
-      return Map<String, dynamic>.from(data['user'] as Map);
+      return {
+        'user': Map<String, dynamic>.from(data['user'] as Map),
+        'token': (data['token'] ?? '').toString(),
+      };
     }
     throw ApiException('Login failed');
   }
 
+  /// GET /api/user/username/check — Instagram-style availability. Returns
+  /// `{ available: bool, suggestions: [..] }`.
+  Future<Map<String, dynamic>> checkUsername(String userName) async {
+    final data = await _api.getJson(
+        '/api/user/username/check?userName=${Uri.encodeQueryComponent(userName)}');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'available': false};
+  }
+
   /// POST /api/user/register — creates the member in MongoDB and returns the
-  /// user map. Throws [ApiException] on failure: status 409 means the phone is
-  /// already registered; other codes / network errors propagate to the caller.
+  /// user map. The backend requires a unique `userName`; when the caller doesn't
+  /// supply one we derive it from the name + phone. Throws [ApiException] on
+  /// failure (409 → phone/username already registered).
   Future<Map<String, dynamic>> register({
     required String name,
     required String phone,
-    required String gotra,
-    required String native,
+    String userName = '',
+    String gotra = '',
+    String native = '',
     String role = 'member',
     String avatar = '6',
     String gender = '',
   }) async {
     final data = await _api.postJson('/api/user/register', {
+      'userName': userName.isNotEmpty ? userName : _deriveUserName(name, phone),
       'name': name,
       'phone': phone,
-      'gotra': gotra,
-      'native': native,
+      if (gotra.isNotEmpty) 'gotra': gotra,
+      if (native.isNotEmpty) 'native': native,
       'role': role,
-      'avatar': avatar,
-      'gender': gender,
+      if (gender.isNotEmpty) 'gender': gender,
     });
     if (data is Map && data['user'] is Map) {
       return Map<String, dynamic>.from(data['user'] as Map);
     }
     throw ApiException('Registration failed');
+  }
+
+  /// A backend-legal username (3–30 chars, lowercase letters/digits/._) derived
+  /// from the name, disambiguated with the last 4 phone digits.
+  String _deriveUserName(String name, String phone) {
+    final base = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9._]'), '');
+    final suffix = phone.length >= 4 ? phone.substring(phone.length - 4) : phone;
+    final raw = '${base.isEmpty ? 'member' : base}_$suffix';
+    return raw.length > 30 ? raw.substring(0, 30) : raw;
+  }
+
+  // ── Feed & posts ────────────────────────────────────────────────────────────
+
+  /// GET /feed — cursor-based feed. Pass [before] (a lastVisiblePostId) to load
+  /// older posts, or [after] (a firstVisiblePostId) to load newer ones. Returns
+  /// the raw envelope: `{count, posts, firstVisiblePostId, lastVisiblePostId}`.
+  Future<Map<String, dynamic>> feed({
+    int limit = 20,
+    String? before,
+    String? after,
+  }) async {
+    final q = <String>['limit=$limit'];
+    if (before != null && before.isNotEmpty) q.add('before=$before');
+    if (after != null && after.isNotEmpty) q.add('after=$after');
+    final data = await _api.getJson('/feed?${q.join('&')}');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'posts': const []};
+  }
+
+  /// GET /feed/new-count — exact number of posts newer than [afterPostId], for
+  /// the "N new posts" banner.
+  Future<int> feedNewCount(String afterPostId) async {
+    try {
+      final data = await _api.getJson('/feed/new-count?after=$afterPostId');
+      if (data is Map && data['count'] is num) {
+        return (data['count'] as num).toInt();
+      }
+    } catch (_) {/* best-effort */}
+    return 0;
+  }
+
+  /// POST /api/posts — multipart upload of an image/video (≤2 MB) to Cloudinary,
+  /// then stores the post. Requires a logged-in session (bearer token). Returns
+  /// the created post map.
+  Future<Map<String, dynamic>> createPost({
+    required String filePath,
+    String caption = '',
+    List<String> hashtags = const [],
+    List<String> taggedUsers = const [],
+    String visibility = 'public',
+  }) async {
+    final data = await _api.postMultipart(
+      '/api/posts',
+      fileField: 'media',
+      filePath: filePath,
+      fields: {
+        'caption': caption,
+        'visibility': visibility,
+        if (hashtags.isNotEmpty) 'hashtags': jsonEncode(hashtags),
+        if (taggedUsers.isNotEmpty) 'taggedUsers': jsonEncode(taggedUsers),
+      },
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not create post');
+  }
+
+  /// POST /api/posts/:postId/likes — like a post. Requires a bearer token.
+  Future<void> likePost(String postId) async {
+    await _api.postJson('/api/posts/$postId/likes', const {});
+  }
+
+  /// POST /api/posts/comments — add a comment. Requires a bearer token.
+  Future<void> addComment({required String postId, required String text}) async {
+    await _api.postJson('/api/posts/comments', {
+      'postId': postId,
+      'text': text,
+    });
+  }
+
+  // ── Aadhaar / DigiLocker (backend `/api/adhar/*`) ───────────────────────────
+
+  /// POST /api/adhar/initialize — start a DigiLocker consent session. Returns
+  /// `{ client_id, url }`: the id to keep and the URL the user opens to consent.
+  Future<Map<String, dynamic>> adharInitialize({required String redirectUrl}) async {
+    final data = await _api.postJson('/api/adhar/initialize', {
+      'redirectUrl': redirectUrl,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not start DigiLocker');
+  }
+
+  /// POST /api/adhar/download — fetch the verified Aadhaar for a consented
+  /// session identified by [clientId].
+  Future<Map<String, dynamic>> adharDownload(String clientId) async {
+    final data = await _api.postJson('/api/adhar/download', {
+      'clientId': clientId,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not download Aadhaar');
   }
 
   /// POST /api/user/upload — uploads an image (base64) to MongoDB, keyed by

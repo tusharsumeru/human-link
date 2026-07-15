@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 /// feed backend yet, so uploads live until the app is restarted.
 class UserPost {
   UserPost({
+    required this.id,
     required this.author,
     required this.subtitle,
     required this.mediaPath,
@@ -11,6 +12,7 @@ class UserPost {
     required this.isReel,
   });
 
+  final String id; // stable id used to key comments
   final String author;
   final String subtitle;
   final String mediaPath; // local file path (image, or video when isReel)
@@ -25,7 +27,11 @@ class FeedStore extends ChangeNotifier {
   static final FeedStore instance = FeedStore._();
 
   final List<UserPost> _posts = <UserPost>[];
+  int _seq = 0;
   List<UserPost> get posts => List.unmodifiable(_posts);
+
+  /// Next stable id for a new upload (e.g. "user-1").
+  String nextId() => 'user-${++_seq}';
 
   void add(UserPost post) {
     _posts.insert(0, post); // newest first

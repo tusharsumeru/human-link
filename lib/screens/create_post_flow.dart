@@ -1,8 +1,8 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../data/feed_store.dart';
@@ -10,7 +10,13 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
-final _picker = ImagePicker();
+/// How the user started the create flow — decides which files the picker shows
+/// and whether the result is treated as a photo post or a video reel.
+enum _CreateMode { post, reel, file }
+
+const _videoExtensions = <String>[
+  'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
+];
 
 /// Bottom sheet launched from the bottom bar's "+" — choose New Post or Reel.
 Future<void> showCreateOptions(BuildContext context) async {
@@ -44,14 +50,14 @@ Future<void> showCreateOptions(BuildContext context) async {
               icon: Icons.add_photo_alternate_outlined,
               title: 'New Post',
               subtitle: 'Share a photo with the Samaj',
-              onTap: () => _startCreate(sheetCtx, isReel: false),
+              onTap: () => _startCreate(sheetCtx, mode: _CreateMode.post),
             ),
             const SizedBox(height: 10),
             _CreateTile(
               icon: Icons.movie_creation_outlined,
               title: 'New Reel',
               subtitle: 'Share a short video moment',
-              onTap: () => _startCreate(sheetCtx, isReel: true),
+              onTap: () => _startCreate(sheetCtx, mode: _CreateMode.reel),
             ),
           ],
         ),
@@ -108,26 +114,41 @@ class _CreateTile extends StatelessWidget {
   }
 }
 
-/// Picks a photo (post) or video (reel), then opens the caption composer.
-Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
+/// Picks a photo (post), a video (reel), or any media file ("Select File",
+/// type auto-detected), then opens the caption composer.
+Future<void> _startCreate(
+  BuildContext sheetCtx, {
+  required _CreateMode mode,
+}) async {
   final auth = sheetCtx.read<AuthService>();
   final router = GoRouter.of(sheetCtx);
   final messenger = ScaffoldMessenger.of(sheetCtx);
 
-  XFile? picked;
+  // Uses the system Files picker (Storage Access Framework) — no Google
+  // account required, unlike the Photos-backed gallery intent.
+  String? path;
   try {
-    picked = isReel
-        ? await _picker.pickVideo(source: ImageSource.gallery)
-        : await _picker.pickImage(
-            source: ImageSource.gallery,
-            maxWidth: 1600,
-            imageQuality: 88,
-          );
+    final result = await FilePicker.platform.pickFiles(
+      type: switch (mode) {
+        _CreateMode.post => FileType.image,
+        _CreateMode.reel => FileType.video,
+        _CreateMode.file => FileType.media, // photos + videos
+      },
+    );
+    path = result?.files.single.path;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
     return;
   }
-  if (picked == null) return; // user cancelled
+  if (path == null) return; // user cancelled or no path
+
+  // Decide post vs reel. For "Select File", infer from the extension.
+  final ext = path.split('.').last.toLowerCase();
+  final isReel = switch (mode) {
+    _CreateMode.post => false,
+    _CreateMode.reel => true,
+    _CreateMode.file => _videoExtensions.contains(ext),
+  };
 
   // Close the options sheet before showing the composer.
   if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
@@ -135,17 +156,18 @@ Future<void> _startCreate(BuildContext sheetCtx, {required bool isReel}) async {
   final user = auth.user;
   final caption = await _composeCaption(
     router.routerDelegate.navigatorKey.currentContext ?? sheetCtx,
-    mediaPath: picked.path,
+    mediaPath: path,
     isReel: isReel,
   );
   if (caption == null) return; // cancelled at composer
 
   FeedStore.instance.add(UserPost(
+    id: FeedStore.instance.nextId(),
     author: user?.name ?? 'You',
     subtitle: (user?.native.split(',').first.trim().isNotEmpty ?? false)
         ? user!.native.split(',').first.trim()
         : 'Daivajna Samaja',
-    mediaPath: picked.path,
+    mediaPath: path,
     caption: caption,
     isReel: isReel,
   ));

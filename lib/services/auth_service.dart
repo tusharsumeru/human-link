@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/api_client.dart';
 import '../data/repository.dart';
 
 /// Authenticated user — mirrors the web app's VVUser shape, plus a few
 /// mobile-only fields (gender/bio/address/photo) the backend doesn't store.
 class AppUser {
   final String name;
+  final String userName; // backend handle (unique, e.g. "priya_test")
   final String phone;
   final String role; // "member" | "elder"
   final String gotra;
@@ -28,6 +30,7 @@ class AppUser {
 
   const AppUser({
     required this.name,
+    this.userName = '',
     required this.phone,
     required this.role,
     required this.gotra,
@@ -49,6 +52,7 @@ class AppUser {
 
   factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
         name: (m['name'] ?? '') as String,
+        userName: (m['userName'] ?? '') as String,
         phone: (m['phone'] ?? '') as String,
         role: (m['role'] ?? 'member') as String,
         gotra: (m['gotra'] ?? '') as String,
@@ -59,7 +63,8 @@ class AppUser {
         address: (m['address'] ?? '') as String,
         matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
         photoPath: (m['photoPath'] ?? '') as String,
-        photoUrl: (m['photoUrl'] ?? '') as String,
+        // Login/register return the remote photo as `profileUrl`.
+        photoUrl: (m['photoUrl'] ?? m['profileUrl'] ?? '') as String,
         onboardingComplete: (m['onboardingComplete'] ?? true) as bool,
         dob: (m['dob'] ?? '') as String,
         maskedAadhaar: (m['masked_aadhaar'] ?? m['maskedAadhaar'] ?? '') as String,
@@ -68,6 +73,7 @@ class AppUser {
 
   Map<String, dynamic> toMap() => {
         'name': name,
+        'userName': userName,
         'phone': phone,
         'role': role,
         'gotra': gotra,
@@ -87,6 +93,7 @@ class AppUser {
 
   AppUser copyWith({
     String? name,
+    String? userName,
     String? phone,
     String? role,
     String? gotra,
@@ -105,6 +112,7 @@ class AppUser {
   }) =>
       AppUser(
         name: name ?? this.name,
+        userName: userName ?? this.userName,
         phone: phone ?? this.phone,
         role: role ?? this.role,
         gotra: gotra ?? this.gotra,
@@ -130,11 +138,14 @@ class AuthService extends ChangeNotifier {
   final Repository _repo;
 
   static const _prefsKey = 'vv_user';
+  static const _tokenKey = 'vv_token';
 
   AppUser? _user;
+  String? _token;
   bool _loaded = false;
 
   AppUser? get user => _user;
+  String? get token => _token;
   bool get isLoggedIn => _user != null;
   bool get loaded => _loaded;
 
@@ -148,15 +159,20 @@ class AuthService extends ChangeNotifier {
         _user = null;
       }
     }
+    // Restore the bearer token so protected calls work after a restart.
+    _token = prefs.getString(_tokenKey);
+    ApiAuth.token = _token;
     _loaded = true;
     notifyListeners();
   }
 
-  /// Logs in via the API (with demo fallback). Throws with a human message.
+  /// Logs in via the API. Captures the JWT token for subsequent protected
+  /// requests. Throws [ApiException] with a human message on failure.
   Future<AppUser> login(String phone, String otp) async {
-    final map = await _repo.login(phone, otp);
-    final user = AppUser.fromMap(map);
-    await _persist(user);
+    final res = await _repo.login(phone, otp);
+    final user = AppUser.fromMap(res['user'] as Map<String, dynamic>);
+    final token = (res['token'] ?? '') as String;
+    await _persist(user, token: token.isEmpty ? null : token);
     return user;
   }
 
@@ -166,20 +182,28 @@ class AuthService extends ChangeNotifier {
   /// Persists an updated profile (after edits in onboarding / verify).
   Future<void> updateUser(AppUser user) => _persist(user);
 
-  Future<void> _persist(AppUser user) async {
+  Future<void> _persist(AppUser user, {String? token}) async {
     _user = user;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, jsonEncode(user.toMap()));
+    if (token != null) {
+      _token = token;
+      ApiAuth.token = token;
+      await prefs.setString(_tokenKey, token);
+    }
     notifyListeners();
   }
 
   Future<void> logout() async {
     _user = null;
+    _token = null;
+    ApiAuth.token = null;
     try {
       await FirebaseAuth.instance.signOut();
     } catch (_) {/* ignore if Firebase isn't signed in */}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
+    await prefs.remove(_tokenKey);
     notifyListeners();
   }
 }
