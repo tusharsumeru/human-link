@@ -242,6 +242,33 @@ class Repository {
     return const [];
   }
 
+  /// GET /api/user/directory — registered members (the `users` collection),
+  /// searchable + paginated. PII-safe shape: `{id, userName, name, gotra,
+  /// native, gender, profileUrl, occupation, bio, verified, role}`.
+  Future<List<Map<String, dynamic>>> usersDirectory({
+    String q = '',
+    int limit = 50,
+    int page = 1,
+  }) async {
+    final query = <String>['limit=$limit', 'page=$page'];
+    if (q.isNotEmpty) query.add('q=${Uri.encodeQueryComponent(q)}');
+    final data = await _api.getJson('/api/user/directory?${query.join('&')}');
+    if (data is Map && data['users'] is List) {
+      return (data['users'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// GET /api/user/:id — one registered member's public (PII-safe) profile.
+  Future<Map<String, dynamic>> userById(String id) async {
+    final data = await _api.getJson('/api/user/$id');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Member not found');
+  }
+
   /// GET /api/family/search — members matching [q] (for tagging / tree link):
   /// `[{ _id, name, gotra, native, photoUrl, generation, branch }]`.
   Future<List<Map<String, dynamic>>> familySearch(String q,
