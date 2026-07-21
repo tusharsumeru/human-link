@@ -210,14 +210,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const _SavedCard(),
                 const SizedBox(height: 24),
                 ForestButton(
+                  label: 'Edit Profile',
+                  icon: Icons.edit_outlined,
+                  expand: true,
+                  onPressed: () => context.push('/profile/edit'),
+                ),
+                const SizedBox(height: 12),
+                OutlineButtonX(
+                  label: 'Matrimonial Details',
+                  expand: true,
+                  onPressed: () => context.push('/matrimonial/edit'),
+                ),
+                const SizedBox(height: 12),
+                OutlineButtonX(
                   label: 'View in Family Tree',
-                  icon: Icons.account_tree_outlined,
                   expand: true,
                   onPressed: () => context.go('/family-tree'),
                 ),
                 const SizedBox(height: 12),
+                // Optional — nothing in the app requires Aadhaar. It only
+                // fills some profile fields in for you.
                 OutlineButtonX(
-                  label: 'Verify Identity',
+                  label: 'Verify Identity (optional)',
                   expand: true,
                   color: AppColors.gold700,
                   onPressed: () => context.push('/profile/verify'),

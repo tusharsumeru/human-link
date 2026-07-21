@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../data/api_client.dart';
 import '../data/comment_store.dart';
 import '../data/feed_store.dart';
 import '../data/repository.dart';
@@ -88,7 +89,14 @@ class _FeedState extends State<_Feed> {
         // feed. No demo/seed content — an empty backend shows an empty feed.
         final userPosts =
             FeedStore.instance.posts.map(_Post.fromUser).toList();
-        final all = <_Post>[...userPosts, ..._backendPosts];
+        // A post uploaded this session also comes back in the backend feed on
+        // the next refresh — keep the local card (it renders from the local
+        // file, so no re-download) and drop the duplicate.
+        final uploaded = FeedStore.instance.remoteIds;
+        final all = <_Post>[
+          ...userPosts,
+          ..._backendPosts.where((p) => !uploaded.contains(p.id)),
+        ];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -633,6 +641,7 @@ class _Post {
     this.mediaPath,
     this.mediaUrl,
     this.isReel = false,
+    this.pending,
   });
 
   final String id;
@@ -648,9 +657,15 @@ class _Post {
   final String? mediaUrl; // remote (Cloudinary) media from the backend feed
   final bool isReel; // true → the media is a video
 
-  /// Builds a feed card from a user-created upload.
+  /// Set while this card is a local upload that hasn't landed on the server
+  /// yet (or failed) — drives the "Uploading… / Retry" overlay.
+  final UserPost? pending;
+
+  /// Builds a feed card from a user-created upload. The id is the server's
+  /// once the upload lands, so likes and comments hit the real post.
   factory _Post.fromUser(UserPost p) => _Post(
-        id: p.id,
+        id: p.feedId,
+        pending: (p.uploading || p.failed) ? p : null,
         author: p.author,
         subtitle: p.subtitle,
         emoji: p.isReel ? '🎬' : '🖼️',
@@ -726,6 +741,7 @@ class _PostCardState extends State<_PostCard> {
   bool _liked = false;
   bool _burst = false;
   Timer? _burstTimer;
+  int? _serverLikeCount; // set once the API confirms a like/unlike
 
   @override
   void dispose() {
@@ -733,19 +749,38 @@ class _PostCardState extends State<_PostCard> {
     super.dispose();
   }
 
-  int get _likeCount => widget.post.likes + (_liked ? 1 : 0);
+  int get _likeCount => _serverLikeCount ?? (widget.post.likes + (_liked ? 1 : 0));
 
-  void _toggleLike() => setState(() => _liked = !_liked);
+  /// POST /api/posts/:postId/likes — the endpoint toggles, so one call covers
+  /// both like and unlike. The heart flips immediately and reverts if the
+  /// request fails.
+  Future<void> _toggleLike() async {
+    final wasLiked = _liked;
+    setState(() => _liked = !wasLiked);
+    if (!isBackendPostId(widget.post.id)) return; // local/demo post
+
+    try {
+      final res = await Repository.instance.likePost(widget.post.id);
+      if (!mounted) return;
+      setState(() {
+        _liked = res['liked'] == true;
+        _serverLikeCount = (res['likeCount'] as num?)?.toInt();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _liked = wasLiked);
+      _showSnack(context, e is ApiException ? e.message : 'Could not update like');
+    }
+  }
 
   void _doubleTapLike() {
-    setState(() {
-      _liked = true;
-      _burst = true;
-    });
     _burstTimer?.cancel();
+    setState(() => _burst = true);
     _burstTimer = Timer(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => _burst = false);
     });
+    // Double-tap always means "like", never unlike.
+    if (!_liked) _toggleLike();
   }
 
   @override
@@ -899,6 +934,9 @@ class _PostCardState extends State<_PostCard> {
                       ),
                     ),
                   ),
+                  // Upload state — only while POST /api/posts is in flight or
+                  // after it failed.
+                  if (p.pending != null) _UploadOverlay(post: p.pending!),
                 ],
               ),
             ),
@@ -984,7 +1022,10 @@ class _PostCardState extends State<_PostCard> {
                 ListenableBuilder(
                   listenable: CommentStore.instance,
                   builder: (context, _) {
-                    final count = CommentStore.instance.countFor(p.id);
+                    // Falls back to the feed's commentCount until this post's
+                    // comments have actually been fetched.
+                    final count = CommentStore.instance
+                        .countFor(p.id, fallback: p.comments);
                     return GestureDetector(
                       onTap: () => showCommentsSheet(context, postId: p.id),
                       child: Text(
@@ -1156,6 +1197,72 @@ class _VideoTileState extends State<_VideoTile> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sits over a freshly-picked post's media while `POST /api/posts` runs, and
+/// turns into a retry prompt if the upload fails — so a dropped connection
+/// never silently swallows a post the user thought they shared.
+class _UploadOverlay extends StatelessWidget {
+  const _UploadOverlay({required this.post});
+  final UserPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = post.failed;
+    return Container(
+      color: Colors.black.withValues(alpha: failed ? 0.55 : 0.35),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!failed) ...[
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2.5, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            Text('Uploading…',
+                style: body(13,
+                    weight: FontWeight.w600, color: Colors.white)),
+          ] else ...[
+            const Icon(Icons.cloud_off_rounded,
+                size: 34, color: Colors.white),
+            const SizedBox(height: 8),
+            Text('Upload failed',
+                style: body(13,
+                    weight: FontWeight.w700, color: Colors.white)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      await FeedStore.instance.retry(post);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      _showSnack(context,
+                          e is ApiException ? e.message : 'Still offline');
+                    }
+                  },
+                  child: Text('Retry',
+                      style: body(13,
+                          weight: FontWeight.w700, color: Colors.white)),
+                ),
+                TextButton(
+                  onPressed: () => FeedStore.instance.remove(post),
+                  child: Text('Discard',
+                      style: body(13, color: Colors.white70)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

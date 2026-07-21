@@ -10,14 +10,16 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/digilocker_card.dart';
 import '../widgets/place_field.dart';
 import '../widgets/ui_kit.dart';
 
 /// Register screen — mirrors web `src/app/register/page.tsx`.
 /// Collects member details (name, phone, gender, gotra, native), verifies the
-/// fixed demo OTP (121212), creates a member and lands on the dashboard —
-/// identity/lineage/heritage onboarding is optional, done later at the
-/// member's own pace.
+/// fixed demo OTP (121212), creates a member, then offers Aadhaar identity
+/// verification via DigiLocker before landing on the dashboard. Verification is
+/// skippable (it's also on the profile); lineage/heritage onboarding stays
+/// optional, done later at the member's own pace.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -39,20 +41,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _nativeCtrl = TextEditingController();
-  final _aadhaarCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   String _gotra = 'Kashyap';
   String _gender = 'M';
-  String _step = 'details'; // 'details' | 'otp'
+  String _step = 'details'; // 'details' | 'otp' | 'identity'
   String _error = '';
   bool _loading = false;
+  bool _identityVerified = false;
+  // KYC captured by DigiLocker before the account existed (details step); it's
+  // written to the profile as soon as registration returns a token.
+  Map<String, dynamic>? _kyc;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _nativeCtrl.dispose();
-    _aadhaarCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
   }
@@ -68,16 +72,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _error = 'Please enter a valid 10-digit phone number');
       return;
     }
-    // Aadhaar is optional — only validate when the member actually enters one.
-    final aadhaar = _aadhaarCtrl.text.replaceAll(' ', '');
-    if (aadhaar.isNotEmpty && !_isValidAadhaar(aadhaar)) {
-      setState(() =>
-          _error = 'Enter a valid 12-digit Aadhaar number, or leave it blank');
-      return;
-    }
     setState(() {
       _error = '';
       _step = 'otp';
+    });
+  }
+
+  /// DigiLocker came back verified. Before the account exists there's nothing to
+  /// save it to, so hold it until [_completeRegistration] can attach it.
+  void _onKycVerified(Map<String, dynamic> kyc) {
+    setState(() {
+      _kyc = kyc;
+      _identityVerified = true;
+      _error = '';
     });
   }
 
@@ -93,9 +100,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await _completeRegistration();
   }
 
-  /// Registers the member in the backend (MongoDB), then persists the profile
-  /// locally and lands on the dashboard. Onboarding stays optional. A phone
-  /// that's already registered (409) surfaces an error (matches the web flow).
+  /// Registers the member in the backend (MongoDB), persists the profile
+  /// locally, then advances to the identity step. The account exists (and holds
+  /// a bearer token) by that point, which is what the DigiLocker KYC needs to
+  /// save against the profile. A phone that's already registered (409) surfaces
+  /// an error (matches the web flow).
   Future<void> _completeRegistration() async {
     final auth = context.read<AuthService>();
     final phone = _phoneCtrl.text;
@@ -115,16 +124,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final map = res['user'] as Map<String, dynamic>;
       final token = (res['token'] ?? '') as String;
       var user = AppUser.fromMap(map).copyWith(gender: _gender, avatar: avatar);
-      // Keep only a masked reference of an optionally-entered Aadhaar; full
-      // KYC (and the verified badge) still happens later via Verify Identity.
-      final aadhaar = _aadhaarCtrl.text.replaceAll(' ', '');
-      if (aadhaar.length == 12) {
-        user = user.copyWith(maskedAadhaar: _maskAadhaar(aadhaar));
+      // Apply a DigiLocker verification done back on the details step. Aadhaar
+      // is authoritative, so its dob/gender win over what was typed.
+      final kyc = _kyc;
+      final dob = (kyc?['dob'] ?? '').toString();
+      final kycGender = (kyc?['gender'] ?? '').toString();
+      final address = (kyc?['full_address'] ?? '').toString();
+      final masked = (kyc?['masked_aadhaar'] ?? '').toString();
+      if (kyc != null) {
+        user = user.copyWith(
+          dob: dob.isEmpty ? null : dob,
+          gender: kycGender.isEmpty ? null : kycGender,
+          address: address.isEmpty ? null : address,
+          maskedAadhaar: masked.isEmpty ? null : masked,
+          verified: true,
+        );
       }
       if (!mounted) return;
       await auth.loginWithUser(user, token: token.isEmpty ? null : token);
+      // Only now is there a bearer token to save the KYC against the profile.
+      if (kyc != null) {
+        await Repository.instance.updateProfile(
+          phone: user.phone,
+          dob: dob.isEmpty ? null : dob,
+          gender: kycGender.isEmpty ? null : kycGender,
+          address: address.isEmpty ? null : address,
+          maskedAadhaar: masked.isEmpty ? null : masked,
+          verified: true,
+        );
+      }
       if (!mounted) return;
-      context.go('/dashboard');
+      setState(() {
+        _loading = false;
+        _step = 'identity';
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -185,8 +218,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildForm() =>
-      _step == 'details' ? _buildDetails() : _buildOtp();
+  Widget _buildForm() => switch (_step) {
+        'details' => _buildDetails(),
+        'otp' => _buildOtp(),
+        _ => _buildIdentity(),
+      };
 
   Widget _buildDetails() {
     return Column(
@@ -255,50 +291,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
           controller: _nativeCtrl,
           hint: 'e.g. Kundapura, Udupi, Karnataka',
         ),
-        const SizedBox(height: 14),
-        _label('Aadhaar Number (optional)'),
-        TextField(
-          controller: _aadhaarCtrl,
-          keyboardType: TextInputType.number,
-          inputFormatters: [_AadhaarInputFormatter()],
-          onChanged: (_) {
-            if (_error.isNotEmpty) setState(() => _error = '');
-          },
-          style: body(15, color: AppColors.ink, letterSpacing: 1.5),
-          decoration: InputDecoration(
-            hintText: '1234 5678 9012',
-            counterText: '',
-            filled: true,
-            fillColor: Colors.white,
-            prefixIcon: const Icon(Icons.credit_card_outlined,
-                size: 18, color: AppColors.hint),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
+        const SizedBox(height: 16),
+        // Optional identity check up front. No Aadhaar number is ever typed —
+        // it comes back from DigiLocker, already masked. Members who'd rather
+        // not stop here get the same card again after the OTP. Once verified,
+        // show the result instead of the card so stepping back from the OTP
+        // screen doesn't ask them to do it all over again.
+        if (_kyc != null)
+          _kycConfirmation()
+        else
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.forest800, width: 1.5),
+            child: DigilockerCard(
+              description:
+                  'Optional — verify now and your profile carries the ✓ badge '
+                  'from day one. We never ask for or store your Aadhaar number, '
+                  'only the masked reference DigiLocker returns.',
+              onVerified: _onKycVerified,
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(Icons.lock_outline, size: 12, color: AppColors.hint),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'Optional. We keep only a masked reference (XXXX XXXX 1234). '
-                'Verify via DigiLocker later for the ✓ badge.',
-                style: body(11, color: AppColors.textMuted, height: 1.4),
-              ),
-            ),
-          ],
-        ),
         if (_error.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(_error, style: body(13, color: Colors.red)),
@@ -419,14 +435,103 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  /// A structurally-valid Aadhaar: 12 digits, first digit 2–9, and a valid
-  /// Verhoeff checksum (the same check UIDAI uses). This authenticates the
-  /// number's form — full identity KYC is the separate DigiLocker step.
-  bool _isValidAadhaar(String a) =>
-      RegExp(r'^[2-9][0-9]{11}$').hasMatch(a) && _verhoeffValid(a);
+  /// Step 3 — Aadhaar identity verification via DigiLocker. The account is
+  /// already created, so this is skippable: unverified members can finish it
+  /// later from Profile → Verify Identity.
+  Widget _buildIdentity() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.check_circle,
+                size: 18, color: AppColors.forest700),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Account created',
+                  style: body(13,
+                      weight: FontWeight.w700, color: AppColors.forest700)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(_identityVerified ? 'You\'re all set' : 'Verify your identity',
+            style: display(26, color: AppColors.forest900)),
+        const SizedBox(height: 6),
+        Text(
+          _identityVerified
+              ? 'Your Aadhaar is verified and saved to your profile — the ✓ '
+                  'badge is already yours.'
+              : 'Aadhaar KYC through the government DigiLocker earns your '
+                  'profile the ✓ verified badge and keeps our ancestral records '
+                  'trustworthy. We store only a masked reference — never your '
+                  'full Aadhaar number.',
+          style: body(13, color: AppColors.textMuted, height: 1.5),
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: DigilockerCard(
+            description:
+                'Sign in to the official DigiLocker portal and consent to share '
+                'your Aadhaar. Verification is confirmed automatically.',
+            onVerified: (_) => setState(() => _identityVerified = true),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ForestButton(
+          label: _identityVerified
+              ? 'Continue to Dashboard'
+              : 'Skip for now — verify later',
+          icon: Icons.arrow_forward_rounded,
+          expand: true,
+          onPressed: () => context.go('/dashboard'),
+        ),
+      ],
+    );
+  }
 
-  /// Masks all but the last four digits: "XXXX XXXX 1234".
-  String _maskAadhaar(String a) => 'XXXX XXXX ${a.substring(8)}';
+  /// Stands in for the DigiLocker card once KYC is captured on the details
+  /// step — the verification survives until the account is created.
+  Widget _kycConfirmation() {
+    final name = (_kyc?['full_name'] ?? '').toString();
+    final masked = (_kyc?['masked_aadhaar'] ?? '').toString();
+    final detail = [
+      if (name.isNotEmpty) name,
+      if (masked.isNotEmpty) masked,
+    ].join(' · ');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FBF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFB7E4C7)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified_rounded,
+              size: 20, color: AppColors.forest700),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Aadhaar verified via DigiLocker',
+                    style: body(12,
+                        weight: FontWeight.w700, color: AppColors.forest800)),
+                const SizedBox(height: 3),
+                Text(
+                  detail.isEmpty
+                      ? 'Saved to your account when you finish signing up.'
+                      : detail,
+                  style: body(11, color: AppColors.forest700, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -492,65 +597,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-}
-
-// ─── Aadhaar input helpers ───────────────────────────────────────────────────
-
-/// Groups the digits as "1234 5678 9012" and caps input at 12 digits.
-class _AadhaarInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final capped = digits.length > 12 ? digits.substring(0, 12) : digits;
-    final buf = StringBuffer();
-    for (var i = 0; i < capped.length; i++) {
-      if (i != 0 && i % 4 == 0) buf.write(' ');
-      buf.write(capped[i]);
-    }
-    final text = buf.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
-
-// Verhoeff checksum tables (multiplication, permutation) — the algorithm
-// Aadhaar uses for its trailing check digit.
-const _vD = <List<int>>[
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-  [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
-  [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
-  [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
-  [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
-  [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
-  [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
-  [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
-  [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
-  [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
-];
-const _vP = <List<int>>[
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-  [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
-  [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
-  [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
-  [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
-  [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
-  [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
-  [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
-];
-
-/// True when [number] (all digits) passes the Verhoeff checksum.
-bool _verhoeffValid(String number) {
-  var c = 0;
-  final digits = number.split('').reversed.toList();
-  for (var i = 0; i < digits.length; i++) {
-    final d = int.tryParse(digits[i]);
-    if (d == null) return false;
-    c = _vD[c][_vP[i % 8][d]];
-  }
-  return c == 0;
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────

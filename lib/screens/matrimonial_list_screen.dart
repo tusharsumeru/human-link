@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/match_bar.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -29,8 +31,39 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
   String _gotra = 'All';
   String _location = 'All';
 
-  List<Map<String, dynamic>> get _candidates =>
-      Repository.instance.matrimonial();
+  // Approved profiles from GET /api/matrimonial. Reaching this screen means
+  // MatrimonialGateScreen already cleared the caller, so a 403 here would be a
+  // real error rather than the expected "not eligible" path.
+  List<Map<String, dynamic>> _candidates = const [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final profiles = await Repository.instance.matrimonialProfiles();
+      if (!mounted) return;
+      setState(() {
+        _candidates = profiles;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e is ApiException ? e.message : 'Could not load profiles';
+        _loading = false;
+      });
+    }
+  }
 
   List<String> get _locations {
     final set = <String>{};
@@ -86,7 +119,14 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
             ]),
           ),
           const SizedBox(height: 12),
-          if (filtered.isEmpty)
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            _errorState(_error!)
+          else if (filtered.isEmpty)
             _emptyState()
           else
             ...filtered.map((c) => Padding(
@@ -182,6 +222,28 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       ),
     );
   }
+
+  Widget _errorState(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 30, color: AppColors.hint),
+          const SizedBox(height: 10),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: body(14, color: AppColors.textMuted)),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: _load,
+            child: Text('Try again',
+                style: body(13,
+                    weight: FontWeight.w700, color: AppColors.forest800)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _HeroBanner extends StatelessWidget {
@@ -213,14 +275,14 @@ class _HeroBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Elder-Mediated Introductions',
+                Text('Daivajna Samaja Matches',
                     style: display(16, color: Colors.white)),
                 const SizedBox(height: 6),
                 Text(
-                  'All introductions in the Daivajna Samaja network are '
-                  'facilitated by the Elder sub-committee — ensuring lineage '
-                  'authenticity, gotra compatibility, and family alignment. '
-                  'Every profile is verified.',
+                  'Everyone here is a Samaj member aged 18–50 who has '
+                  'completed a full profile — gotra, family and horoscope '
+                  'included — and chosen to publish it. You can see them '
+                  'because you have done the same.',
                   style:
                       body(12, color: AppColors.forest300, height: 1.5),
                 ),
@@ -341,6 +403,13 @@ class _CandidateCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   _detailRow(Icons.business_center_outlined,
                       (c['company'] as String).split('—').first.trim()),
+                  const SizedBox(height: 10),
+                  // How well this profile fits the preferences both sides
+                  // filled in. Absent when the viewer has no profile yet.
+                  MatchBar(
+                    match: c['match'] as Map<String, dynamic>?,
+                    compact: true,
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [

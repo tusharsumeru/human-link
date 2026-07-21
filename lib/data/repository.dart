@@ -141,17 +141,51 @@ class Repository {
     throw ApiException('Could not create post');
   }
 
-  /// POST /api/posts/:postId/likes — like a post. Requires a bearer token.
-  Future<void> likePost(String postId) async {
-    await _api.postJson('/api/posts/$postId/likes', const {});
+  /// POST /api/posts/:postId/likes — toggles the caller's like on a post and
+  /// returns the fresh `{liked, likeCount}`. Requires a bearer token.
+  Future<Map<String, dynamic>> likePost(String postId) async {
+    final data = await _api.postJson('/api/posts/$postId/likes', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'liked': true, 'likeCount': 0};
   }
 
-  /// POST /api/posts/comments — add a comment. Requires a bearer token.
-  Future<void> addComment({required String postId, required String text}) async {
-    await _api.postJson('/api/posts/comments', {
+  /// POST /api/posts/comments — add a comment. The server DTO field is
+  /// `content` (not `text`); a mismatch is stripped by the global
+  /// ValidationPipe and rejected as "content should not be empty".
+  /// Returns the created comment with its author populated.
+  Future<Map<String, dynamic>> addComment({
+    required String postId,
+    required String text,
+  }) async {
+    final data = await _api.postJson('/api/posts/comments', {
       'postId': postId,
-      'text': text,
+      'content': text,
     });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not post comment');
+  }
+
+  /// POST /api/posts/comments/:commentId/likes — toggles the caller's like on
+  /// a comment. Returns `{liked, likeCount}`.
+  Future<Map<String, dynamic>> likeComment(String commentId) async {
+    final data =
+        await _api.postJson('/api/posts/comments/$commentId/likes', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'liked': true, 'likeCount': 0};
+  }
+
+  /// GET /api/posts/:postId/comments — newest first:
+  /// `{count, comments:[{_id, userId:{userName, profileUrl}, content,
+  /// createdAt, likeCount, likedByMe}]}`.
+  Future<List<Map<String, dynamic>>> postComments(String postId) async {
+    final data = await _api.getJson('/api/posts/$postId/comments');
+    if (data is Map && data['comments'] is List) {
+      return (data['comments'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
   }
 
   // ── Stories (24h) ───────────────────────────────────────────────────────────
@@ -284,28 +318,6 @@ class Repository {
     await _api.deleteJson('/api/stories/$storyId');
   }
 
-  // ── Aadhaar / DigiLocker (backend `/api/adhar/*`) ───────────────────────────
-
-  /// POST /api/adhar/initialize — start a DigiLocker consent session. Returns
-  /// `{ client_id, url }`: the id to keep and the URL the user opens to consent.
-  Future<Map<String, dynamic>> adharInitialize({required String redirectUrl}) async {
-    final data = await _api.postJson('/api/adhar/initialize', {
-      'redirectUrl': redirectUrl,
-    });
-    if (data is Map) return Map<String, dynamic>.from(data);
-    throw ApiException('Could not start DigiLocker');
-  }
-
-  /// POST /api/adhar/download — fetch the verified Aadhaar for a consented
-  /// session identified by [clientId].
-  Future<Map<String, dynamic>> adharDownload(String clientId) async {
-    final data = await _api.postJson('/api/adhar/download', {
-      'clientId': clientId,
-    });
-    if (data is Map) return Map<String, dynamic>.from(data);
-    throw ApiException('Could not download Aadhaar');
-  }
-
   /// POST /api/user/upload — uploads an image (base64) to MongoDB, keyed by
   /// phone + type ("selfie" | "id" | "familyDoc"). Returns the absolute URL to
   /// load it back, or null if the backend is unreachable.
@@ -329,71 +341,199 @@ class Repository {
     return null;
   }
 
-  /// PATCH /api/user/profile — saves editable profile fields. Best-effort:
-  /// returns true on success, false if the backend is unreachable.
-  Future<bool> updateProfile({
-    required String phone,
+  /// PATCH /api/user/profile — saves editable profile fields and returns the
+  /// updated user map. Throws [ApiException] carrying the server's validation
+  /// message ("Name must be at least 2 characters"), which is what an edit form
+  /// needs to show; [updateProfile] is the best-effort wrapper for the
+  /// background call sites that would rather ignore a failure.
+  ///
+  /// The user is identified by the bearer token, so `phone` is not sent — the
+  /// server strips it anyway, and sending it implied an identity the request
+  /// does not actually carry.
+  Future<Map<String, dynamic>> saveProfile({
+    String? name,
     String? gotra,
     String? native,
     String? bio,
+    String? occupation,
     bool? matrimonialOptIn,
     String? dob,
     String? gender,
     String? address,
+    String? profileUrl,
+    String? maskedAadhaar,
+    bool? verified,
+  }) async {
+    final data = await _api.patchJson('/api/user/profile', {
+      'name': ?name,
+      'gotra': ?gotra,
+      'native': ?native,
+      'bio': ?bio,
+      'occupation': ?occupation,
+      'matrimonialOptIn': ?matrimonialOptIn,
+      'dob': ?dob,
+      'gender': ?gender,
+      'address': ?address,
+      'profileUrl': ?profileUrl,
+      'masked_aadhaar': ?maskedAadhaar,
+      'verified': ?verified,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not save your profile');
+  }
+
+  /// Best-effort [saveProfile]: true on success, false if the backend rejected
+  /// the change or is unreachable. Used by the onboarding/registration flows,
+  /// which must not stall on a profile write.
+  Future<bool> updateProfile({
+    String? phone,
+    String? name,
+    String? gotra,
+    String? native,
+    String? bio,
+    String? occupation,
+    bool? matrimonialOptIn,
+    String? dob,
+    String? gender,
+    String? address,
+    String? profileUrl,
     String? maskedAadhaar,
     bool? verified,
   }) async {
     try {
-      await _api.patchJson('/api/user/profile', {
-        'phone': phone,
-        'gotra': ?gotra,
-        'native': ?native,
-        'bio': ?bio,
-        'matrimonialOptIn': ?matrimonialOptIn,
-        'dob': ?dob,
-        'gender': ?gender,
-        'address': ?address,
-        'masked_aadhaar': ?maskedAadhaar,
-        'verified': ?verified,
-      });
+      await saveProfile(
+        name: name,
+        gotra: gotra,
+        native: native,
+        bio: bio,
+        occupation: occupation,
+        matrimonialOptIn: matrimonialOptIn,
+        dob: dob,
+        gender: gender,
+        address: address,
+        profileUrl: profileUrl,
+        maskedAadhaar: maskedAadhaar,
+        verified: verified,
+      );
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  /// DigiLocker (Surepass) — start a session. Returns a map with `client_id`,
-  /// the hosted `url` to open in a WebView, and `redirect_url` to watch for.
-  Future<Map<String, dynamic>> digilockerInitialize() async {
-    final res = await _api.postJson('/api/digilocker/initialize', {});
-    if (res is Map) {
-      final data = res['data'];
-      if (data is Map) {
-        return {
-          'client_id': data['client_id'],
-          // Via Link returns a URL to open; field name may vary by product.
-          'url': data['url'] ?? data['link'] ?? data['digilocker_url'],
-          'token': data['token'],
-          'redirect_url': res['redirect_url'],
-        };
-      }
-    }
-    throw ApiException('Could not start DigiLocker');
+  /// POST /api/user/profile/photo — multipart upload of the profile picture
+  /// (image only). Returns the updated user map, including the new
+  /// `profileUrl`. A photo is required to enter the matrimonial hub.
+  Future<Map<String, dynamic>> uploadProfilePhoto(String filePath) async {
+    final data = await _api.postMultipart(
+      '/api/user/profile/photo',
+      fileField: 'media',
+      filePath: filePath,
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not upload your photo');
   }
 
-  /// DigiLocker (Surepass) — fetch the verified Aadhaar data after the user
-  /// finishes the DigiLocker flow. Returns the KYC map (full_name, dob, …).
-  Future<Map<String, dynamic>> digilockerAadhaar(String clientId) async {
-    final res = await _api.getJson('/api/digilocker/aadhaar?client_id=$clientId');
-    if (res is Map && res['data'] is Map) {
-      final data = Map<String, dynamic>.from(res['data'] as Map);
-      // Flatten the useful KYC block if present.
-      if (data['aadhaar_xml_data'] is Map) {
-        return Map<String, dynamic>.from(data['aadhaar_xml_data'] as Map);
-      }
-      return data;
+  // ── Aadhaar KYC via DigiLocker (backend `/api/adhar/*`, Surepass behind it) ─
+  //
+  // The NestJS server mounts these under `/api/adhar`, *not* `/api/digilocker`
+  // (that path only exists on the Next.js web app). Calling the wrong one made
+  // Nest answer its 404 body — "Cannot POST /api/digilocker/initialize" — which
+  // the verification screens then showed as the error message.
+
+  /// POST /api/adhar/initialize — start a DigiLocker consent session. Returns
+  /// `client_id` (needed to download the Aadhaar afterwards), the hosted `url`
+  /// to open in a WebView, and the `redirect_url` that signals completion.
+  /// Leave [redirectUrl] empty to use the server's configured callback.
+  Future<Map<String, dynamic>> digilockerInitialize({
+    String redirectUrl = '',
+  }) async {
+    final res = await _api.postJson('/api/adhar/initialize', {
+      if (redirectUrl.isNotEmpty) 'redirectUrl': redirectUrl,
+    });
+    final data = _unwrapSurepass(res);
+    final clientId = (data['client_id'] ?? '').toString();
+    // Via Link returns a URL to open; the field name varies by product.
+    final url =
+        (data['url'] ?? data['link'] ?? data['digilocker_url'] ?? '').toString();
+    if (clientId.isEmpty || url.isEmpty) {
+      throw ApiException('Could not start DigiLocker');
     }
-    throw ApiException('Could not fetch Aadhaar data');
+    // Only the web route echoes a redirect_url back; otherwise the WebView
+    // falls back to matching the `digilocker-callback` marker in the URL.
+    final echoed = (res is Map ? res['redirect_url'] ?? '' : '').toString();
+    return {
+      'client_id': clientId,
+      'url': url,
+      'token': (data['token'] ?? '').toString(),
+      'redirect_url': echoed.isNotEmpty ? echoed : redirectUrl,
+    };
+  }
+
+  /// POST /api/adhar/download — the verified Aadhaar for a consented session.
+  /// Normalises Surepass's payload to just what the profile stores:
+  /// `full_name`, `dob`, `gender`, `masked_aadhaar`, `full_address`.
+  Future<Map<String, dynamic>> digilockerAadhaar(String clientId) async {
+    final res = await _api.postJson('/api/adhar/download', {
+      'clientId': clientId,
+    });
+    var data = _unwrapSurepass(res);
+    // Some Surepass products nest the KYC block one level deeper.
+    for (final key in const ['aadhaar_xml_data', 'aadhaar_data']) {
+      if (data[key] is Map) data = Map<String, dynamic>.from(data[key] as Map);
+    }
+    if (data.isEmpty) throw ApiException('Could not fetch Aadhaar data');
+    return {
+      'full_name': (data['full_name'] ?? data['name'] ?? '').toString(),
+      'dob': (data['dob'] ?? data['date_of_birth'] ?? '').toString(),
+      'gender': _normalizeGender(data['gender']),
+      'masked_aadhaar': (data['masked_aadhaar'] ??
+              data['aadhaar_id'] ??
+              data['aadhaar_number'] ??
+              '')
+          .toString(),
+      'full_address': _fullAddress(data),
+    };
+  }
+
+  /// The NestJS server returns Surepass's `data` block already unwrapped; the
+  /// Next.js web route returns the whole `{data: …}` envelope. Accept either.
+  Map<String, dynamic> _unwrapSurepass(dynamic res) {
+    if (res is Map && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data'] as Map);
+    }
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return const {};
+  }
+
+  /// Aadhaar gender arrives as `M`/`F` or `MALE`/`FEMALE`; the profile DTO only
+  /// accepts the single letter.
+  String _normalizeGender(dynamic raw) {
+    final g = (raw ?? '').toString().toUpperCase();
+    if (g.startsWith('M')) return 'M';
+    if (g.startsWith('F')) return 'F';
+    return '';
+  }
+
+  /// Surepass returns either a ready `full_address` string or a structured
+  /// `address` object; both collapse to the one line the profile shows.
+  String _fullAddress(Map<String, dynamic> data) {
+    final full = (data['full_address'] ?? '').toString();
+    if (full.isNotEmpty) return full;
+    final address = data['address'];
+    if (address is String) return address;
+    if (address is Map) {
+      const order = [
+        'house', 'street', 'landmark', 'loc', 'vtc', 'po',
+        'subdist', 'dist', 'state', 'country',
+      ];
+      final line = [
+        for (final key in order) (address[key] ?? '').toString().trim(),
+      ].where((part) => part.isNotEmpty).join(', ');
+      final zip = (data['zip'] ?? address['zip'] ?? '').toString().trim();
+      return [line, zip].where((part) => part.isNotEmpty).join(' - ');
+    }
+    return '';
   }
 
   /// Aadhaar (Surepass) — step 1: send OTP to the Aadhaar-linked mobile.
@@ -497,6 +637,86 @@ class Repository {
       'relation': relation,
       'note': note,
     });
+  }
+
+  // ── Matrimonial ─────────────────────────────────────────────────────────────
+
+  /// GET /api/matrimonial/eligibility — the gate. Returns
+  /// `{eligible, age, ageEligible, ageRange:{min,max}, profileComplete,
+  /// missing:[{key,label}], status, reviewNote, reasons:[..]}`.
+  Future<Map<String, dynamic>> matrimonialEligibility() async {
+    final data = await _api.getJson('/api/matrimonial/eligibility');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not check matrimonial eligibility');
+  }
+
+  /// GET /api/matrimonial/me — `{profile, eligibility}`; profile is null until
+  /// the member starts one.
+  Future<Map<String, dynamic>> myMatrimonialProfile() async {
+    final data = await _api.getJson('/api/matrimonial/me');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not load your matrimonial profile');
+  }
+
+  /// PUT /api/matrimonial/me — save-as-you-go draft. Every field optional.
+  Future<Map<String, dynamic>> saveMatrimonialProfile(
+      Map<String, dynamic> fields) async {
+    final data = await _api.putJson('/api/matrimonial/me', fields);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not save your matrimonial profile');
+  }
+
+  /// POST /api/matrimonial/me/submit — publish the profile to the hub. Takes
+  /// effect immediately; there is no review step. Throws with the server's
+  /// message (and a `missing` list) when the profile is incomplete or the
+  /// member is outside the permitted age range.
+  Future<Map<String, dynamic>> publishMatrimonialProfile() async {
+    final data = await _api.postJson('/api/matrimonial/me/submit', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not submit your matrimonial profile');
+  }
+
+  /// POST /api/matrimonial/me/withdraw — take the profile out of the hub.
+  Future<void> withdrawMatrimonialProfile() async {
+    await _api.postJson('/api/matrimonial/me/withdraw', const {});
+  }
+
+  /// GET /api/matrimonial — published profiles. 403 (ApiException) when the
+  /// caller has not passed the gate.
+  Future<List<Map<String, dynamic>>> matrimonialProfiles({
+    String? gender,
+    String? gotra,
+    String? location,
+    int? ageMin,
+    int? ageMax,
+    int limit = 50,
+  }) async {
+    final q = <String>['limit=$limit'];
+    if (gender != null && gender != 'All') q.add('gender=$gender');
+    if (gotra != null && gotra != 'All') {
+      q.add('gotra=${Uri.encodeQueryComponent(gotra)}');
+    }
+    if (location != null && location != 'All') {
+      q.add('location=${Uri.encodeQueryComponent(location)}');
+    }
+    if (ageMin != null) q.add('ageMin=$ageMin');
+    if (ageMax != null) q.add('ageMax=$ageMax');
+
+    final data = await _api.getJson('/api/matrimonial?${q.join('&')}');
+    if (data is Map && data['profiles'] is List) {
+      return (data['profiles'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// GET /api/matrimonial/:id — one published profile in full.
+  Future<Map<String, dynamic>> matrimonialProfile(String id) async {
+    final data = await _api.getJson('/api/matrimonial/$id');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Profile not found');
   }
 
   // ── Embedded content (same dataset the web pages use) ───────────────────────

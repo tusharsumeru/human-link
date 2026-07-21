@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/api_client.dart';
 import '../data/comment_store.dart';
 import '../data/demo_data.dart';
 import '../services/auth_service.dart';
@@ -45,6 +46,14 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   List<String> _suggestions = const [];
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pull this post's comments from the API the first time its sheet opens.
+    CommentStore.instance.load(widget.postId);
+  }
 
   @override
   void dispose() {
@@ -95,14 +104,32 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     _focus.requestFocus();
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _sending) return;
     final me = context.read<AuthService>().user?.name ?? 'You';
-    CommentStore.instance.add(widget.postId, Comment(author: me, text: text));
+
+    // Clear the field up front — the comment is appended optimistically, and
+    // CommentStore rolls it back if the POST fails.
     _controller.clear();
     _setSuggestions(const []);
+    setState(() => _sending = true);
+    try {
+      await CommentStore.instance
+          .send(widget.postId, text: text, author: me);
+    } catch (e) {
+      if (!mounted) return;
+      _controller.text = text; // give the user their text back to retry
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not post comment: ${_message(e)}')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
+
+  String _message(Object e) =>
+      e is ApiException ? e.message : 'check your connection';
 
   @override
   Widget build(BuildContext context) {
@@ -233,10 +260,11 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       ValueListenableBuilder<TextEditingValue>(
                         valueListenable: _controller,
                         builder: (_, value, __) {
-                          final enabled = value.text.trim().isNotEmpty;
+                          final enabled =
+                              value.text.trim().isNotEmpty && !_sending;
                           return TextButton(
                             onPressed: enabled ? _send : null,
-                            child: Text('Post',
+                            child: Text(_sending ? 'Posting…' : 'Post',
                                 style: body(14,
                                     weight: FontWeight.w700,
                                     color: enabled
@@ -283,12 +311,50 @@ class _CommentRow extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 4),
-              Text(comment.time, style: body(11, color: AppColors.hint)),
+              Row(
+                children: [
+                  Text(comment.time, style: body(11, color: AppColors.hint)),
+                  if (comment.likeCount > 0) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      '${comment.likeCount} like${comment.likeCount == 1 ? '' : 's'}',
+                      style: body(11,
+                          weight: FontWeight.w600, color: AppColors.hint),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
-        const Icon(Icons.favorite_border_rounded,
-            size: 16, color: AppColors.hint),
+        // Liking needs the server id, so the heart is inert for the moment a
+        // comment is still being posted.
+        IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          iconSize: 16,
+          icon: Icon(
+            comment.likedByMe
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            color: comment.likedByMe
+                ? const Color(0xFFE0245E)
+                : AppColors.hint,
+          ),
+          onPressed: comment.id == null
+              ? null
+              : () async {
+                  try {
+                    await CommentStore.instance.toggleLike(comment);
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                          'Could not like: ${e is ApiException ? e.message : 'check your connection'}'),
+                    ));
+                  }
+                },
+        ),
       ],
     );
   }

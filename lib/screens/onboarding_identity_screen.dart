@@ -5,12 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/digilocker_card.dart';
 import '../widgets/ui_kit.dart';
-import 'digilocker_webview_screen.dart';
 
 /// Onboarding step 1 — Identity.
 ///
@@ -30,81 +29,6 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
 
   XFile? _selfie;
   bool _saving = false;
-
-  // DigiLocker (Aadhaar) verification state.
-  bool _verified = false;
-  String _verifiedName = '';
-  bool _digiBusy = false;
-  String _digiError = '';
-
-  /// Starts Surepass DigiLocker: init → open the hosted page in a WebView →
-  /// on completion, download the verified Aadhaar data.
-  Future<void> _startDigilocker() async {
-    final auth = context.read<AuthService>();
-    setState(() {
-      _digiBusy = true;
-      _digiError = '';
-    });
-    try {
-      final init = await Repository.instance.digilockerInitialize();
-      final url = (init['url'] ?? '').toString();
-      final clientId = (init['client_id'] ?? '').toString();
-      final redirect = (init['redirect_url'] ?? '').toString();
-      if (url.isEmpty || clientId.isEmpty) {
-        throw ApiException('DigiLocker link unavailable');
-      }
-      if (!mounted) return;
-      final ok = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) =>
-              DigilockerWebViewScreen(url: url, redirectUrl: redirect),
-        ),
-      );
-      if (ok != true) {
-        if (mounted) setState(() => _digiBusy = false);
-        return;
-      }
-      final data = await Repository.instance.digilockerAadhaar(clientId);
-      final fullName = (data['full_name'] ?? '').toString();
-      final dob = (data['dob'] ?? '').toString();
-      final gender = (data['gender'] ?? '').toString();
-      final masked = (data['masked_aadhaar'] ?? '').toString();
-      final address = (data['full_address'] ?? '').toString();
-
-      final user = auth.user;
-      if (user != null) {
-        // Persist KYC to MongoDB (best-effort) and locally.
-        await Repository.instance.updateProfile(
-          phone: user.phone,
-          dob: dob,
-          gender: gender,
-          address: address,
-          maskedAadhaar: masked,
-          verified: true,
-        );
-        await auth.updateUser(user.copyWith(
-          dob: dob,
-          gender: gender.isEmpty ? null : gender,
-          address: address,
-          maskedAadhaar: masked,
-          verified: true,
-        ));
-      }
-      if (!mounted) return;
-      setState(() {
-        _digiBusy = false;
-        _verified = true;
-        _verifiedName = fullName;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _digiBusy = false;
-        _digiError =
-            e is ApiException ? e.message : 'DigiLocker verification failed.';
-      });
-    }
-  }
 
   Future<void> _takeSelfie() async {
     try {
@@ -171,7 +95,14 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 18),
-            AppCard(child: _digilockerCard()),
+            const AppCard(
+              child: DigilockerCard(
+                description:
+                    'Verify your Aadhaar securely through the government '
+                    'DigiLocker. You\'ll sign in to DigiLocker and consent to '
+                    'share your Aadhaar.',
+              ),
+            ),
             const SizedBox(height: 14),
             AppCard(
               child: Column(
@@ -199,74 +130,6 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _digilockerCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.verified_user_outlined,
-                size: 18, color: AppColors.forest700),
-            const SizedBox(width: 8),
-            Text('Aadhaar via DigiLocker',
-                style: display(16, color: AppColors.forest900)),
-            const Spacer(),
-            if (_verified)
-              Pill('Verified',
-                  icon: Icons.check_circle,
-                  bg: AppColors.forest600.withValues(alpha: 0.14),
-                  fg: AppColors.forest700),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (_verified)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FBF4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFB7E4C7)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle,
-                    size: 18, color: AppColors.forest700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _verifiedName.isEmpty
-                        ? 'Aadhaar verified successfully.'
-                        : 'Verified: $_verifiedName',
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.forest700),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else ...[
-          Text(
-            'Verify your Aadhaar securely through the government DigiLocker. '
-            'You\'ll sign in to DigiLocker and consent to share your Aadhaar.',
-            style: body(12, color: AppColors.textMuted, height: 1.4),
-          ),
-          const SizedBox(height: 10),
-          ForestButton(
-            label: 'Verify with DigiLocker',
-            icon: Icons.shield_outlined,
-            expand: true,
-            loading: _digiBusy,
-            onPressed: _digiBusy ? null : _startDigilocker,
-          ),
-        ],
-        if (_digiError.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(_digiError, style: body(12, color: Colors.red)),
-        ],
-      ],
     );
   }
 

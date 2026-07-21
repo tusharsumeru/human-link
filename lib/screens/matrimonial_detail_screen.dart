@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
 import '../theme/app_theme.dart';
+import '../widgets/match_bar.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -19,6 +20,34 @@ class MatrimonialDetailScreen extends StatefulWidget {
 }
 
 class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
+  // GET /api/matrimonial/:id. The endpoint applies the same gates as the
+  // listing — approved-only and age-eligible — so a direct link can't reach a
+  // draft, a withdrawn profile, or someone who has aged out.
+  Map<String, dynamic>? _candidate;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final c = await Repository.instance.matrimonialProfile(widget.id);
+      if (!mounted) return;
+      setState(() {
+        _candidate = c;
+        _loading = false;
+      });
+    } catch (_) {
+      // A 403/404 both mean "you can't see this" — the not-found view says so
+      // without leaking whether the profile exists.
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
   void _back() {
     if (context.canPop()) {
       context.pop();
@@ -29,7 +58,7 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final candidate = Repository.instance.matrimonialById(widget.id);
+    final candidate = _candidate;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -45,9 +74,11 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
         title: Text('Candidate Profile',
             style: display(18, color: Colors.white)),
       ),
-      body: candidate == null
-          ? _notFound()
-          : _CandidateDetail(candidate: candidate),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : candidate == null
+              ? _notFound()
+              : _CandidateDetail(candidate: candidate),
     );
   }
 
@@ -87,6 +118,16 @@ class _CandidateDetail extends StatelessWidget {
           children: [
             _PhotoHeader(candidate: c),
             const SizedBox(height: 16),
+            // Placed first: whether this profile fits what you're looking for
+            // is the thing you want to know before reading the rest.
+            if (c['match'] != null) ...[
+              _section(
+                title: 'Compatibility',
+                icon: Icons.favorite_rounded,
+                child: MatchDetail(match: c['match'] as Map<String, dynamic>?),
+              ),
+              const SizedBox(height: 14),
+            ],
             _section(
               title: 'Professional',
               icon: Icons.business_center_outlined,
@@ -126,7 +167,8 @@ class _CandidateDetail extends StatelessWidget {
                 ('Star / Nakshatra', c['star'] as String),
                 ('Rashi', c['rashi'] as String),
                 ('Mangal',
-                    c['mangal'] == 'Yes' ? 'Mangalik' : 'Non-Mangalik'),
+                    // The API sends a real boolean; null means "not answered".
+                    c['mangal'] == true ? 'Mangalik' : 'Non-Mangalik'),
                 ('Gotra / Surname', c['gotraSurname'] as String),
                 ('Time of Birth', c['timeOfBirth'] as String),
               ]),

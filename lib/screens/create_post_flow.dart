@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/api_client.dart';
 import '../data/feed_store.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -161,27 +162,49 @@ Future<void> _startCreate(
   );
   if (caption == null) return; // cancelled at composer
 
-  FeedStore.instance.add(UserPost(
-    id: FeedStore.instance.nextId(),
-    author: user?.name ?? 'You',
-    subtitle: (user?.native.split(',').first.trim().isNotEmpty ?? false)
-        ? user!.native.split(',').first.trim()
-        : 'Daivajna Samaja',
-    mediaPath: path,
-    caption: caption,
-    isReel: isReel,
-  ));
+  // Jump to the feed first: the card shows straight away from the local file
+  // with an "Uploading…" overlay, and settles once POST /api/posts returns.
+  router.go('/dashboard');
 
-  messenger.showSnackBar(SnackBar(
-    content: Text(isReel ? 'Reel shared 🎬' : 'Post shared ✨',
-        style: body(13, color: Colors.white)),
-    backgroundColor: AppColors.forest800,
-    behavior: SnackBarBehavior.floating,
-    duration: const Duration(seconds: 2),
-  ));
-
-  router.go('/dashboard'); // jump to the feed to show it
+  try {
+    await FeedStore.instance.upload(
+      mediaPath: path,
+      caption: caption,
+      isReel: isReel,
+      author: user?.name ?? 'You',
+      subtitle: (user?.native.split(',').first.trim().isNotEmpty ?? false)
+          ? user!.native.split(',').first.trim()
+          : 'Daivajna Samaja',
+      hashtags: _hashtagsIn(caption),
+    );
+    messenger.showSnackBar(SnackBar(
+      content: Text(isReel ? 'Reel shared 🎬' : 'Post shared ✨',
+          style: body(13, color: Colors.white)),
+      backgroundColor: AppColors.forest800,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+    ));
+  } catch (e) {
+    // The card stays in the feed marked "Upload failed — Retry", so the user
+    // never loses the pick just because the network dropped.
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+          'Upload failed: ${e is ApiException ? e.message : 'check your connection'}',
+          style: body(13, color: Colors.white)),
+      backgroundColor: Colors.red.shade700,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+    ));
+  }
 }
+
+/// "#kumta #heritage" in the caption → `['kumta', 'heritage']` for the API's
+/// optional hashtags field.
+List<String> _hashtagsIn(String caption) => RegExp(r'#(\w+)')
+    .allMatches(caption)
+    .map((m) => m.group(1)!)
+    .toSet()
+    .toList();
 
 /// Full-screen composer: preview + caption + Share. Returns the caption, or
 /// null if the user backed out.

@@ -18,6 +18,7 @@ class AppUser {
   // Extras — backend supports `bio`/`matrimonialOptIn`; the rest are local-only.
   final String gender;
   final String bio;
+  final String occupation;
   final String address;
   final bool matrimonialOptIn;
   final String photoPath; // local file path to the user's photo/selfie
@@ -38,6 +39,7 @@ class AppUser {
     required this.avatar,
     this.gender = '',
     this.bio = '',
+    this.occupation = '',
     this.address = '',
     this.matrimonialOptIn = false,
     this.photoPath = '',
@@ -60,6 +62,7 @@ class AppUser {
         avatar: (m['avatar'] ?? '6') as String,
         gender: (m['gender'] ?? '') as String,
         bio: (m['bio'] ?? '') as String,
+        occupation: (m['occupation'] ?? '') as String,
         address: (m['address'] ?? '') as String,
         matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
         photoPath: (m['photoPath'] ?? '') as String,
@@ -81,6 +84,7 @@ class AppUser {
         'avatar': avatar,
         'gender': gender,
         'bio': bio,
+        'occupation': occupation,
         'address': address,
         'matrimonialOptIn': matrimonialOptIn,
         'photoPath': photoPath,
@@ -101,6 +105,7 @@ class AppUser {
     String? avatar,
     String? gender,
     String? bio,
+    String? occupation,
     String? address,
     bool? matrimonialOptIn,
     String? photoPath,
@@ -120,6 +125,7 @@ class AppUser {
         avatar: avatar ?? this.avatar,
         gender: gender ?? this.gender,
         bio: bio ?? this.bio,
+        occupation: occupation ?? this.occupation,
         address: address ?? this.address,
         matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
         photoPath: photoPath ?? this.photoPath,
