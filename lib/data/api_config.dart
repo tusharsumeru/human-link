@@ -6,11 +6,14 @@
 class ApiConfig {
   ApiConfig._();
 
-  /// Deployed Next.js backend (Vercel). Verified working: `/api/user/login`,
-  /// `/api/stats` return live data from MongoDB.
+  /// Backend base URL. Default targets the local NestJS server from the Android
+  /// emulator: 10.0.2.2 is the emulator's alias for the host machine, and using
+  /// the IP (not a hostname) also avoids the emulator's flaky DNS.
   // NOTE: no trailing `/api` — every request path already begins with `/api`
   // (e.g. `/api/user/login`), so keeping it here would double it.
-  static const String _deployed ="https://53d3-2409-4091-9008-ae00-79a7-65ca-8d56-307e.ngrok-free.app";
+  // For a physical device or a tunnel, override with
+  // --dart-define=API_BASE_URL=https://<host> (see below).
+  static const String _deployed = "https://baskets-caps-flame-musician.trycloudflare.com";
   static const String _override = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
@@ -24,6 +27,8 @@ class ApiConfig {
     return _deployed;
   }
 
-  /// How long to wait for the API before falling back to embedded demo data.
-  static const Duration timeout = Duration(seconds: 4);
+  /// How long to wait for the API before failing / falling back to demo data.
+  /// Generous on purpose: an emulator's first HTTPS call through a dev tunnel
+  /// (DNS + TLS handshake) can easily take several seconds.
+  static const Duration timeout = Duration(seconds: 20);
 }

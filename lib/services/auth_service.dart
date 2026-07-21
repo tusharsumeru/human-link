@@ -146,10 +146,17 @@ class AuthService extends ChangeNotifier {
 
   AppUser? get user => _user;
   String? get token => _token;
-  bool get isLoggedIn => _user != null;
+  // A session is only usable with a bearer token: every protected endpoint
+  // (stories, posts, likes) 401s without one. Requiring the token here means a
+  // profile persisted without a token (e.g. from before tokens were issued)
+  // routes to login to get one, rather than looking signed in but failing every
+  // protected call.
+  bool get isLoggedIn => _user != null && (_token?.isNotEmpty ?? false);
   bool get loaded => _loaded;
 
   Future<void> load() async {
+    // Clear the session on any 401 so an expired/missing token routes to login.
+    ApiAuth.onUnauthorized = _clearSession;
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
     if (raw != null) {
@@ -176,8 +183,10 @@ class AuthService extends ChangeNotifier {
     return user;
   }
 
-  /// Logs in directly with a known profile.
-  Future<void> loginWithUser(AppUser user) => _persist(user);
+  /// Logs in directly with a known profile (e.g. right after registration),
+  /// optionally storing the JWT so protected calls work without a re-login.
+  Future<void> loginWithUser(AppUser user, {String? token}) =>
+      _persist(user, token: token);
 
   /// Persists an updated profile (after edits in onboarding / verify).
   Future<void> updateUser(AppUser user) => _persist(user);
@@ -191,6 +200,21 @@ class AuthService extends ChangeNotifier {
       ApiAuth.token = token;
       await prefs.setString(_tokenKey, token);
     }
+    notifyListeners();
+  }
+
+  /// Clears the in-memory + stored session and notifies listeners so the router
+  /// redirects to login. Synchronous for the memory clear (safe to call from the
+  /// ApiClient 401 handler); the prefs wipe is fire-and-forget.
+  void _clearSession() {
+    if (_user == null && _token == null) return;
+    _user = null;
+    _token = null;
+    ApiAuth.token = null;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove(_prefsKey);
+      prefs.remove(_tokenKey);
+    });
     notifyListeners();
   }
 

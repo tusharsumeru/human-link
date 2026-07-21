@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -38,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _nativeCtrl = TextEditingController();
+  final _aadhaarCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   String _gotra = 'Kashyap';
   String _gender = 'M';
@@ -50,6 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _nativeCtrl.dispose();
+    _aadhaarCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
   }
@@ -63,6 +66,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = 'Please enter a valid 10-digit phone number');
+      return;
+    }
+    // Aadhaar is optional — only validate when the member actually enters one.
+    final aadhaar = _aadhaarCtrl.text.replaceAll(' ', '');
+    if (aadhaar.isNotEmpty && !_isValidAadhaar(aadhaar)) {
+      setState(() =>
+          _error = 'Enter a valid 12-digit Aadhaar number, or leave it blank');
       return;
     }
     setState(() {
@@ -94,7 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Assign a random avatar (1–8), as the web register page does.
     final avatar = (Random().nextInt(8) + 1).toString();
     try {
-      final map = await Repository.instance.register(
+      final res = await Repository.instance.register(
         name: _nameCtrl.text.trim(),
         phone: phone,
         gotra: _gotra,
@@ -102,9 +112,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         avatar: avatar,
         gender: _gender,
       );
-      final user = AppUser.fromMap(map).copyWith(gender: _gender, avatar: avatar);
+      final map = res['user'] as Map<String, dynamic>;
+      final token = (res['token'] ?? '') as String;
+      var user = AppUser.fromMap(map).copyWith(gender: _gender, avatar: avatar);
+      // Keep only a masked reference of an optionally-entered Aadhaar; full
+      // KYC (and the verified badge) still happens later via Verify Identity.
+      final aadhaar = _aadhaarCtrl.text.replaceAll(' ', '');
+      if (aadhaar.length == 12) {
+        user = user.copyWith(maskedAadhaar: _maskAadhaar(aadhaar));
+      }
       if (!mounted) return;
-      await auth.loginWithUser(user);
+      await auth.loginWithUser(user, token: token.isEmpty ? null : token);
       if (!mounted) return;
       context.go('/dashboard');
     } on ApiException catch (e) {
@@ -115,10 +133,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             : 'Registration failed. Please try again.';
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      // Surface *why* it failed — a bare "network error" hides whether this was
+      // a timeout, a dead tunnel/DNS failure, or a bad response.
+      final detail = e is TimeoutException
+          ? 'the server took too long to respond'
+          : e.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _error = 'Network error. Please check your connection.';
+        _error = 'Network error — $detail';
         _loading = false;
       });
     }
@@ -231,6 +254,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
           label: 'Native Place (optional)',
           controller: _nativeCtrl,
           hint: 'e.g. Kundapura, Udupi, Karnataka',
+        ),
+        const SizedBox(height: 14),
+        _label('Aadhaar Number (optional)'),
+        TextField(
+          controller: _aadhaarCtrl,
+          keyboardType: TextInputType.number,
+          inputFormatters: [_AadhaarInputFormatter()],
+          onChanged: (_) {
+            if (_error.isNotEmpty) setState(() => _error = '');
+          },
+          style: body(15, color: AppColors.ink, letterSpacing: 1.5),
+          decoration: InputDecoration(
+            hintText: '1234 5678 9012',
+            counterText: '',
+            filled: true,
+            fillColor: Colors.white,
+            prefixIcon: const Icon(Icons.credit_card_outlined,
+                size: 18, color: AppColors.hint),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: AppColors.forest800, width: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(Icons.lock_outline, size: 12, color: AppColors.hint),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Optional. We keep only a masked reference (XXXX XXXX 1234). '
+                'Verify via DigiLocker later for the ✓ badge.',
+                style: body(11, color: AppColors.textMuted, height: 1.4),
+              ),
+            ),
+          ],
         ),
         if (_error.isNotEmpty) ...[
           const SizedBox(height: 10),
@@ -352,6 +419,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  /// A structurally-valid Aadhaar: 12 digits, first digit 2–9, and a valid
+  /// Verhoeff checksum (the same check UIDAI uses). This authenticates the
+  /// number's form — full identity KYC is the separate DigiLocker step.
+  bool _isValidAadhaar(String a) =>
+      RegExp(r'^[2-9][0-9]{11}$').hasMatch(a) && _verhoeffValid(a);
+
+  /// Masks all but the last four digits: "XXXX XXXX 1234".
+  String _maskAadhaar(String a) => 'XXXX XXXX ${a.substring(8)}';
+
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(text,
@@ -416,6 +492,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
+
+// ─── Aadhaar input helpers ───────────────────────────────────────────────────
+
+/// Groups the digits as "1234 5678 9012" and caps input at 12 digits.
+class _AadhaarInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final capped = digits.length > 12 ? digits.substring(0, 12) : digits;
+    final buf = StringBuffer();
+    for (var i = 0; i < capped.length; i++) {
+      if (i != 0 && i % 4 == 0) buf.write(' ');
+      buf.write(capped[i]);
+    }
+    final text = buf.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+// Verhoeff checksum tables (multiplication, permutation) — the algorithm
+// Aadhaar uses for its trailing check digit.
+const _vD = <List<int>>[
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+  [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+  [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+  [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+  [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+  [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+  [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+  [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+  [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+];
+const _vP = <List<int>>[
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+  [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+  [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+  [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+  [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+  [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+  [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+];
+
+/// True when [number] (all digits) passes the Verhoeff checksum.
+bool _verhoeffValid(String number) {
+  var c = 0;
+  final digits = number.split('').reversed.toList();
+  for (var i = 0; i < digits.length; i++) {
+    final d = int.tryParse(digits[i]);
+    if (d == null) return false;
+    c = _vD[c][_vP[i % 8][d]];
+  }
+  return c == 0;
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────

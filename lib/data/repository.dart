@@ -69,7 +69,10 @@ class Repository {
       if (gender.isNotEmpty) 'gender': gender,
     });
     if (data is Map && data['user'] is Map) {
-      return Map<String, dynamic>.from(data['user'] as Map);
+      return {
+        'user': Map<String, dynamic>.from(data['user'] as Map),
+        'token': (data['token'] ?? '').toString(),
+      };
     }
     throw ApiException('Registration failed');
   }
@@ -149,6 +152,136 @@ class Repository {
       'postId': postId,
       'text': text,
     });
+  }
+
+  // ── Stories (24h) ───────────────────────────────────────────────────────────
+
+  /// GET /api/stories — active stories grouped per author ("trays"). Returns the
+  /// raw envelope: `{count, trays:[{author, latestAt, stories:[...]}], nextCursor}`.
+  Future<Map<String, dynamic>> storiesFeed({int limit = 30, String? cursor}) async {
+    final q = <String>['limit=$limit'];
+    if (cursor != null && cursor.isNotEmpty) q.add('cursor=$cursor');
+    final data = await _api.getJson('/api/stories?${q.join('&')}');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'trays': const []};
+  }
+
+  /// GET /api/stories/me — the caller's own active stories (array).
+  Future<List<Map<String, dynamic>>> myStories() async {
+    final data = await _api.getJson('/api/stories/me');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/stories — multipart upload of an image/video (≤100 MB) as a story
+  /// that expires in 24h. Optionally tags family members, links to an ancestor
+  /// tree node, and attaches a location. Requires a bearer token.
+  Future<Map<String, dynamic>> createStory({
+    required String filePath,
+    String caption = '',
+    String visibility = 'community',
+    List<String> taggedMembers = const [],
+    String? treeNodeId,
+    String? locationName,
+    String? locationKind,
+  }) async {
+    final data = await _api.postMultipart(
+      '/api/stories',
+      fileField: 'media',
+      filePath: filePath,
+      fields: {
+        'caption': caption,
+        'visibility': visibility,
+        // taggedMembers is sent as a JSON-array string (per the API contract).
+        if (taggedMembers.isNotEmpty) 'taggedMembers': jsonEncode(taggedMembers),
+        if (treeNodeId != null && treeNodeId.isNotEmpty) 'treeNodeId': treeNodeId,
+        if (locationName != null && locationName.isNotEmpty)
+          'locationName': locationName,
+        if (locationKind != null && locationKind.isNotEmpty)
+          'locationKind': locationKind,
+      },
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not create story');
+  }
+
+  /// GET /api/stories/:id — one story with counts and the caller's liked flag.
+  Future<Map<String, dynamic>> story(String storyId) async {
+    final data = await _api.getJson('/api/stories/$storyId');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Story not found');
+  }
+
+  /// POST /api/stories/:id/likes — toggle a like. Returns `{liked, likeCount}`.
+  Future<Map<String, dynamic>> toggleStoryLike(String storyId) async {
+    final data = await _api.postJson('/api/stories/$storyId/likes', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'liked': false, 'likeCount': 0};
+  }
+
+  /// POST /api/stories/:id/comments — reply to a story.
+  Future<void> addStoryComment(String storyId, String content) async {
+    await _api.postJson('/api/stories/$storyId/comments', {'content': content});
+  }
+
+  /// GET /api/stories/:id/comments — the replies:
+  /// `[{ _id, userId:{_id,userName}, content, createdAt }]`.
+  Future<List<Map<String, dynamic>>> storyComments(String storyId) async {
+    final data = await _api.getJson('/api/stories/$storyId/comments');
+    if (data is Map && data['comments'] is List) {
+      return (data['comments'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// GET /api/family/search — members matching [q] (for tagging / tree link):
+  /// `[{ _id, name, gotra, native, photoUrl, generation, branch }]`.
+  Future<List<Map<String, dynamic>>> familySearch(String q,
+      {int limit = 20}) async {
+    final data = await _api.getJson(
+        '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/stories/:id/views — mark a story viewed. Returns the new count.
+  Future<int> markStoryViewed(String storyId) async {
+    final data = await _api.postJson('/api/stories/$storyId/views', const {});
+    if (data is Map && data['viewCount'] is num) {
+      return (data['viewCount'] as num).toInt();
+    }
+    return 0;
+  }
+
+  /// GET /api/stories/:id/views — the viewers list:
+  /// `[{ user:{_id,userName}, viewedAt }]`.
+  Future<List<Map<String, dynamic>>> storyViewers(String storyId) async {
+    final data = await _api.getJson('/api/stories/$storyId/views');
+    if (data is Map && data['viewers'] is List) {
+      return (data['viewers'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// DELETE /api/stories/:id — remove one of the caller's stories.
+  Future<void> deleteStory(String storyId) async {
+    await _api.deleteJson('/api/stories/$storyId');
   }
 
   // ── Aadhaar / DigiLocker (backend `/api/adhar/*`) ───────────────────────────

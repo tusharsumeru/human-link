@@ -1,19 +1,26 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/comment_store.dart';
 import '../data/feed_store.dart';
 import '../data/repository.dart';
 import '../data/saved_store.dart';
+import '../data/story_store.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
 import 'comments_sheet.dart';
 import 'full_screen_reel.dart';
 import 'share_sheet.dart';
+import 'story_compose_screen.dart';
+import 'story_viewer_screen.dart';
 
 /// Dashboard — an Instagram-style Samaj feed: stories, reels, and posts.
 class DashboardScreen extends StatelessWidget {
@@ -68,7 +75,7 @@ class _FeedState extends State<_Feed> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false); // keep _backendPosts empty → demo fallback
+      setState(() => _loading = false); // leave feed empty on error, no fallback
     }
   }
 
@@ -77,23 +84,41 @@ class _FeedState extends State<_Feed> {
     return ListenableBuilder(
       listenable: FeedStore.instance,
       builder: (context, _) {
-        // Locally-uploaded posts (this session) sit on top; then the real
-        // backend feed; demo posts only fill in when the backend has none.
+        // Locally-uploaded posts (this session) sit on top of the real backend
+        // feed. No demo/seed content — an empty backend shows an empty feed.
         final userPosts =
             FeedStore.instance.posts.map(_Post.fromUser).toList();
-        final base = _backendPosts.isNotEmpty ? _backendPosts : _posts;
-        final all = <_Post>[...userPosts, ...base];
+        final all = <_Post>[...userPosts, ..._backendPosts];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
+            // Stories rail (Instagram-style) pinned to the top of the feed.
+            const _StoriesShelf(),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 28),
                 child: Center(
                     child: CircularProgressIndicator(
                         color: AppColors.forest700, strokeWidth: 2)),
+              )
+            else if (all.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+                child: Column(
+                  children: [
+                    const Icon(Icons.photo_library_outlined,
+                        size: 44, color: AppColors.hint),
+                    const SizedBox(height: 12),
+                    Text('No posts yet',
+                        style: display(16, color: AppColors.forest900)),
+                    const SizedBox(height: 4),
+                    Text('Be the first to share something with the Samaj.',
+                        textAlign: TextAlign.center,
+                        style: body(13, color: AppColors.textMuted)),
+                  ],
+                ),
               ),
             // Interleave posts with a reels shelf after the second post.
             for (var i = 0; i < all.length; i++) ...[
@@ -111,6 +136,335 @@ class _FeedState extends State<_Feed> {
       },
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stories
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Horizontal "Family Updates" stories rail, backed by `/api/stories`. Loads on
+/// mount and rebuilds as you post, view, or delete.
+class _StoriesShelf extends StatefulWidget {
+  const _StoriesShelf();
+
+  @override
+  State<_StoriesShelf> createState() => _StoriesShelfState();
+}
+
+class _StoriesShelfState extends State<_StoriesShelf> {
+  @override
+  void initState() {
+    super.initState();
+    // Load after first frame so it doesn't block the initial feed paint.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StoryStore.instance.refresh();
+    });
+  }
+
+  static const _videoExts = {
+    'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
+  };
+
+  /// Pick an image/video, then open the "Share Story" composer to post it.
+  Future<void> _pickAndPostStory() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    String? picked;
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.media);
+      picked = result?.files.single.path;
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
+      return;
+    }
+    if (picked == null) return; // cancelled
+    final path = picked;
+    final isVideo = _videoExts.contains(path.split('.').last.toLowerCase());
+    navigator.push(MaterialPageRoute(
+      builder: (_) => StoryComposeScreen(filePath: path, isVideo: isVideo),
+    ));
+  }
+
+  void _openMyStories() {
+    final mine = StoryStore.instance.mine;
+    if (mine.isEmpty) {
+      _pickAndPostStory();
+      return;
+    }
+    final slides = [
+      for (final s in mine)
+        StorySlide(
+          author: 'Your Story',
+          createdAt: s.createdAt,
+          mediaUrl: s.mediaUrl,
+          isVideo: s.isVideo,
+          caption: s.caption,
+          isMine: true,
+          storyId: s.id,
+          viewCount: s.viewCount,
+          onDeleted: () => StoryStore.instance.refresh(),
+        ),
+    ];
+    _openViewer(slides);
+  }
+
+  void _openTray(StoryTray tray) {
+    final slides = [
+      for (final s in tray.stories)
+        StorySlide(
+          author: tray.author.userName,
+          createdAt: s.createdAt,
+          mediaUrl: s.mediaUrl,
+          isVideo: s.isVideo,
+          caption: s.caption,
+          storyId: s.id,
+          onShown: () => StoryStore.instance.markViewed(s.id),
+        ),
+    ];
+    _openViewer(slides);
+  }
+
+  void _openViewer(List<StorySlide> slides) {
+    if (slides.isEmpty) return;
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (_, __, ___) => StoryViewerScreen(slides: slides),
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: StoryStore.instance,
+      builder: (context, _) {
+        final trays = StoryStore.instance.otherTrays;
+        return Container(
+          color: AppColors.cream,
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                child: Text('FAMILY UPDATES',
+                    style: body(12,
+                        weight: FontWeight.w700,
+                        color: AppColors.gold700,
+                        letterSpacing: 1.4)),
+              ),
+              SizedBox(
+                height: 96,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: trays.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      return _YourStory(
+                        hasStory: StoryStore.instance.hasActiveStory,
+                        onTap: _openMyStories,
+                        onAdd: _pickAndPostStory,
+                      );
+                    }
+                    final tray = trays[i - 1];
+                    return _TrayCircle(
+                      tray: tray,
+                      viewed: StoryStore.instance.trayViewed(tray),
+                      onTap: () => _openTray(tray),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The leading "Your Story" tile. With no active story it's a dashed ring +
+/// button; once you've posted, it becomes your avatar in a ring with a small
+/// + badge to add another.
+class _YourStory extends StatelessWidget {
+  const _YourStory({
+    required this.hasStory,
+    required this.onTap,
+    required this.onAdd,
+  });
+  final bool hasStory;
+  final VoidCallback onTap;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasStory) {
+      return _StoryTile(
+        label: 'Your Story',
+        onTap: onTap,
+        avatar: CustomPaint(
+          painter: const _DashedCirclePainter(color: AppColors.forest600),
+          child: const SizedBox(
+            width: 64,
+            height: 64,
+            child: Icon(Icons.add_rounded, color: AppColors.forest700, size: 28),
+          ),
+        ),
+      );
+    }
+    final name = context.watch<AuthService>().user?.name ?? 'You';
+    return _StoryTile(
+      label: 'Your Story',
+      onTap: onTap,
+      avatar: SizedBox(
+        width: 64,
+        height: 64,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _ring(child: PexelsImage(url: '', name: name, size: 56)),
+            // Add-another badge
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: GestureDetector(
+                onTap: onAdd,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppColors.forest700,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.cream, width: 2),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: Colors.white, size: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One author's story tray: a ring (gold→forest when unseen, grey once viewed)
+/// around their initials avatar.
+class _TrayCircle extends StatelessWidget {
+  const _TrayCircle({
+    required this.tray,
+    required this.viewed,
+    required this.onTap,
+  });
+  final StoryTray tray;
+  final bool viewed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = tray.author.userName;
+    return _StoryTile(
+      label: name,
+      onTap: onTap,
+      avatar: _ring(
+        viewed: viewed,
+        child: PexelsImage(url: '', name: name, size: 56),
+      ),
+    );
+  }
+}
+
+/// A story avatar ring: gradient (unseen) or grey (viewed), with a cream gap.
+Widget _ring({required Widget child, bool viewed = false}) {
+  return Container(
+    width: 64,
+    height: 64,
+    padding: const EdgeInsets.all(2.5),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: viewed
+          ? null
+          : const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.gold500, AppColors.forest600],
+            ),
+      color: viewed ? AppColors.border : null,
+    ),
+    child: Container(
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.cream,
+      ),
+      child: ClipOval(child: child),
+    ),
+  );
+}
+
+/// Shared layout for a story item: avatar above a single-line label.
+class _StoryTile extends StatelessWidget {
+  const _StoryTile(
+      {required this.label, required this.avatar, required this.onTap});
+  final String label;
+  final Widget avatar;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 66,
+        child: Column(
+          children: [
+            avatar,
+            const SizedBox(height: 6),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: body(11, color: AppColors.label)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Paints a dashed circle outline (for the "add your story" tile).
+class _DashedCirclePainter extends CustomPainter {
+  const _DashedCirclePainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    final radius = size.width / 2 - paint.strokeWidth;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    const dashes = 26;
+    final step = 2 * math.pi / dashes;
+    final sweep = step * 0.62; // gap between dashes
+    for (var i = 0; i < dashes; i++) {
+      canvas.drawArc(rect, i * step, sweep, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -359,69 +713,6 @@ String _timeAgo(String? iso) {
   if (d.inDays < 7) return '${d.inDays}d ago';
   return '${(d.inDays / 7).floor()}w ago';
 }
-
-const _posts = <_Post>[
-  _Post(
-    id: 'seed-0',
-    author: 'Venkatesh Haldankar',
-    subtitle: 'Basavanagudi, Bengaluru',
-    emoji: '📜',
-    gradient: [Color(0xFF8B5E3C), Color(0xFFC4823A)],
-    caption:
-        'Sharing a treasured memory from the 1968 Samaj Utsava in Kumta. Our elders in their prime — the goldsmith community stood tall. 🙏',
-    likes: 214,
-    comments: 18,
-    time: '2 hours ago',
-  ),
-  _Post(
-    id: 'seed-1',
-    author: 'Shri Narayanarao Suvarna',
-    subtitle: 'Elder & Admin · Rajajinagar',
-    emoji: '🌳',
-    gradient: [AppColors.forest800, AppColors.forest600],
-    caption:
-        'Verified the lineage of the Chickpete branch today. Three generations of the Suvarna family now mapped on the tree. Heritage preserved. ✅',
-    likes: 342,
-    comments: 27,
-    time: 'Yesterday',
-  ),
-  _Post(
-    id: 'seed-2',
-    author: 'Rekha Diwakar',
-    subtitle: 'Jayanagar, Bengaluru',
-    emoji: '🎂',
-    gradient: [Color(0xFFB05E7A), Color(0xFFC4823A)],
-    caption:
-        'Thank you all for the birthday wishes from the Samaj family! Blessed to celebrate with our community. 🎉❤️',
-    likes: 489,
-    comments: 63,
-    time: 'Today',
-  ),
-  _Post(
-    id: 'seed-3',
-    author: 'Daivajna Samaja Bhavan',
-    subtitle: 'Samaj Bhavan Renovation · Fundraiser',
-    emoji: '🏛️',
-    gradient: [Color(0xFF166534), Color(0xFF16A34A)],
-    caption:
-        '85% funded! The new 500-seat auditorium is taking shape. Thank you to our 328 backers. Every contribution builds our future. 🙏',
-    likes: 176,
-    comments: 12,
-    time: '2 days ago',
-  ),
-  _Post(
-    id: 'seed-4',
-    author: 'Karthik Revankar',
-    subtitle: 'Jayanagar, Bengaluru',
-    emoji: '🎶',
-    gradient: [Color(0xFF3B4C8A), Color(0xFF1B4332)],
-    caption:
-        'Carnatic vocal session at this year\'s cultural evening. Nothing like our traditions coming alive on stage. 🎵',
-    likes: 231,
-    comments: 21,
-    time: '3 days ago',
-  ),
-];
 
 class _PostCard extends StatefulWidget {
   const _PostCard({required this.post});
