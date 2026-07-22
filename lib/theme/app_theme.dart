@@ -23,6 +23,8 @@ class AppColors {
   // Cream / surfaces
   static const Color cream = Color(0xFFFAF7F2);
   static const Color creamDark = Color(0xFFF0E6D3);
+  // Warm feed background — posts sit as white cards on this.
+  static const Color feedBg = Color(0xFFF4EFE4);
 
   // Convenient aliases (kept for backwards-compat with legacy screens)
   static const Color forestDark = forest900;
@@ -36,7 +38,7 @@ class AppColors {
   static const Color textMuted = Color(0xFF6B7280);
   static const Color border = Color(0xFFDFC5A0);
 
-  static const Color pageBackground = cream;
+  static const Color pageBackground = feedBg;
   static const Color cardBackground = Colors.white;
 }
 

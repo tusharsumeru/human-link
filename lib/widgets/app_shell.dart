@@ -120,12 +120,13 @@ class AppShell extends StatelessWidget {
       child: Scaffold(
       drawer: _Sidebar(nav: nav, isElder: isElder),
       appBar: AppBar(
-        backgroundColor: AppColors.cream.withValues(alpha: 0.95),
+        backgroundColor: AppColors.pageBackground,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: const Border(bottom: BorderSide(color: AppColors.border)),
+        centerTitle: true,
         title: Text(title,
-            style: display(20, color: AppColors.forest800)),
+            style: display(20, color: AppColors.forest700)),
         actions: [
           Stack(
             alignment: Alignment.center,

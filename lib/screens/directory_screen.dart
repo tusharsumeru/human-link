@@ -82,13 +82,42 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     }).toList();
   }
 
-  /// Members sharing the signed-in user's gotra (real "SAME GOTRA" suggestion).
+  /// Members sharing the signed-in user's gotra (real "SAME GOTRA" suggestion),
+  /// excluding the user themselves.
   List<Map<String, dynamic>> _suggested(String? myGotra) {
     if (myGotra == null || myGotra.isEmpty) return const [];
+    final myUser = (context.read<AuthService>().user?.userName ?? '').toLowerCase();
     return _filtered
-        .where((m) => _str(m, 'gotra').toLowerCase() == myGotra.toLowerCase())
+        .where((m) =>
+            _str(m, 'gotra').toLowerCase() == myGotra.toLowerCase() &&
+            (myUser.isEmpty || _str(m, 'userName').toLowerCase() != myUser))
         .take(4)
         .toList();
+  }
+
+  /// Place key from a free-text native ("Kumta, Karnataka" → "kumta").
+  String _placeKey(Object? native) =>
+      (native ?? '').toString().split(',').first.trim().toLowerCase();
+
+  /// "Nearby" without GPS: members from the signed-in user's native place lead,
+  /// then everyone else. Excludes the user themselves.
+  List<Map<String, dynamic>> _nearby(List<Map<String, dynamic>> list) {
+    final me = context.read<AuthService>().user;
+    final myPlace = _placeKey(me?.native);
+    final myUser = (me?.userName ?? '').toLowerCase();
+    final same = <Map<String, dynamic>>[];
+    final rest = <Map<String, dynamic>>[];
+    for (final m in list) {
+      if (myUser.isNotEmpty && _str(m, 'userName').toLowerCase() == myUser) {
+        continue; // skip self
+      }
+      if (myPlace.isNotEmpty && _placeKey(m['native']) == myPlace) {
+        same.add(m);
+      } else {
+        rest.add(m);
+      }
+    }
+    return [...same, ...rest];
   }
 
   @override
@@ -260,20 +289,35 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     }
 
     final suggested = _suggested(myGotra);
+    final nearby = _nearby(filtered);
+    final myPlace = _placeKey(context.read<AuthService>().user?.native);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
       children: [
         _sectionHeader('Nearby Members', trailing: 'View All →'),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 208,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => _NearbyCard(
-                member: filtered[i], onConnect: _connect, onView: _openMember),
+        if (myPlace.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text('From your native place first',
+                style: body(11, color: AppColors.textMuted)),
           ),
+        const SizedBox(height: 10),
+        if (nearby.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text('No other members yet.',
+                style: body(13, color: AppColors.textMuted)),
+          )
+        else
+          SizedBox(
+            height: 208,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: nearby.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) => _NearbyCard(
+                  member: nearby[i], onConnect: _connect, onView: _openMember),
+            ),
         ),
         const SizedBox(height: 22),
         if (suggested.isNotEmpty) ...[

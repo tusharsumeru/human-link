@@ -251,7 +251,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
       builder: (context, _) {
         final trays = StoryStore.instance.otherTrays;
         return Container(
-          color: AppColors.cream,
+          color: AppColors.pageBackground,
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,7 +500,7 @@ class _ReelsShelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.cream,
+      color: AppColors.pageBackground,
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,8 +787,14 @@ class _PostCardState extends State<_PostCard> {
   Widget build(BuildContext context) {
     final p = widget.post;
     return Container(
-      color: AppColors.cream,
-      padding: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.creamDark),
+        boxShadow: AppShadows.soft,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1015,7 +1021,7 @@ class _PostCardState extends State<_PostCard> {
           ),
           // Comments + time
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
