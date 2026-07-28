@@ -13,7 +13,7 @@ class ApiConfig {
   // (e.g. `/api/user/login`), so keeping it here would double it.
   // For a physical device or a tunnel, override with
   // --dart-define=API_BASE_URL=https://<host> (see below).
-  static const String _deployed = "https://chemistry-bbs-arizona-patent.trycloudflare.com";
+  static const String _deployed = "https://1c3d-2409-4091-9008-ac01-1965-93f9-576a-96a0.ngrok-free.app";
   static const String _override = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
