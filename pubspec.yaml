@@ -38,6 +38,7 @@ dependencies:
   firebase_auth: ^5.3.1
   image_picker: ^1.2.2
   file_picker: ^8.1.4
+  camera: ^0.11.0
   video_player: ^2.9.2
   share_plus: ^10.1.4
   google_fonts: ^6.2.1
@@ -47,6 +48,11 @@ dependencies:
   # of rejecting them as application/octet-stream.
   mime: ^1.0.5
   http_parser: ^4.0.2
+  # Device GPS for the "Use current location" option (reverse-geocoded to a
+  # place name via OpenStreetMap).
+  geolocator: ^13.0.2
+  # Real-time 1:1 chat over the NestJS socket.io gateway.
+  socket_io_client: ^2.0.3+1
   shared_preferences: ^2.3.2
   cached_network_image: ^3.4.1
   webview_flutter: ^4.10.0

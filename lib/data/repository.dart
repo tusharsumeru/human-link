@@ -122,6 +122,7 @@ class Repository {
   Future<Map<String, dynamic>> createPost({
     required String filePath,
     String caption = '',
+    String location = '',
     List<String> hashtags = const [],
     List<String> taggedUsers = const [],
     String visibility = 'public',
@@ -133,6 +134,9 @@ class Repository {
       fields: {
         'caption': caption,
         'visibility': visibility,
+        // Instagram-style place the author attached; the server stores it on the
+        // post and returns it in the feed.
+        if (location.isNotEmpty) 'location': location,
         if (hashtags.isNotEmpty) 'hashtags': jsonEncode(hashtags),
         if (taggedUsers.isNotEmpty) 'taggedUsers': jsonEncode(taggedUsers),
       },
@@ -309,6 +313,69 @@ class Repository {
       {int limit = 20}) async {
     final data = await _api.getJson(
         '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  // ── Messaging & connections ───────────────────────────────────────────────
+
+  /// GET /api/conversations — my inbox: `[{ key, otherUser, lastText, lastAt,
+  /// lastSenderId, unread }]`, newest activity first.
+  Future<List<Map<String, dynamic>>> conversations() async {
+    final data = await _api.getJson('/api/conversations');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// GET /api/conversations/:userId/messages — history, oldest→newest.
+  Future<List<Map<String, dynamic>>> messageHistory(String userId,
+      {int limit = 40, String? before}) async {
+    final q = <String>['limit=$limit'];
+    if (before != null && before.isNotEmpty) q.add('before=$before');
+    final data = await _api
+        .getJson('/api/conversations/$userId/messages?${q.join('&')}');
+    if (data is Map && data['messages'] is List) {
+      return (data['messages'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/messages — send over REST (fallback when the socket is down).
+  Future<Map<String, dynamic>> sendMessage(String toUserId, String text) async {
+    final data = await _api
+        .postJson('/api/messages', {'toUserId': toUserId, 'text': text});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not send message');
+  }
+
+  /// POST /api/conversations/:userId/read — mark that thread's messages read.
+  Future<void> markConversationRead(String userId) async {
+    await _api.postJson('/api/conversations/$userId/read', const {});
+  }
+
+  /// POST /api/connections — send a connection request (directory "Connect").
+  Future<Map<String, dynamic>> connect(String toUserId) async {
+    final data = await _api.postJson('/api/connections', {'toUserId': toUserId});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not send connection request');
+  }
+
+  /// GET /api/connections — my connections (incoming + outgoing) with status.
+  Future<List<Map<String, dynamic>>> connections() async {
+    final data = await _api.getJson('/api/connections');
     if (data is List) {
       return data
           .whereType<Map>()

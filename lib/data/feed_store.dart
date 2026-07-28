@@ -12,7 +12,7 @@ class UserPost {
   UserPost({
     required this.id,
     required this.author,
-    required this.subtitle,
+    required this.location,
     required this.mediaPath,
     required this.caption,
     required this.isReel,
@@ -23,7 +23,7 @@ class UserPost {
 
   final String id; // local id, stable for the session
   final String author;
-  final String subtitle;
+  final String location; // place the author attached (Instagram-style), or ''
   final String mediaPath; // local file path (image, or video when isReel)
   final String caption;
   final bool isReel; // true → a video reel; false → a photo post
@@ -70,14 +70,14 @@ class FeedStore extends ChangeNotifier {
     required String caption,
     required bool isReel,
     required String author,
-    required String subtitle,
+    String location = '',
     List<String> hashtags = const [],
     List<String> taggedUsers = const [],
   }) async {
     final post = UserPost(
       id: nextId(),
       author: author,
-      subtitle: subtitle,
+      location: location,
       mediaPath: mediaPath,
       caption: caption,
       isReel: isReel,
@@ -89,6 +89,7 @@ class FeedStore extends ChangeNotifier {
       final created = await _repo.createPost(
         filePath: mediaPath,
         caption: caption,
+        location: location,
         hashtags: hashtags,
         taggedUsers: taggedUsers,
       );
@@ -113,6 +114,7 @@ class FeedStore extends ChangeNotifier {
       final created = await _repo.createPost(
         filePath: post.mediaPath,
         caption: post.caption,
+        location: post.location,
       );
       post.remoteId = (created['_id'] ?? created['id'])?.toString();
       post.uploading = false;

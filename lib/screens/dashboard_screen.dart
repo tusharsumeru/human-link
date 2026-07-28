@@ -20,6 +20,7 @@ import '../widgets/pexels_image.dart';
 import 'comments_sheet.dart';
 import 'full_screen_reel.dart';
 import 'share_sheet.dart';
+import 'camera_capture_screen.dart';
 import 'story_compose_screen.dart';
 import 'story_viewer_screen.dart';
 
@@ -128,11 +129,7 @@ class _FeedState extends State<_Feed> {
                   ],
                 ),
               ),
-            // Interleave posts with a reels shelf after the second post.
-            for (var i = 0; i < all.length; i++) ...[
-              _PostCard(post: all[i]),
-              if (i == 1) const _ReelsShelf(),
-            ],
+            for (final post in all) _PostCard(post: post),
             const SizedBox(height: 24),
             Center(
               child: Text('You\'re all caught up ✦',
@@ -149,6 +146,52 @@ class _FeedState extends State<_Feed> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Stories
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Where a new story's media comes from.
+enum _CaptureSource { camera, file }
+
+/// One choice tile in the "Your Story" source sheet: an icon over a short label.
+class _SourceBox extends StatelessWidget {
+  const _SourceBox(
+      {required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: AppGradients.forest,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(icon, color: Colors.white, size: 25),
+            ),
+            const SizedBox(height: 10),
+            Text(label,
+                style: body(14,
+                    weight: FontWeight.w700, color: AppColors.forest900)),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Horizontal "Family Updates" stories rail, backed by `/api/stories`. Loads on
 /// mount and rebuilds as you post, view, or delete.
@@ -173,24 +216,92 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
   };
 
-  /// Pick an image/video, then open the "Share Story" composer to post it.
+  /// "Your Story" → choose Camera or a file, capture/pick, then open the
+  /// "Share Story" composer to post it.
   Future<void> _pickAndPostStory() async {
+    final source = await _chooseStorySource();
+    if (source == null || !mounted) return; // dismissed
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    String? picked;
-    try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.media);
-      picked = result?.files.single.path;
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
-      return;
+
+    final String capturedPath;
+    final bool capturedVideo;
+    if (source == _CaptureSource.camera) {
+      final result = await navigator.push<CaptureResult>(
+        MaterialPageRoute(builder: (_) => const CameraCaptureScreen()),
+      );
+      if (result == null) return; // backed out of the camera
+      capturedPath = result.path;
+      capturedVideo = result.isVideo;
+    } else {
+      String? picked;
+      try {
+        final result = await FilePicker.platform.pickFiles(type: FileType.media);
+        picked = result?.files.single.path;
+      } catch (e) {
+        messenger
+            .showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
+        return;
+      }
+      if (picked == null) return; // cancelled
+      capturedPath = picked;
+      capturedVideo = _videoExts.contains(picked.split('.').last.toLowerCase());
     }
-    if (picked == null) return; // cancelled
-    final path = picked;
-    final isVideo = _videoExts.contains(path.split('.').last.toLowerCase());
+
+    if (!mounted) return;
     navigator.push(MaterialPageRoute(
-      builder: (_) => StoryComposeScreen(filePath: path, isVideo: isVideo),
+      builder: (_) =>
+          StoryComposeScreen(filePath: capturedPath, isVideo: capturedVideo),
     ));
+  }
+
+  /// Small sheet: capture with the Camera, or select an image/video from files.
+  Future<_CaptureSource?> _chooseStorySource() {
+    return showModalBottomSheet<_CaptureSource>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999)),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SourceBox(
+                      icon: Icons.photo_camera_rounded,
+                      label: 'Camera',
+                      onTap: () =>
+                          Navigator.of(ctx).pop(_CaptureSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SourceBox(
+                      icon: Icons.perm_media_rounded,
+                      label: 'Select file',
+                      onTap: () => Navigator.of(ctx).pop(_CaptureSource.file),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _openMyStories() {
@@ -476,154 +587,6 @@ class _DashedCirclePainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reels
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Reel {
-  const _Reel(this.title, this.emoji, this.views, this.gradient);
-  final String title;
-  final String emoji;
-  final String views;
-  final List<Color> gradient;
-}
-
-const _reels = <_Reel>[
-  _Reel('Samaj Utsava 2025', '🪔', '12.4K', [Color(0xFF92400E), Color(0xFFD97706)]),
-  _Reel('Chickpete Goldsmiths', '💛', '8.1K', [AppColors.gold700, AppColors.gold500]),
-  _Reel('Kumta Temple Yatra', '🛕', '5.9K', [AppColors.forest800, AppColors.forest600]),
-  _Reel('Bhajan Sandhya', '🎶', '3.2K', [Color(0xFF3B4C8A), Color(0xFF1B4332)]),
-];
-
-class _ReelsShelf extends StatelessWidget {
-  const _ReelsShelf();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.pageBackground,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: [
-                const Icon(Icons.movie_creation_outlined,
-                    size: 18, color: AppColors.forest800),
-                const SizedBox(width: 8),
-                Text('Reels', style: display(16, color: AppColors.forest900)),
-                const Spacer(),
-                Text('See all',
-                    style: body(12,
-                        weight: FontWeight.w600, color: AppColors.forest700)),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _reels.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) => _ReelCard(reel: _reels[i]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReelCard extends StatelessWidget {
-  const _ReelCard({required this.reel});
-  final _Reel reel;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showSnack(context, 'Playing "${reel.title}"'),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: 140,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: reel.gradient,
-                  ),
-                ),
-              ),
-              Center(
-                  child:
-                      Text(reel.emoji, style: const TextStyle(fontSize: 52))),
-              // Play glyph
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.play_arrow_rounded,
-                      color: Colors.white, size: 26),
-                ),
-              ),
-              // Gradient scrim + caption
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(10, 24, 10, 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.55),
-                      ],
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(reel.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(12,
-                              weight: FontWeight.w700, color: Colors.white)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.play_arrow_rounded,
-                              size: 13, color: Colors.white70),
-                          const SizedBox(width: 2),
-                          Text('${reel.views} plays',
-                              style: body(10, color: Colors.white70)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Posts
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -631,13 +594,14 @@ class _Post {
   const _Post({
     required this.id,
     required this.author,
-    required this.subtitle,
+    this.location = '',
     required this.emoji,
     required this.gradient,
     required this.caption,
     required this.likes,
     required this.comments,
     required this.time,
+    this.shareCount = 0,
     this.mediaPath,
     this.mediaUrl,
     this.isReel = false,
@@ -646,12 +610,13 @@ class _Post {
 
   final String id;
   final String author;
-  final String subtitle;
+  final String location; // place the author attached, or '' (Instagram-style)
   final String emoji;
   final List<Color> gradient;
   final String caption;
   final int likes;
   final int comments;
+  final int shareCount;
   final String time;
   final String? mediaPath; // local upload file; null → use mediaUrl / placeholder
   final String? mediaUrl; // remote (Cloudinary) media from the backend feed
@@ -667,7 +632,7 @@ class _Post {
         id: p.feedId,
         pending: (p.uploading || p.failed) ? p : null,
         author: p.author,
-        subtitle: p.subtitle,
+        location: p.location,
         emoji: p.isReel ? '🎬' : '🖼️',
         gradient: const [AppColors.forest800, AppColors.forest600],
         caption: p.caption,
@@ -691,12 +656,13 @@ class _Post {
     return _Post(
       id: (m['_id'] ?? '').toString(),
       author: author,
-      subtitle: 'Samaj Member',
+      location: (m['location'] ?? '').toString(),
       emoji: isVideo ? '🎬' : '🖼️',
       gradient: const [AppColors.forest800, AppColors.forest600],
       caption: (m['caption'] ?? '').toString(),
       likes: (m['likeCount'] as num?)?.toInt() ?? 0,
       comments: (m['commentCount'] as num?)?.toInt() ?? 0,
+      shareCount: (m['shareCount'] as num?)?.toInt() ?? 0,
       time: _timeAgo(m['createdAt']?.toString()),
       mediaUrl: mediaUrl,
       isReel: isVideo,
@@ -831,10 +797,22 @@ class _PostCardState extends State<_PostCard> {
                           style: body(13,
                               weight: FontWeight.w700,
                               color: AppColors.forest900)),
-                      Text(p.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(11, color: AppColors.hint)),
+                      // Instagram-style: show a location line only when the
+                      // author attached one — no role label, no native place.
+                      if (p.location.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded,
+                                size: 11, color: AppColors.hint),
+                            const SizedBox(width: 2),
+                            Flexible(
+                              child: Text(p.location,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: body(11, color: AppColors.hint)),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -958,10 +936,16 @@ class _PostCardState extends State<_PostCard> {
                       : Icons.favorite_border_rounded,
                   color: _liked ? const Color(0xFFE0245E) : AppColors.label,
                   onTap: _toggleLike,
+                  count: _likeCount,
                 ),
-                _ActionIcon(
-                  icon: Icons.mode_comment_outlined,
-                  onTap: () => showCommentsSheet(context, postId: p.id),
+                ListenableBuilder(
+                  listenable: CommentStore.instance,
+                  builder: (context, _) => _ActionIcon(
+                    icon: Icons.mode_comment_outlined,
+                    onTap: () => showCommentsSheet(context, postId: p.id),
+                    count: CommentStore.instance
+                        .countFor(p.id, fallback: p.comments),
+                  ),
                 ),
                 _ActionIcon(
                   icon: Icons.send_outlined,
@@ -971,6 +955,7 @@ class _PostCardState extends State<_PostCard> {
                     caption: p.caption,
                     isReel: p.isReel,
                   ),
+                  count: p.shareCount,
                 ),
                 const Spacer(),
                 ListenableBuilder(
@@ -997,16 +982,9 @@ class _PostCardState extends State<_PostCard> {
               ],
             ),
           ),
-          // Likes
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
-            child: Text('$_likeCount likes',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest900)),
-          ),
           // Caption
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
             child: Text.rich(
               TextSpan(children: [
                 TextSpan(
@@ -1019,31 +997,12 @@ class _PostCardState extends State<_PostCard> {
               ]),
             ),
           ),
-          // Comments + time
+          // Time
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListenableBuilder(
-                  listenable: CommentStore.instance,
-                  builder: (context, _) {
-                    // Falls back to the feed's commentCount until this post's
-                    // comments have actually been fetched.
-                    final count = CommentStore.instance
-                        .countFor(p.id, fallback: p.comments);
-                    return GestureDetector(
-                      onTap: () => showCommentsSheet(context, postId: p.id),
-                      child: Text(
-                        count == 0
-                            ? 'Add a comment…'
-                            : 'View all $count comment${count == 1 ? '' : 's'}',
-                        style: body(12, color: AppColors.hint),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 4),
                 Text(p.time.toUpperCase(),
                     style: body(10,
                         color: AppColors.hint, letterSpacing: 0.4)),
@@ -1280,17 +1239,35 @@ class _ActionIcon extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.color = AppColors.label,
+    this.count = 0,
   });
   final IconData icon;
   final VoidCallback onTap;
   final Color color;
 
+  /// Shown next to the icon when > 0 (e.g. like/comment/share counts).
+  final int count;
+
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, size: 26, color: color),
-      onPressed: onTap,
-      splashRadius: 22,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 25, color: color),
+            if (count > 0) ...[
+              const SizedBox(width: 5),
+              Text('$count',
+                  style: body(13,
+                      weight: FontWeight.w600, color: AppColors.forest900)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

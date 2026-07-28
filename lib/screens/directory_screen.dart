@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
+import 'chat_screen.dart';
 
 /// Member Directory — "Vamsha Vruksha" network. Real members from `/api/family`,
 /// grouped/searched by area, gotra, or occupation, with a nearby rail, gotra-
@@ -71,9 +72,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   String _str(Map m, String k) => (m[k] ?? '').toString().trim();
 
   List<Map<String, dynamic>> get _filtered {
+    // Never list yourself — you can't message/connect with your own account.
+    final me = context.read<AuthService>().user;
+    final myId = me?.id ?? '';
+    final myUser = (me?.userName ?? '').toLowerCase();
     final q = _search.toLowerCase();
-    if (q.isEmpty) return _members;
     return _members.where((m) {
+      final id = _str(m, 'id');
+      if (myId.isNotEmpty && id == myId) return false;
+      if (myUser.isNotEmpty && _str(m, 'userName').toLowerCase() == myUser) {
+        return false;
+      }
+      if (q.isEmpty) return true;
       return _str(m, 'name').toLowerCase().contains(q) ||
           _str(m, 'gotra').toLowerCase().contains(q) ||
           _str(m, 'native').toLowerCase().contains(q) ||
@@ -369,18 +379,36 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  // "Connect" → friendly feedback (no user-to-user connection endpoint yet).
-  void _connect(Map<String, dynamic> member) {
+  // "Connect" → POST /api/connections. If the other person already requested
+  // me, the server accepts it (mutual) and we say so.
+  Future<void> _connect(Map<String, dynamic> member) async {
     final messenger = ScaffoldMessenger.of(context);
+    final id = _str(member, 'id');
+    if (id.isEmpty) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(
-      content: Text('Connection request sent to ${_str(member, 'name')}',
-          style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
-    ));
+    try {
+      final res = await Repository.instance.connect(id);
+      final accepted = (res['status'] ?? '').toString() == 'accepted';
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+            accepted
+                ? 'You are now connected with ${_str(member, 'name')}'
+                : 'Connection request sent to ${_str(member, 'name')}',
+            style: body(13, color: Colors.white)),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Could not send the request. Try again.',
+            style: body(13, color: Colors.white)),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
+
 
   // Tap a member → show their full details, fetched fresh via GET /api/user/:id.
   void _openMember(Map<String, dynamic> member) {
@@ -482,7 +510,7 @@ class _NearbyCard extends StatelessWidget {
                 child: _MiniButton(
                   label: 'Message',
                   filled: false,
-                  onTap: () => _toast(context, 'Messaging coming soon'),
+                  onTap: () => openMemberChat(context, member),
                 ),
               ),
               const SizedBox(width: 6),
@@ -939,7 +967,7 @@ class _MemberSheetState extends State<_MemberSheet> {
                     expand: true,
                     onPressed: () {
                       Navigator.of(context).pop();
-                      _toast(context, 'Messaging coming soon');
+                      openMemberChat(context, _m);
                     },
                   ),
                 ),
@@ -1094,4 +1122,20 @@ void _toast(BuildContext context, String msg) {
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 1),
     ));
+}
+
+// Open a real-time chat with a directory member (used by every "Message"
+// button). Reads the PII-safe fields from the member map.
+void openMemberChat(BuildContext context, Map<String, dynamic> member) {
+  final id = (member['id'] ?? member['_id'] ?? '').toString();
+  if (id.isEmpty) return;
+  final name = (member['name'] ?? '').toString().trim();
+  final userName = (member['userName'] ?? '').toString().trim();
+  Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => ChatScreen(
+      otherUserId: id,
+      otherName: name.isNotEmpty ? name : (userName.isEmpty ? 'Member' : userName),
+      otherAvatarUrl: (member['profileUrl'] ?? '').toString(),
+    ),
+  ));
 }
