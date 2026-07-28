@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import '../data/repository.dart';
 /// mobile-only fields (gender/bio/address/photo) the backend doesn't store.
 class AppUser {
   final String id; // backend users._id (needed to key chats/messages)
+  final String samajId; // permanent membership number, e.g. "DS-0013467"
   final String name;
   final String userName; // backend handle (unique, e.g. "priya_test")
   final String phone;
@@ -33,6 +35,7 @@ class AppUser {
 
   const AppUser({
     this.id = '',
+    this.samajId = '',
     required this.name,
     this.userName = '',
     required this.phone,
@@ -57,6 +60,7 @@ class AppUser {
 
   factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
         id: (m['_id'] ?? m['id'] ?? '').toString(),
+        samajId: (m['samajId'] ?? '') as String,
         name: (m['name'] ?? '') as String,
         userName: (m['userName'] ?? '') as String,
         phone: (m['phone'] ?? '') as String,
@@ -80,6 +84,7 @@ class AppUser {
 
   Map<String, dynamic> toMap() => {
         'id': id,
+        'samajId': samajId,
         'name': name,
         'userName': userName,
         'phone': phone,
@@ -102,6 +107,7 @@ class AppUser {
 
   AppUser copyWith({
     String? id,
+    String? samajId,
     String? name,
     String? userName,
     String? phone,
@@ -123,6 +129,7 @@ class AppUser {
   }) =>
       AppUser(
         id: id ?? this.id,
+        samajId: samajId ?? this.samajId,
         name: name ?? this.name,
         userName: userName ?? this.userName,
         phone: phone ?? this.phone,
@@ -214,6 +221,27 @@ class AuthService extends ChangeNotifier {
     }
     _loaded = true;
     notifyListeners();
+
+    // Best-effort refresh from the backend so a restored session picks up fields
+    // added since it was cached (e.g. samajId, an updated photo). Fire-and-forget:
+    // the UI already rendered from the cached user; this just tops it up.
+    if (isLoggedIn) unawaited(refreshFromServer());
+  }
+
+  /// Pulls the latest self-profile from `/api/user/me` and merges it over the
+  /// cached session, preserving local-only fields (avatar, local photo path,
+  /// onboarding flag) the backend doesn't store. Best-effort — never throws.
+  Future<void> refreshFromServer() async {
+    if (_user == null || !(_token?.isNotEmpty ?? false)) return;
+    try {
+      final data = await _repo.me();
+      final merged = <String, dynamic>{..._user!.toMap(), ...data};
+      // The backend returns the photo as `profileUrl`; prefer it only when set so
+      // a server photo wins but a blank one never wipes the local photo.
+      final serverPhoto = (data['profileUrl'] ?? '').toString();
+      if (serverPhoto.isNotEmpty) merged['photoUrl'] = serverPhoto;
+      await _persist(AppUser.fromMap(merged));
+    } catch (_) {/* offline / endpoint unavailable — keep the cached user */}
   }
 
   /// Logs in via the API. Captures the JWT token for subsequent protected

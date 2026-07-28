@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -198,8 +199,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _aadhaarVerifiedCard(user.maskedAadhaar),
                   const SizedBox(height: 16),
                 ],
-                _aboutCard('—', _dash(user.dob.isEmpty ? null : user.dob),
-                    'Active'),
+                _aboutCard(_dash(user.occupation),
+                    _dash(user.dob.isEmpty ? null : user.dob), 'Active',
+                    samajId: user.samajId),
                 if (archive.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _archiveCard(archive),
@@ -288,7 +290,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _aboutCard(String occupation, String birthYear, String status) {
+  Widget _aboutCard(String occupation, String birthYear, String status,
+      {String samajId = ''}) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,6 +305,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 14),
+          if (samajId.isNotEmpty) ...[
+            _samajRow(samajId),
+            const Divider(height: 22, color: AppColors.creamDark),
+          ],
           _detailRow(Icons.badge_outlined, 'Occupation', occupation),
           const Divider(height: 22, color: AppColors.creamDark),
           _detailRow(Icons.cake_outlined, 'Birth Year', birthYear),
@@ -476,6 +483,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Samaj ID row for the About card — like [_detailRow] but with a trailing
+  /// one-tap copy, since this is the number relatives search by to connect.
+  Widget _samajRow(String samajId) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Icon(Icons.badge_outlined, size: 16, color: AppColors.gold700),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Samaj ID', style: body(11, color: AppColors.textMuted)),
+              const SizedBox(height: 2),
+              Text(samajId,
+                  style: body(14,
+                          weight: FontWeight.w700, color: AppColors.forest800)
+                      .copyWith(letterSpacing: 0.5)),
+            ],
+          ),
+        ),
+        InkWell(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: samajId));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Samaj ID $samajId copied'),
+                backgroundColor: AppColors.forest800,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Icon(Icons.copy_rounded, size: 18, color: AppColors.forest700),
+          ),
+        ),
+      ],
     );
   }
 
