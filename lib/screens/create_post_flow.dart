@@ -9,158 +9,62 @@ import '../data/api_client.dart';
 import '../data/feed_store.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/location_picker_sheet.dart';
 import '../widgets/ui_kit.dart';
-
-/// How the user started the create flow — decides which files the picker shows
-/// and whether the result is treated as a photo post or a video reel.
-enum _CreateMode { post, reel, file }
 
 const _videoExtensions = <String>[
   'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
 ];
 
-/// Bottom sheet launched from the bottom bar's "+" — choose New Post or Reel.
+/// Create (+) → post from files only (no camera; the camera lives on the
+/// "Your Story" flow). Picks an image or video from the device, then composes
+/// and uploads it.
 Future<void> showCreateOptions(BuildContext context) async {
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.cream,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-    ),
-    builder: (sheetCtx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Create', style: display(20, color: AppColors.forest900)),
-            const SizedBox(height: 12),
-            _CreateTile(
-              icon: Icons.add_photo_alternate_outlined,
-              title: 'New Post',
-              subtitle: 'Share a photo with the Samaj',
-              onTap: () => _startCreate(sheetCtx, mode: _CreateMode.post),
-            ),
-            const SizedBox(height: 10),
-            _CreateTile(
-              icon: Icons.movie_creation_outlined,
-              title: 'New Reel',
-              subtitle: 'Share a short video moment',
-              onTap: () => _startCreate(sheetCtx, mode: _CreateMode.reel),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
+  final auth = context.read<AuthService>();
+  final router = GoRouter.of(context);
+  final messenger = ScaffoldMessenger.of(context);
 
-class _CreateTile extends StatelessWidget {
-  const _CreateTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(14),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              gradient: AppGradients.forest,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: body(14,
-                        weight: FontWeight.w700, color: AppColors.forest900)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: body(12, color: AppColors.hint)),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.hint),
-        ],
-      ),
-    );
-  }
-}
-
-/// Picks a photo (post), a video (reel), or any media file ("Select File",
-/// type auto-detected), then opens the caption composer.
-Future<void> _startCreate(
-  BuildContext sheetCtx, {
-  required _CreateMode mode,
-}) async {
-  final auth = sheetCtx.read<AuthService>();
-  final router = GoRouter.of(sheetCtx);
-  final messenger = ScaffoldMessenger.of(sheetCtx);
-
-  // Uses the system Files picker (Storage Access Framework) — no Google
-  // account required, unlike the Photos-backed gallery intent.
   String? path;
   try {
-    final result = await FilePicker.platform.pickFiles(
-      type: switch (mode) {
-        _CreateMode.post => FileType.image,
-        _CreateMode.reel => FileType.video,
-        _CreateMode.file => FileType.media, // photos + videos
-      },
-    );
+    // FileType.media = photos + videos ("anything").
+    final result = await FilePicker.platform.pickFiles(type: FileType.media);
     path = result?.files.single.path;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
     return;
   }
-  if (path == null) return; // user cancelled or no path
+  if (path == null) return; // cancelled or no path
 
-  // Decide post vs reel. For "Select File", infer from the extension.
-  final ext = path.split('.').last.toLowerCase();
-  final isReel = switch (mode) {
-    _CreateMode.post => false,
-    _CreateMode.reel => true,
-    _CreateMode.file => _videoExtensions.contains(ext),
-  };
+  final isReel = _videoExtensions.contains(path.split('.').last.toLowerCase());
+  final navContext = router.routerDelegate.navigatorKey.currentContext ?? context;
+  if (!navContext.mounted) return;
+  await _composeAndUpload(
+    navContext,
+    auth: auth,
+    router: router,
+    path: path,
+    isReel: isReel,
+  );
+}
 
-  // Close the options sheet before showing the composer.
-  if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
-
+/// Shared tail for both entry points: caption composer → optimistic feed jump →
+/// upload, with success/failure snackbars.
+Future<void> _composeAndUpload(
+  BuildContext navContext, {
+  required AuthService auth,
+  required GoRouter router,
+  required String path,
+  required bool isReel,
+}) async {
+  final messenger = ScaffoldMessenger.of(navContext);
   final user = auth.user;
-  final caption = await _composeCaption(
-    router.routerDelegate.navigatorKey.currentContext ?? sheetCtx,
+
+  final result = await _composeCaption(
+    navContext,
     mediaPath: path,
     isReel: isReel,
   );
-  if (caption == null) return; // cancelled at composer
+  if (result == null) return; // cancelled at composer
 
   // Jump to the feed first: the card shows straight away from the local file
   // with an "Uploading…" overlay, and settles once POST /api/posts returns.
@@ -169,13 +73,13 @@ Future<void> _startCreate(
   try {
     await FeedStore.instance.upload(
       mediaPath: path,
-      caption: caption,
+      caption: result.caption,
       isReel: isReel,
       author: user?.name ?? 'You',
-      subtitle: (user?.native.split(',').first.trim().isNotEmpty ?? false)
-          ? user!.native.split(',').first.trim()
-          : 'Daivajna Samaja',
-      hashtags: _hashtagsIn(caption),
+      // Only the place the author explicitly picked — no "Samaj Member" label
+      // and no auto-filled native place.
+      location: result.location,
+      hashtags: _hashtagsIn(result.caption),
     );
     messenger.showSnackBar(SnackBar(
       content: Text(isReel ? 'Reel shared 🎬' : 'Post shared ✨',
@@ -206,15 +110,25 @@ List<String> _hashtagsIn(String caption) => RegExp(r'#(\w+)')
     .toSet()
     .toList();
 
-/// Full-screen composer: preview + caption + Share. Returns the caption, or
-/// null if the user backed out.
-Future<String?> _composeCaption(
+/// What the composer returns: the caption plus the (optional) place the author
+/// attached. `location` is '' when none was picked.
+class _ComposeResult {
+  const _ComposeResult(this.caption, this.location);
+  final String caption;
+  final String location;
+}
+
+/// Full-screen composer: preview + caption + Add location + Share. Returns the
+/// caption + location, or null if the user backed out.
+Future<_ComposeResult?> _composeCaption(
   BuildContext context, {
   required String mediaPath,
   required bool isReel,
 }) {
   final controller = TextEditingController();
-  return showModalBottomSheet<String>(
+  String location = ''; // the place the author picks, if any
+  bool locating = false; // fetching the current GPS location
+  return showModalBottomSheet<_ComposeResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.cream,
@@ -222,93 +136,255 @@ Future<String?> _composeCaption(
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),
     builder: (ctx) {
-      final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-      return Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.of(ctx).pop(),
-                    ),
-                    Text(isReel ? 'New Reel' : 'New Post',
-                        style: display(18, color: AppColors.forest900)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
+      return StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+          return Padding(
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: isReel
-                          ? Container(
-                              width: 84,
-                              height: 84,
-                              color: AppColors.forest900,
-                              child: const Center(
-                                child: Icon(Icons.play_circle_fill_rounded,
-                                    color: Colors.white70, size: 30),
-                              ),
-                            )
-                          : Image.file(File(mediaPath),
-                              width: 84, height: 84, fit: BoxFit.cover),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                        Text(isReel ? 'New Reel' : 'New Post',
+                            style: display(18, color: AppColors.forest900)),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: controller,
-                        maxLines: 4,
-                        minLines: 3,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: body(13, color: AppColors.ink),
-                        decoration: InputDecoration(
-                          hintText: 'Write a caption…',
-                          hintStyle: body(13, color: AppColors.hint),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: AppColors.border),
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: isReel
+                              ? Container(
+                                  width: 84,
+                                  height: 84,
+                                  color: AppColors.forest900,
+                                  child: const Center(
+                                    child: Icon(Icons.play_circle_fill_rounded,
+                                        color: Colors.white70, size: 30),
+                                  ),
+                                )
+                              : Image.file(File(mediaPath),
+                                  width: 84, height: 84, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            maxLines: 4,
+                            minLines: 3,
+                            textCapitalization: TextCapitalization.sentences,
+                            style: body(13, color: AppColors.ink),
+                            decoration: InputDecoration(
+                              hintText: 'Write a caption…',
+                              hintStyle: body(13, color: AppColors.hint),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    const BorderSide(color: AppColors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    const BorderSide(color: AppColors.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                    color: AppColors.forest700, width: 1.5),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: AppColors.forest700, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Instagram-style "Add location": search-and-pick, or grab
+                    // the device's current location. Once set it shows as a
+                    // removable chip.
+                    _LocationRow(
+                      location: location,
+                      locating: locating,
+                      onAdd: () async {
+                        final picked = await pickLocation(ctx);
+                        if (picked != null && picked.trim().isNotEmpty) {
+                          setSheetState(() => location = picked.trim());
+                        }
+                      },
+                      onUseCurrent: () async {
+                        if (locating) return;
+                        setSheetState(() => locating = true);
+                        try {
+                          final place = await currentLocationName();
+                          setSheetState(() {
+                            location = place;
+                            locating = false;
+                          });
+                        } on LocationFailure catch (e) {
+                          setSheetState(() => locating = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(e.message)),
+                            );
+                          }
+                        } catch (_) {
+                          setSheetState(() => locating = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Could not get your location.')),
+                            );
+                          }
+                        }
+                      },
+                      onClear: () => setSheetState(() => location = ''),
+                    ),
+                    const SizedBox(height: 16),
+                    ForestButton(
+                      label: 'Share',
+                      icon: Icons.send_rounded,
+                      expand: true,
+                      onPressed: () => Navigator.of(ctx).pop(
+                        _ComposeResult(
+                          controller.text.trim().isEmpty
+                              ? (isReel ? 'New reel' : 'New post')
+                              : controller.text.trim(),
+                          location,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                ForestButton(
-                  label: 'Share',
-                  icon: Icons.send_rounded,
-                  expand: true,
-                  onPressed: () => Navigator.of(ctx).pop(
-                    controller.text.trim().isEmpty
-                        ? (isReel ? 'New reel' : 'New post')
-                        : controller.text.trim(),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     },
   );
+}
+
+/// The location affordance in the composer — when empty, two actions ("Add
+/// location" to search, "Current location" for GPS); once set, a pin + place
+/// name with a clear button.
+class _LocationRow extends StatelessWidget {
+  const _LocationRow({
+    required this.location,
+    required this.locating,
+    required this.onAdd,
+    required this.onUseCurrent,
+    required this.onClear,
+  });
+  final String location;
+  final bool locating;
+  final VoidCallback onAdd;
+  final VoidCallback onUseCurrent;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    if (location.isEmpty) {
+      return Row(
+        children: [
+          _Action(
+            icon: Icons.add_location_alt_outlined,
+            label: 'Add location',
+            onTap: onAdd,
+          ),
+          const SizedBox(width: 8),
+          _Action(
+            icon: Icons.my_location_rounded,
+            label: locating ? 'Locating…' : 'Current location',
+            onTap: onUseCurrent,
+            busy: locating,
+          ),
+        ],
+      );
+    }
+    return InkWell(
+      onTap: onAdd, // tap the row to change it
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_rounded,
+                size: 20, color: AppColors.gold700),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(14,
+                      weight: FontWeight.w600, color: AppColors.forest900)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded,
+                  size: 18, color: AppColors.hint),
+              onPressed: onClear,
+              tooltip: 'Remove location',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A compact pill button used for the two empty-state location choices.
+class _Action extends StatelessWidget {
+  const _Action({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.busy = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: busy ? null : onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            busy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.forest700),
+                  )
+                : Icon(icon, size: 18, color: AppColors.forest700),
+            const SizedBox(width: 8),
+            Text(label,
+                style: body(13,
+                    weight: FontWeight.w600, color: AppColors.forest800)),
+          ],
+        ),
+      ),
+    );
+  }
 }

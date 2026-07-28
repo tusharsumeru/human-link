@@ -3,11 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/api_client.dart';
+import '../data/chat_service.dart';
 import '../data/repository.dart';
 
 /// Authenticated user — mirrors the web app's VVUser shape, plus a few
 /// mobile-only fields (gender/bio/address/photo) the backend doesn't store.
 class AppUser {
+  final String id; // backend users._id (needed to key chats/messages)
   final String name;
   final String userName; // backend handle (unique, e.g. "priya_test")
   final String phone;
@@ -30,6 +32,7 @@ class AppUser {
   final bool verified;
 
   const AppUser({
+    this.id = '',
     required this.name,
     this.userName = '',
     required this.phone,
@@ -53,6 +56,7 @@ class AppUser {
   bool get isElder => role == 'elder';
 
   factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
+        id: (m['_id'] ?? m['id'] ?? '').toString(),
         name: (m['name'] ?? '') as String,
         userName: (m['userName'] ?? '') as String,
         phone: (m['phone'] ?? '') as String,
@@ -75,6 +79,7 @@ class AppUser {
       );
 
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'userName': userName,
         'phone': phone,
@@ -96,6 +101,7 @@ class AppUser {
       };
 
   AppUser copyWith({
+    String? id,
     String? name,
     String? userName,
     String? phone,
@@ -116,6 +122,7 @@ class AppUser {
     bool? verified,
   }) =>
       AppUser(
+        id: id ?? this.id,
         name: name ?? this.name,
         userName: userName ?? this.userName,
         phone: phone ?? this.phone,
@@ -135,6 +142,20 @@ class AppUser {
         maskedAadhaar: maskedAadhaar ?? this.maskedAadhaar,
         verified: verified ?? this.verified,
       );
+}
+
+/// Decodes a JWT's payload claims ({sub, userName, role, …}), or null if it
+/// can't be parsed.
+Map<String, dynamic>? _jwtClaims(String? token) {
+  if (token == null || token.isEmpty) return null;
+  final parts = token.split('.');
+  if (parts.length != 3) return null;
+  try {
+    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    return jsonDecode(payload) as Map<String, dynamic>;
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Holds the current session, persisted to SharedPreferences under `vv_user`
@@ -175,6 +196,22 @@ class AuthService extends ChangeNotifier {
     // Restore the bearer token so protected calls work after a restart.
     _token = prefs.getString(_tokenKey);
     ApiAuth.token = _token;
+    // Repair sessions persisted before AppUser carried id/userName: the JWT
+    // payload has both (sub + userName), so backfill from it. Without this,
+    // "is this me?" checks (chat bubble side, hiding my own directory card)
+    // compare against empty strings and silently fail.
+    final claims = _jwtClaims(_token);
+    if (claims != null && _user != null) {
+      final sub = (claims['sub'] ?? '').toString();
+      final uName = (claims['userName'] ?? '').toString();
+      if ((_user!.id.isEmpty && sub.isNotEmpty) ||
+          (_user!.userName.isEmpty && uName.isNotEmpty)) {
+        _user = _user!.copyWith(
+          id: _user!.id.isEmpty ? sub : null,
+          userName: _user!.userName.isEmpty ? uName : null,
+        );
+      }
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -217,6 +254,7 @@ class AuthService extends ChangeNotifier {
     _user = null;
     _token = null;
     ApiAuth.token = null;
+    ChatService.instance.disconnect();
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove(_prefsKey);
       prefs.remove(_tokenKey);
@@ -228,6 +266,7 @@ class AuthService extends ChangeNotifier {
     _user = null;
     _token = null;
     ApiAuth.token = null;
+    ChatService.instance.disconnect();
     try {
       await FirebaseAuth.instance.signOut();
     } catch (_) {/* ignore if Firebase isn't signed in */}

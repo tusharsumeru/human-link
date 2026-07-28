@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../screens/conversations_screen.dart';
 import '../screens/create_post_flow.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -128,6 +129,13 @@ class AppShell extends StatelessWidget {
         title: Text(title,
             style: display(20, color: AppColors.forest700)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.forum_outlined, color: AppColors.forest700),
+            tooltip: 'Messages',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ConversationsScreen()),
+            ),
+          ),
           Stack(
             alignment: Alignment.center,
             children: [
