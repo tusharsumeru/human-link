@@ -33,12 +33,36 @@ class FamilyTreeScreen extends StatefulWidget {
 // Layout constants. Generations are normalized (see _layout): the oldest
 // generation present (most-negative number, i.e. ancestors) renders at the top.
 const double _r = 40;
-const double _w = 860;
+const double _nodeDiameter = _r * 2;
+const double _spouseGap = 30;
+const double _horizontalGap = 34;
+const double _canvasMinWidth = 900;
 const double _pad = 80;
-const double _canvasW = 900;
 const double _top = 100;
 const double _rowH = 140;
 const List<String> _genRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+
+class _TreeLayout {
+  const _TreeLayout(this.positions, this.width);
+
+  final Map<String, Offset> positions;
+  final double width;
+}
+
+class _FamilyUnit {
+  _FamilyUnit({required this.ids, required this.generation});
+
+  final List<String> ids;
+  final int generation;
+  final Set<_FamilyUnit> parents = {};
+  final Set<_FamilyUnit> children = {};
+  double x = 0;
+
+  bool contains(String id) => ids.contains(id);
+  double get baseWidth => ids.length == 2
+      ? (_nodeDiameter * 2 + _spouseGap)
+      : _nodeDiameter;
+}
 
 // The seven immediate relations the backend accepts, in display order.
 const List<(String, String)> _relations = [
@@ -133,70 +157,231 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   static bool _isPlaceholder(Map<String, dynamic> m) => m['isPlaceholder'] == true;
   static bool _isSelf(Map<String, dynamic> m) => m['isSelf'] == true;
 
-  /// Distributes nodes by generation across the canvas width, normalizing so the
-  /// smallest generation number (oldest ancestors) sits at the top row.
- Map<String, Offset> _layout() {
-  if (_nodes.isEmpty) return {};
+  /// Computes a fixed hierarchical genealogy layout for the tree.
+  /// This is not a force-directed layout; nodes are placed in generation rows,
+  /// spouses share a row, and parent-child connections preserve a top-down
+  /// family tree structure.
+  _TreeLayout _layout() {
+    if (_nodes.isEmpty) return const _TreeLayout({}, _canvasMinWidth);
 
-  // Copy generation values
-  final generations = <String, int>{};
+    final generations = <String, int>{};
+    final names = <String, String>{};
+    for (final node in _nodes) {
+      final id = node['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      generations[id] = ((node['generation'] ?? 0) as num).toInt();
+      names[id] = (node['name'] ?? '').toString();
+    }
 
-  for (final node in _nodes) {
-    generations[node['id'].toString()] =
-        ((node['generation'] ?? 0) as num).toInt();
+    final spouseOf = <String, String>{};
+    final parentMap = <String, Set<String>>{};
+    final childMap = <String, Set<String>>{};
+
+    for (final edge in _edges) {
+      final rel = (edge['relation'] ?? '').toString();
+      final from = edge['from']?.toString() ?? '';
+      final to = edge['to']?.toString() ?? '';
+      if (from.isEmpty || to.isEmpty) continue;
+
+      if (rel == 'spouse') {
+        spouseOf[from] = to;
+        spouseOf[to] = from;
+      } else if (rel == 'father' || rel == 'mother') {
+        parentMap[from] ??= {};
+        parentMap[from]!.add(to);
+        childMap[to] ??= {};
+        childMap[to]!.add(from);
+      } else if (rel == 'son' || rel == 'daughter') {
+        parentMap[to] ??= {};
+        parentMap[to]!.add(from);
+        childMap[from] ??= {};
+        childMap[from]!.add(to);
+      }
+    }
+
+    for (final id in generations.keys) {
+      parentMap[id] ??= {};
+      childMap[id] ??= {};
+    }
+
+    final units = <_FamilyUnit>[];
+    final unitByNode = <String, _FamilyUnit>{};
+    final visited = <String>{};
+
+    for (final node in _nodes) {
+      final id = node['id']?.toString() ?? '';
+      if (id.isEmpty || visited.contains(id)) continue;
+      final mate = spouseOf[id];
+      if (mate != null && generations.containsKey(mate) && !visited.contains(mate)) {
+        final gen = math.min(generations[id]!, generations[mate]!);
+        final unit = _FamilyUnit(ids: [id, mate], generation: gen);
+        units.add(unit);
+        unitByNode[id] = unit;
+        unitByNode[mate] = unit;
+        visited.addAll([id, mate]);
+      } else {
+        final unit = _FamilyUnit(ids: [id], generation: generations[id]!);
+        units.add(unit);
+        unitByNode[id] = unit;
+        visited.add(id);
+      }
+    }
+
+    for (final unit in units) {
+      for (final id in unit.ids) {
+        for (final parentId in parentMap[id]!) {
+          final parentUnit = unitByNode[parentId];
+          if (parentUnit == null || parentUnit == unit) continue;
+          unit.parents.add(parentUnit);
+          parentUnit.children.add(unit);
+        }
+        for (final childId in childMap[id]!) {
+          final childUnit = unitByNode[childId];
+          if (childUnit == null || childUnit == unit) continue;
+          unit.children.add(childUnit);
+          childUnit.parents.add(unit);
+        }
+      }
+    }
+
+    final selfId = _nodes.firstWhere(_isSelf, orElse: () => {}).cast<String, dynamic>()['id']?.toString();
+    final selfUnit = selfId != null ? unitByNode[selfId] : null;
+
+    double computeSpan(_FamilyUnit unit, Map<_FamilyUnit, double> cache) {
+      if (cache.containsKey(unit)) return cache[unit]!;
+      if (unit.children.isEmpty) {
+        cache[unit] = unit.baseWidth;
+        return cache[unit]!;
+      }
+      final childSpans = unit.children
+          .map((child) => computeSpan(child, cache))
+          .toList();
+      final totalChildWidth = childSpans.fold<double>(0, (sum, span) => sum + span) +
+          _horizontalGap * math.max(0, childSpans.length - 1);
+      cache[unit] = math.max(unit.baseWidth, totalChildWidth);
+      return cache[unit]!;
+    }
+
+    final spanCache = <_FamilyUnit, double>{};
+    for (final unit in units) {
+      computeSpan(unit, spanCache);
+    }
+
+    final groups = <int, List<_FamilyUnit>>{};
+    for (final unit in units) {
+      groups[unit.generation] ??= [];
+      groups[unit.generation]!.add(unit);
+    }
+
+    final sortedGens = groups.keys.toList()..sort();
+    for (final gen in sortedGens) {
+      final unitsInGen = groups[gen]!;
+      for (final unit in unitsInGen) {
+        unit.x = 0;
+      }
+
+      final targets = <_FamilyUnit, double>{};
+      for (final unit in unitsInGen) {
+        if (unit.parents.isNotEmpty) {
+          targets[unit] = unit.parents
+              .map((parent) => parent.x)
+              .fold<double>(0, (sum, x) => sum + x) /
+              unit.parents.length;
+        } else if (selfUnit == unit) {
+          targets[unit] = _canvasMinWidth / 2;
+        } else {
+          targets[unit] = 0;
+        }
+      }
+
+      unitsInGen.sort((a, b) {
+        final first = targets[a]!;
+        final second = targets[b]!;
+        if (first != second) return first.compareTo(second);
+        return a.ids.first.compareTo(b.ids.first);
+      });
+
+      if (selfUnit != null && selfUnit.generation == gen && unitsInGen.length > 1) {
+        final centerX = _canvasMinWidth / 2;
+        selfUnit.x = centerX;
+        final siblings = unitsInGen.where((unit) => unit != selfUnit).toList();
+        final left = siblings.where((unit) => targets[unit]! < centerX).toList()
+          ..sort((a, b) => targets[a]!.compareTo(targets[b]!));
+        final right = siblings.where((unit) => targets[unit]! >= centerX).toList()
+          ..sort((a, b) => targets[a]!.compareTo(targets[b]!));
+
+        double x = centerX - selfUnit.baseWidth / 2 - _horizontalGap;
+        for (final unit in left.reversed) {
+          x -= unit.baseWidth;
+          unit.x = x + unit.baseWidth / 2;
+          x -= _horizontalGap;
+        }
+
+        x = centerX + selfUnit.baseWidth / 2 + _horizontalGap;
+        for (final unit in right) {
+          unit.x = x + unit.baseWidth / 2;
+          x += unit.baseWidth + _horizontalGap;
+        }
+      } else {
+        double x = _pad;
+        for (final unit in unitsInGen) {
+          final target = targets[unit]!;
+          final left = math.max(x, target - unit.baseWidth / 2);
+          unit.x = left + unit.baseWidth / 2;
+          x = left + unit.baseWidth + _horizontalGap;
+        }
+      }
+    }
+
+    final allXs = units.expand((unit) {
+      if (unit.ids.length == 2) {
+        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
+        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
+        return [leftCenter, rightCenter];
+      }
+      return [unit.x];
+    }).toList();
+
+    final minX = allXs.reduce(math.min) - _nodeDiameter / 2;
+    if (minX < _pad) {
+      final shift = _pad - minX;
+      for (final unit in units) {
+        unit.x += shift;
+      }
+    }
+
+    final maxX = units.expand((unit) {
+      if (unit.ids.length == 2) {
+        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
+        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
+        return [leftCenter, rightCenter];
+      }
+      return [unit.x];
+    }).reduce(math.max) + _nodeDiameter / 2;
+
+    final result = <String, Offset>{};
+    final minGen = sortedGens.isEmpty ? 0 : sortedGens.first;
+    for (final unit in units) {
+      final y = _top + (unit.generation - minGen) * _rowH;
+      if (unit.ids.length == 2) {
+        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
+        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
+        result[unit.ids[0]] = Offset(leftCenter, y);
+        result[unit.ids[1]] = Offset(rightCenter, y);
+      } else {
+        result[unit.ids[0]] = Offset(unit.x, y);
+      }
+    }
+
+    return _TreeLayout(result, math.max(_canvasMinWidth, maxX + _pad));
   }
-
-  // Make spouse share same generation
-  for (final edge in _edges) {
-    if (edge['relation'] != 'spouse') continue;
-
-    final from = edge['from'].toString();
-    final to = edge['to'].toString();
-
-    final g1 = generations[from] ?? 0;
-    final g2 = generations[to] ?? 0;
-
-    final same = math.min(g1, g2);
-
-    generations[from] = same;
-    generations[to] = same;
-  }
-
-  final groups = <int, List<Map<String, dynamic>>>{};
-
-  for (final node in _nodes) {
-    final g = generations[node['id'].toString()]!;
-    (groups[g] ??= []).add(node);
-  }
-
-  final minGen = groups.keys.reduce(math.min);
-
-  final pos = <String, Offset>{};
-
- groups.forEach((gen, members) {
-  final y = _top + (gen - minGen) * _rowH;
-
-  final step =
-      members.length > 1 ? (_w - 2 * _pad) / (members.length - 1) : 0;
-
-  final startX =
-      members.length == 1 ? _w / 2 : _pad;
-
-  for (int i = 0; i < members.length; i++) {
-    pos[members[i]['id'].toString()] =
-        Offset(startX + i * step, y);
-  }
-});
-
-  return pos;
-}
   /// Scale the canvas down so the whole tree is visible, centred horizontally.
-  void _fitToViewport(double canvasH) {
+  void _fitToViewport(double canvasW, double canvasH) {
     final vp = _viewport;
     if (vp == null || _didFit || vp.width <= 0 || vp.height <= 0) return;
-    final raw = math.min(vp.width / _canvasW, vp.height / canvasH);
+    final raw = math.min(vp.width / canvasW, vp.height / canvasH);
     final s = (raw.isFinite && raw > 0 ? raw : 0.4).clamp(0.15, 1.0).toDouble();
-    final dx = (vp.width - _canvasW * s) / 2;
+    final dx = (vp.width - canvasW * s) / 2;
     _tc.value = Matrix4.identity()
       ..translateByDouble(dx, 8.0, 0.0, 1.0)
       ..scaleByDouble(s, s, s, 1.0);
@@ -492,13 +677,15 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       );
     }
 
-    final pos = _layout();
+    final layout = _layout();
+    final pos = layout.positions;
     final gens = _nodes.map(_gen);
     final minGen = gens.reduce((a, b) => a < b ? a : b);
     final maxGen = gens.reduce((a, b) => a > b ? a : b);
     final rowCount = maxGen - minGen + 1;
     double rowY(int row) => _top + row * _rowH;
     final canvasH = rowY(rowCount - 1) + 130;
+    final canvasW = math.max(layout.width, _canvasMinWidth);
 
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.cream),
@@ -507,7 +694,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
           _viewport = Size(cons.maxWidth, cons.maxHeight);
           if (!_didFit) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _fitToViewport(canvasH));
+              if (mounted) setState(() => _fitToViewport(canvasW, canvasH));
             });
           }
           return Stack(
@@ -519,14 +706,13 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                 maxScale: 3,
                 boundaryMargin: const EdgeInsets.all(200),
                 child: SizedBox(
-                  width: _canvasW,
+                  width: canvasW,
                   height: canvasH,
                   child: Stack(
                     children: [
                       Positioned.fill(
                         child: CustomPaint(
-                            painter:
-                                _TreePainter(edges: _edges, pos: pos)),
+                            painter: _TreePainter(edges: _edges, pos: pos)),
                       ),
                       for (var row = 0; row < rowCount; row++)
                         Positioned(
@@ -871,7 +1057,7 @@ class _TreePainter extends CustomPainter {
       ..strokeWidth = 1;
     final gens = pos.values.map((o) => o.dy).toSet();
     for (final y in gens) {
-      _dashedLine(canvas, Offset(40, y), Offset(_w - 40, y), guide,
+      _dashedLine(canvas, Offset(40, y), Offset(size.width - 40, y), guide,
           dash: 4, gap: 10);
     }
 
