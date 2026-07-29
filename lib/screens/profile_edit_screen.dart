@@ -7,6 +7,7 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/location_picker_sheet.dart';
 import '../widgets/pexels_image.dart';
 
 /// Edit every detail on your own profile, by hand.
@@ -36,11 +37,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late final TextEditingController _bio;
   late final TextEditingController _address;
 
+  // Current address, part by part — the shape the server stores under
+  // `currentAddress` and geocodes into coordinates when it saves.
+  late final TextEditingController _country;
+  late final TextEditingController _state;
+  late final TextEditingController _district;
+  late final TextEditingController _taluk;
+  late final TextEditingController _city;
+  late final TextEditingController _area;
+  late final TextEditingController _street;
+  late final TextEditingController _landmark;
+  late final TextEditingController _pincode;
+  late final List<TextEditingController> _addressFields;
+
   String _gender = '';
   DateTime? _dob;
   String _photoUrl = '';
   bool _saving = false;
   bool _uploadingPhoto = false;
+  bool _locating = false;
+
+  // A position read from the device this session, and whether it still matches
+  // what is in the fields. Editing any part clears it, because coordinates that
+  // belong to the address the member has since typed over are worse than none —
+  // the server geocodes the parts instead.
+  double? _lat;
+  double? _lng;
+  bool _fixIsCurrent = false;
 
   @override
   void initState() {
@@ -52,6 +75,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _occupation = TextEditingController(text: u?.occupation ?? '');
     _bio = TextEditingController(text: u?.bio ?? '');
     _address = TextEditingController(text: u?.address ?? '');
+
+    final addr = u?.currentAddress ?? CurrentAddress.empty;
+    _country = TextEditingController(text: addr.country);
+    _state = TextEditingController(text: addr.state);
+    _district = TextEditingController(text: addr.district);
+    _taluk = TextEditingController(text: addr.taluk);
+    _city = TextEditingController(text: addr.city);
+    _area = TextEditingController(text: addr.area);
+    _street = TextEditingController(text: addr.street);
+    _landmark = TextEditingController(text: addr.landmark);
+    _pincode = TextEditingController(text: addr.pincode);
+    _addressFields = [
+      _country, _state, _district, _taluk, _city,
+      _area, _street, _landmark, _pincode,
+    ];
+    for (final c in _addressFields) {
+      c.addListener(_onAddressEdited);
+    }
+
     _gender = u?.gender ?? '';
     _photoUrl = u?.photoUrl ?? '';
     final dob = u?.dob ?? '';
@@ -60,10 +102,74 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _gotra, _native, _occupation, _bio, _address]) {
+    for (final c in [
+      _name, _gotra, _native, _occupation, _bio, _address,
+      ..._addressFields,
+    ]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _onAddressEdited() {
+    if (_fixIsCurrent) setState(() => _fixIsCurrent = false);
+  }
+
+  CurrentAddress get _currentAddress => CurrentAddress(
+        country: _country.text.trim(),
+        state: _state.text.trim(),
+        district: _district.text.trim(),
+        taluk: _taluk.text.trim(),
+        city: _city.text.trim(),
+        area: _area.text.trim(),
+        street: _street.text.trim(),
+        landmark: _landmark.text.trim(),
+        pincode: _pincode.text.trim(),
+        latitude: _lat,
+        longitude: _lng,
+      );
+
+  // ── Current location ──────────────────────────────────────────────────────
+
+  /// Fills the address fields from the device's GPS position (reverse-geocoded
+  /// via OpenStreetMap). Only fills parts that come back — anything the lookup
+  /// doesn't name is left as the member typed it.
+  Future<void> _useCurrentLocation() async {
+    setState(() => _locating = true);
+    try {
+      final parts = await currentAddressParts();
+      if (!mounted) return;
+      final addr = CurrentAddress.fromMap(parts);
+
+      void fill(TextEditingController c, String value) {
+        if (value.isNotEmpty) c.text = value;
+      }
+
+      fill(_country, addr.country);
+      fill(_state, addr.state);
+      fill(_district, addr.district);
+      fill(_taluk, addr.taluk);
+      fill(_city, addr.city);
+      fill(_area, addr.area);
+      fill(_street, addr.street);
+      fill(_pincode, addr.pincode);
+
+      // After the fills, so the listeners they triggered don't clear it again.
+      setState(() {
+        _lat = addr.latitude;
+        _lng = addr.longitude;
+        _fixIsCurrent = addr.hasLocation;
+      });
+      _snack(addr.isEmpty
+          ? 'Got your position — fill in the address parts'
+          : 'Address filled in from your location');
+    } on LocationFailure catch (e) {
+      _snack(e.message);
+    } catch (_) {
+      _snack('Could not read your location');
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   // ── Photo ─────────────────────────────────────────────────────────────────
@@ -146,6 +252,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         occupation: _occupation.text.trim(),
         bio: _bio.text.trim(),
         address: _address.text.trim(),
+        // Sent whole — the server replaces the stored address with this, and
+        // geocodes it unless the device fix below travels with it.
+        currentAddress:
+            _currentAddress.toRequest(includeLocation: _fixIsCurrent),
         gender: _gender.isEmpty ? null : _gender,
         dob: _dobIso.isEmpty ? null : _dobIso,
       );
@@ -203,9 +313,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             _text(_occupation, 'Occupation', hint: 'e.g. Software Engineer'),
 
             const SizedBox(height: 18),
+            _sectionLabel('CURRENT ADDRESS'),
+            _locationRow(),
+            _text(_country, 'Country', hint: 'e.g. India'),
+            _text(_state, 'State', hint: 'e.g. Karnataka'),
+            _text(_district, 'District', hint: 'e.g. Bangalore Urban'),
+            _text(_taluk, 'Taluk', hint: 'e.g. Bangalore North'),
+            _text(_city, 'City / Town / Village', hint: 'e.g. Bangalore'),
+            _text(_area, 'Area / Locality', hint: 'e.g. Rajajinagar'),
+            _text(_street, 'Street', hint: 'e.g. 3rd Cross, 5th Main'),
+            _text(_landmark, 'Landmark', hint: 'e.g. Opposite Navrang Theatre'),
+            _text(_pincode, 'PIN code',
+                hint: '6 digits',
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  final s = (v ?? '').trim();
+                  if (s.isEmpty) return null;
+                  return RegExp(r'^\d{6}$').hasMatch(s)
+                      ? null
+                      : 'PIN code must be 6 digits';
+                }),
+
+            const SizedBox(height: 18),
             _sectionLabel('ABOUT'),
             _text(_bio, 'Bio', maxLines: 3, maxLength: 500),
-            _text(_address, 'Address', maxLines: 2),
+            _text(_address, 'Address (old, single line)', maxLines: 2),
 
             const SizedBox(height: 26),
             SizedBox(
@@ -294,12 +426,56 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 letterSpacing: 1.6)),
       );
 
+  /// "Use my current location", plus what came of it. The coordinates matter
+  /// enough to show: they are what the navigation feature routes to, and a
+  /// member should be able to see whether their address has them.
+  Widget _locationRow() {
+    final saved = context.read<AuthService>().user?.currentAddress;
+    final hasSavedFix = saved?.hasLocation ?? false;
+    final status = _fixIsCurrent && _lat != null && _lng != null
+        ? 'Pinned at ${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)}'
+        : hasSavedFix
+            ? 'Already on the map. Editing the address re-pins it when you save.'
+            : 'Coordinates are worked out from the address when you save.';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _locating ? null : _useCurrentLocation,
+            icon: _locating
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.my_location_rounded, size: 18),
+            label: Text(_locating ? 'Locating…' : 'Use my current location',
+                style: body(13, weight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.forest800,
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(status, style: body(11, color: AppColors.textMuted, height: 1.4)),
+        ],
+      ),
+    );
+  }
+
   Widget _text(
     TextEditingController c,
     String label, {
     String? hint,
     int maxLines = 1,
     int? maxLength,
+    TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
     return Padding(
@@ -308,6 +484,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         controller: c,
         maxLines: maxLines,
         maxLength: maxLength,
+        keyboardType: keyboardType,
         validator: validator,
         style: body(14, color: AppColors.ink),
         decoration: InputDecoration(

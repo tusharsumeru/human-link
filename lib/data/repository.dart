@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'package:latlong2/latlong.dart';
+
 import 'api_client.dart';
 import 'api_config.dart';
 import 'demo_data.dart';
+import 'invitation_member.dart';
 
 /// Single data source for the app.
 ///
@@ -58,6 +61,7 @@ class Repository {
     String role = 'member',
     String avatar = '6',
     String gender = '',
+    Map<String, dynamic>? currentAddress,
   }) async {
     final data = await _api.postJson('/api/user/register', {
       'userName': userName.isNotEmpty ? userName : _deriveUserName(name, phone),
@@ -67,6 +71,9 @@ class Repository {
       if (native.isNotEmpty) 'native': native,
       'role': role,
       if (gender.isNotEmpty) 'gender': gender,
+      // Send it as `CurrentAddress.toRequest()` builds it — parts only, no
+      // empty strings. The server geocodes it and stores the coordinates.
+      'currentAddress': ?currentAddress,
     });
     if (data is Map && data['user'] is Map) {
       return {
@@ -300,6 +307,55 @@ class Repository {
     return const [];
   }
 
+  /// GET /api/user/map — members to plot on the invitation route planner:
+  /// everyone whose current address has been geocoded, nearest to you first,
+  /// plus your own pin as the route's starting point.
+  ///
+  /// Unlike the directory this carries the full address and coordinates — it is
+  /// the view the address parts were collected for, since delivering an
+  /// invitation by hand means finding the door.
+  Future<InvitationMap> invitationMap({String q = '', int limit = 100}) async {
+    final query = <String>['limit=$limit'];
+    if (q.isNotEmpty) query.add('q=${Uri.encodeQueryComponent(q)}');
+    final data = await _api.getJson('/api/user/map?${query.join('&')}');
+    if (data is! Map) return const InvitationMap();
+
+    final members = <InvitationMember>[];
+    for (final raw in (data['members'] as List? ?? const [])) {
+      final m = InvitationMember.fromMap(raw);
+      if (m != null) members.add(m);
+    }
+    return InvitationMap(
+      me: InvitationMember.fromMap(data['me']),
+      members: members,
+      unmapped: (data['unmapped'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// POST /api/user/route — the optimised order to visit the selected members
+  /// in, starting from [origin] (your saved address when it is omitted) and
+  /// ending at the last family rather than back home.
+  ///
+  /// The ids go up in whatever order they were picked: working out the order is
+  /// the server's job. It always answers with a usable route — see
+  /// [RoutePlan.isEstimate] for whether the distances are real road distances.
+  Future<RoutePlan> planRoute(
+    List<String> memberIds, {
+    LatLng? origin,
+  }) async {
+    final data = await _api.postJson('/api/user/route', {
+      'memberIds': memberIds,
+      if (origin != null)
+        'origin': {
+          'latitude': origin.latitude,
+          'longitude': origin.longitude,
+        },
+    });
+    final plan = RoutePlan.fromMap(data);
+    if (plan == null) throw ApiException('Could not plan the route');
+    return plan;
+  }
+
   /// GET /api/user/me — the authenticated member's own full profile (same shape
   /// as login/register, including `samajId`). Used to refresh a restored session
   /// so fields added after the session was cached (e.g. samajId) populate without
@@ -464,6 +520,7 @@ class Repository {
     String? dob,
     String? gender,
     String? address,
+    Map<String, dynamic>? currentAddress,
     String? profileUrl,
     String? maskedAadhaar,
     bool? verified,
@@ -478,6 +535,9 @@ class Repository {
       'dob': ?dob,
       'gender': ?gender,
       'address': ?address,
+      // Replaces the stored address wholesale, so it carries every part the
+      // member still wants kept — see [CurrentAddress.toRequest].
+      'currentAddress': ?currentAddress,
       'profileUrl': ?profileUrl,
       'masked_aadhaar': ?maskedAadhaar,
       'verified': ?verified,
@@ -500,6 +560,7 @@ class Repository {
     String? dob,
     String? gender,
     String? address,
+    Map<String, dynamic>? currentAddress,
     String? profileUrl,
     String? maskedAadhaar,
     bool? verified,
@@ -515,6 +576,7 @@ class Repository {
         dob: dob,
         gender: gender,
         address: address,
+        currentAddress: currentAddress,
         profileUrl: profileUrl,
         maskedAadhaar: maskedAadhaar,
         verified: verified,

@@ -54,5 +54,13 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- "Start Navigation" hands the planned route to whichever app opens
+             https links (Google Maps). Android 11+ hides other packages unless
+             they are declared here, and url_launcher would otherwise report
+             that nothing can open the link. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

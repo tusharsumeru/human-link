@@ -7,6 +7,164 @@ import '../data/api_client.dart';
 import '../data/chat_service.dart';
 import '../data/repository.dart';
 
+/// Where the member currently stays, in the parts the server stores under
+/// `currentAddress` — country → state → district → taluk → city → area, then
+/// the street-level detail.
+///
+/// [latitude]/[longitude] come back under `location`: the server geocodes the
+/// written address with OpenStreetMap when it saves it, so they are usually
+/// present but never guaranteed — an address it could not place has none.
+///
+/// Every part is a plain String, empty when unknown, because that is what the
+/// server returns for a part it has nothing for.
+class CurrentAddress {
+  const CurrentAddress({
+    this.country = '',
+    this.state = '',
+    this.district = '',
+    this.taluk = '',
+    this.city = '',
+    this.area = '',
+    this.street = '',
+    this.landmark = '',
+    this.pincode = '',
+    this.latitude,
+    this.longitude,
+  });
+
+  final String country;
+  final String state;
+  final String district;
+  final String taluk;
+  final String city;
+  final String area;
+  final String street;
+  final String landmark;
+  final String pincode;
+  final double? latitude;
+  final double? longitude;
+
+  static const empty = CurrentAddress();
+
+  List<String> get _parts =>
+      [street, landmark, area, city, taluk, district, state, pincode, country];
+
+  bool get isEmpty => _parts.every((p) => p.trim().isEmpty);
+  bool get isNotEmpty => !isEmpty;
+  bool get hasLocation => latitude != null && longitude != null;
+
+  /// The whole address on one line, narrowest part first.
+  String get oneLine =>
+      _parts.map((p) => p.trim()).where((p) => p.isNotEmpty).join(', ');
+
+  /// The half of it a member is happy to show — no street, landmark or pincode.
+  String get shortLine => [area, city, district, state]
+      .map((p) => p.trim())
+      .where((p) => p.isNotEmpty)
+      .join(', ');
+
+  factory CurrentAddress.fromMap(dynamic raw) {
+    if (raw is! Map) return empty;
+    final m = Map<String, dynamic>.from(raw);
+    final loc = m['location'];
+    double? coord(String key) {
+      if (loc is! Map) return null;
+      final v = loc[key];
+      if (v is num) return v.toDouble();
+      return double.tryParse((v ?? '').toString());
+    }
+
+    String part(String key) => (m[key] ?? '').toString();
+
+    return CurrentAddress(
+      country: part('country'),
+      state: part('state'),
+      district: part('district'),
+      taluk: part('taluk'),
+      city: part('city'),
+      area: part('area'),
+      street: part('street'),
+      landmark: part('landmark'),
+      pincode: part('pincode'),
+      latitude: coord('latitude'),
+      longitude: coord('longitude'),
+    );
+  }
+
+  /// Full shape, for persisting the session locally.
+  Map<String, dynamic> toMap() => {
+        'country': country,
+        'state': state,
+        'district': district,
+        'taluk': taluk,
+        'city': city,
+        'area': area,
+        'street': street,
+        'landmark': landmark,
+        'pincode': pincode,
+        if (hasLocation)
+          'location': {'latitude': latitude, 'longitude': longitude},
+      };
+
+  /// What to send to the server — empty parts left out entirely, and null when
+  /// there is no address at all, so a blank form doesn't overwrite a stored
+  /// address with nothing.
+  ///
+  /// `location` is sent only when the device actually fixed the position (the
+  /// "use my current location" path). Otherwise it is omitted so the server
+  /// geocodes the parts below itself, rather than us echoing back coordinates
+  /// that belong to whatever address was there before.
+  Map<String, dynamic>? toRequest({bool includeLocation = false}) {
+    if (isEmpty) return null;
+    final m = <String, dynamic>{};
+    void put(String key, String value) {
+      final v = value.trim();
+      if (v.isNotEmpty) m[key] = v;
+    }
+
+    put('country', country);
+    put('state', state);
+    put('district', district);
+    put('taluk', taluk);
+    put('city', city);
+    put('area', area);
+    put('street', street);
+    put('landmark', landmark);
+    put('pincode', pincode);
+    if (includeLocation && hasLocation) {
+      m['location'] = {'latitude': latitude, 'longitude': longitude};
+    }
+    return m;
+  }
+
+  CurrentAddress copyWith({
+    String? country,
+    String? state,
+    String? district,
+    String? taluk,
+    String? city,
+    String? area,
+    String? street,
+    String? landmark,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+  }) =>
+      CurrentAddress(
+        country: country ?? this.country,
+        state: state ?? this.state,
+        district: district ?? this.district,
+        taluk: taluk ?? this.taluk,
+        city: city ?? this.city,
+        area: area ?? this.area,
+        street: street ?? this.street,
+        landmark: landmark ?? this.landmark,
+        pincode: pincode ?? this.pincode,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+      );
+}
+
 /// Authenticated user — mirrors the web app's VVUser shape, plus a few
 /// mobile-only fields (gender/bio/address/photo) the backend doesn't store.
 class AppUser {
@@ -23,7 +181,10 @@ class AppUser {
   final String gender;
   final String bio;
   final String occupation;
+  // The old single-line address. Superseded by [currentAddress], kept because
+  // Aadhaar KYC still hands back one line and older accounts only have this.
   final String address;
+  final CurrentAddress currentAddress;
   final bool matrimonialOptIn;
   final String photoPath; // local file path to the user's photo/selfie
   final String photoUrl; // remote (MongoDB-served) photo URL
@@ -47,6 +208,7 @@ class AppUser {
     this.bio = '',
     this.occupation = '',
     this.address = '',
+    this.currentAddress = CurrentAddress.empty,
     this.matrimonialOptIn = false,
     this.photoPath = '',
     this.photoUrl = '',
@@ -72,6 +234,7 @@ class AppUser {
         bio: (m['bio'] ?? '') as String,
         occupation: (m['occupation'] ?? '') as String,
         address: (m['address'] ?? '') as String,
+        currentAddress: CurrentAddress.fromMap(m['currentAddress']),
         matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
         photoPath: (m['photoPath'] ?? '') as String,
         // Login/register return the remote photo as `profileUrl`.
@@ -96,6 +259,7 @@ class AppUser {
         'bio': bio,
         'occupation': occupation,
         'address': address,
+        'currentAddress': currentAddress.toMap(),
         'matrimonialOptIn': matrimonialOptIn,
         'photoPath': photoPath,
         'photoUrl': photoUrl,
@@ -119,6 +283,7 @@ class AppUser {
     String? bio,
     String? occupation,
     String? address,
+    CurrentAddress? currentAddress,
     bool? matrimonialOptIn,
     String? photoPath,
     String? photoUrl,
@@ -141,6 +306,7 @@ class AppUser {
         bio: bio ?? this.bio,
         occupation: occupation ?? this.occupation,
         address: address ?? this.address,
+        currentAddress: currentAddress ?? this.currentAddress,
         matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
         photoPath: photoPath ?? this.photoPath,
         photoUrl: photoUrl ?? this.photoUrl,
