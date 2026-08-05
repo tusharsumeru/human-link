@@ -94,6 +94,8 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _HeroBanner(),
+          const SizedBox(height: 12),
+          _discoverMatchesButton(context),
           const SizedBox(height: 18),
           _genderFilter(),
           const SizedBox(height: 12),
@@ -134,6 +136,24 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
                   child: _CandidateCard(candidate: c),
                 )),
         ],
+      ),
+    );
+  }
+
+  Widget _discoverMatchesButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.forest800),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () => context.push('/matrimonial/discover'),
+        icon: const Icon(Icons.auto_awesome_rounded,
+            size: 18, color: AppColors.forest800),
+        label: Text('Discover Matches',
+            style: body(14, weight: FontWeight.w700, color: AppColors.forest800)),
       ),
     );
   }

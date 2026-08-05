@@ -5,6 +5,46 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../theme/app_theme.dart';
 
+/// Wire value (backend enum, matches matrimonial-profile.schema.ts) → the
+/// compact label shown on its chip. Order here is the order the chips render
+/// in, left to right.
+const _marriageIntentionOptions = <String, String>{
+  'SOON': 'Soon',
+  'ONE_TO_TWO_YEARS': '1–2 Years',
+  'NOT_DECIDED': 'Not Decided',
+};
+const _childrenPreferenceOptions = <String, String>{
+  'WANT_CHILDREN': 'Want',
+  'DO_NOT_WANT_CHILDREN': "Don't Want",
+  'OPEN_TO_DISCUSS': 'Open',
+};
+const _familyPreferenceOptions = <String, String>{
+  'JOINT_FAMILY': 'Joint',
+  'NUCLEAR_FAMILY': 'Nuclear',
+  'FLEXIBLE': 'Flexible',
+};
+const _relocationPreferenceOptions = <String, String>{
+  'YES': 'Yes',
+  'NO': 'No',
+  'MAYBE': 'Maybe',
+};
+const _foodPreferenceOptions = <String, String>{
+  'VEGETARIAN': 'Vegetarian',
+  'NON_VEGETARIAN': 'Non-Vegetarian',
+  'EGGETARIAN': 'Eggetarian',
+  'OTHER': 'Other',
+};
+const _interestOptions = <String, String>{
+  'TRAVEL': 'Travel',
+  'MUSIC': 'Music',
+  'MOVIES': 'Movies',
+  'FITNESS': 'Fitness',
+  'SPORTS': 'Sports',
+  'READING': 'Reading',
+  'COOKING': 'Cooking',
+  'SPIRITUALITY': 'Spirituality',
+};
+
 /// The matrimonial half of a member's profile — career, physical, family,
 /// horoscope and what they're looking for.
 ///
@@ -40,6 +80,18 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   bool? _mangal;
   int? _partnerAgeMin;
   int? _partnerAgeMax;
+
+  // STEP 16 — Marriage Preferences (compact chips, wire enum values).
+  String _marriageIntention = '';
+  String _childrenPreference = '';
+  String _familyPreference = '';
+  String _relocationPreference = '';
+
+  // STEP 17 — Lifestyle (compact chips, wire enum values).
+  String _foodPreference = '';
+
+  // STEP 18 — Interests (multi-select, wire enum values).
+  final Set<String> _interests = {};
 
   bool _loading = true;
   bool _saving = false;
@@ -80,6 +132,14 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         _mangal = p['mangal'] as bool?;
         _partnerAgeMin = (p['partnerAgeMin'] as num?)?.toInt();
         _partnerAgeMax = (p['partnerAgeMax'] as num?)?.toInt();
+        _marriageIntention = (p['marriageIntention'] ?? '').toString();
+        _childrenPreference = (p['childrenPreference'] ?? '').toString();
+        _familyPreference = (p['familyPreference'] ?? '').toString();
+        _relocationPreference = (p['relocationPreference'] ?? '').toString();
+        _foodPreference = (p['foodPreference'] ?? '').toString();
+        _interests
+          ..clear()
+          ..addAll((p['interests'] as List?)?.map((e) => e.toString()) ?? const []);
       }
       setState(() => _loading = false);
     } catch (e) {
@@ -135,6 +195,15 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           'partnerGotraExclusions': _splitCommas(_gotraExclusions.text),
         if (_preferredLocations.text.trim().isNotEmpty)
           'partnerPreferredLocations': _splitCommas(_preferredLocations.text),
+        if (_marriageIntention.isNotEmpty)
+          'marriageIntention': _marriageIntention,
+        if (_childrenPreference.isNotEmpty)
+          'childrenPreference': _childrenPreference,
+        if (_familyPreference.isNotEmpty) 'familyPreference': _familyPreference,
+        if (_relocationPreference.isNotEmpty)
+          'relocationPreference': _relocationPreference,
+        if (_foodPreference.isNotEmpty) 'foodPreference': _foodPreference,
+        if (_interests.isNotEmpty) 'interests': _interests.toList(),
       });
       if (!mounted) return;
       _snack('Matrimonial details saved');
@@ -206,6 +275,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           _text('rashi', 'Rashi', hint: 'e.g. Vrishabha'),
           _text('timeOfBirth', 'Time of birth', hint: 'e.g. 10:45 AM'),
           _mangalField(),
+
+          const SizedBox(height: 16),
+          _label('COMPATIBILITY'),
           _compatibilityBirthDetailsLink(),
           _compatibilityConsentLink(),
 
@@ -222,6 +294,26 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               hint: 'Comma separated, e.g. Bengaluru, Mangaluru'),
           _multiline(_gotraExclusions, 'Gotras to exclude (optional)',
               hint: 'Comma separated. Your own gotra is always excluded.'),
+
+          const SizedBox(height: 16),
+          _label('MARRIAGE PREFERENCES'),
+          _enumChoice('Marriage intention', _marriageIntentionOptions,
+              _marriageIntention, (v) => setState(() => _marriageIntention = v)),
+          _enumChoice('Children', _childrenPreferenceOptions,
+              _childrenPreference, (v) => setState(() => _childrenPreference = v)),
+          _enumChoice('Family', _familyPreferenceOptions, _familyPreference,
+              (v) => setState(() => _familyPreference = v)),
+          _enumChoice('Relocation', _relocationPreferenceOptions,
+              _relocationPreference, (v) => setState(() => _relocationPreference = v)),
+
+          const SizedBox(height: 16),
+          _label('LIFESTYLE'),
+          _enumChoice('Food preference', _foodPreferenceOptions,
+              _foodPreference, (v) => setState(() => _foodPreference = v)),
+
+          const SizedBox(height: 16),
+          _label('INTERESTS'),
+          _multiEnumChoice('', _interestOptions, _interests),
 
           const SizedBox(height: 24),
           SizedBox(
@@ -308,12 +400,84 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               for (final o in options)
                 ChoiceChip(
                   label: Text(o, style: body(13)),
                   selected: selected == o,
                   onSelected: (_) => onPick(o),
+                  selectedColor: AppColors.forest300,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Same compact chip look as [_choice], but for a backend enum field: the
+  /// map's values are what's shown on each chip, its keys are what's actually
+  /// selected/saved — so the wire value (e.g. "ONE_TO_TWO_YEARS") never has
+  /// to match the display label (e.g. "1–2 Years").
+  Widget _enumChoice(String label, Map<String, String> wireToLabel,
+      String selectedWire, ValueChanged<String> onPickWire) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: body(13, color: AppColors.label)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in wireToLabel.entries)
+                ChoiceChip(
+                  label: Text(entry.value, style: body(13)),
+                  selected: selectedWire == entry.key,
+                  onSelected: (_) => onPickWire(entry.key),
+                  selectedColor: AppColors.forest300,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Multi-select variant of [_enumChoice] — any number of chips may be on at
+  /// once, and tapping a selected one turns it back off. [selectedWires] is
+  /// mutated in place ([Set.add]/[Set.remove]), matching how the other
+  /// collection-backed fields on this screen (expectations, gotra exclusions)
+  /// are edited directly rather than replaced wholesale.
+  Widget _multiEnumChoice(
+      String label, Map<String, String> wireToLabel, Set<String> selectedWires) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (label.isNotEmpty) ...[
+            Text(label, style: body(13, color: AppColors.label)),
+            const SizedBox(height: 6),
+          ],
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in wireToLabel.entries)
+                FilterChip(
+                  label: Text(entry.value, style: body(13)),
+                  selected: selectedWires.contains(entry.key),
+                  onSelected: (on) => setState(() {
+                    if (on) {
+                      selectedWires.add(entry.key);
+                    } else {
+                      selectedWires.remove(entry.key);
+                    }
+                  }),
                   selectedColor: AppColors.forest300,
                 ),
             ],
@@ -398,21 +562,25 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   }
 
   Widget _mangalField() {
+    // Wrap, not Row: an unconstrained Row of a label + chips can overflow on
+    // narrow devices — Wrap folds onto a second line instead.
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: Row(
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 6,
         children: [
-          Text('Mangal dosha', style: body(13, color: AppColors.label)),
-          const SizedBox(width: 14),
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Text('Mangal dosha', style: body(13, color: AppColors.label)),
+          ),
           for (final (value, label) in [(true, 'Yes'), (false, 'No')])
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(label, style: body(13)),
-                selected: _mangal == value,
-                onSelected: (_) => setState(() => _mangal = value),
-                selectedColor: AppColors.forest300,
-              ),
+            ChoiceChip(
+              label: Text(label, style: body(13)),
+              selected: _mangal == value,
+              onSelected: (_) => setState(() => _mangal = value),
+              selectedColor: AppColors.forest300,
             ),
         ],
       ),

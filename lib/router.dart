@@ -15,6 +15,7 @@ import 'screens/matrimonial_edit_screen.dart';
 import 'screens/birth_details_screen.dart';
 import 'screens/matrimonial_gate_screen.dart';
 import 'screens/matrimonial_detail_screen.dart';
+import 'screens/discover_matches_screen.dart';
 import 'screens/profile_edit_screen.dart';
 import 'screens/welfare_list_screen.dart';
 import 'screens/welfare_detail_screen.dart';
@@ -92,6 +93,12 @@ GoRouter buildRouter(AuthService auth) {
       GoRoute(
         path: '/matrimonial/compatibility-consent',
         builder: (_, __) => const CompatibilityConsentScreen(),
+      ),
+      // Declared before '/matrimonial/:id' so "discover" is never read as a
+      // profile id.
+      GoRoute(
+        path: '/matrimonial/discover',
+        builder: (_, __) => const DiscoverMatchesScreen(),
       ),
       GoRoute(
         path: '/matrimonial/:id',

@@ -1071,6 +1071,46 @@ class Repository {
     return const [];
   }
 
+  /// GET /api/matrimonial/discover — Discover Matches: the same eligible
+  /// candidate pool as [matrimonialProfiles], sorted server-side by
+  /// `matchPercentage` DESC and shaped into discovery-safe preview cards
+  /// (`{profileId, name, age, location, profileImage, occupation,
+  /// matchPercentage, matchLevel, sharedInterests, coverage}`). The
+  /// percentage/level are computed entirely server-side — nothing here
+  /// recomputes or re-sorts them.
+  Future<Map<String, dynamic>> discoverMatches({
+    String? gender,
+    String? gotra,
+    String? location,
+    int? ageMin,
+    int? ageMax,
+    int limit = 20,
+    int skip = 0,
+  }) async {
+    final q = <String>['limit=$limit', 'skip=$skip'];
+    if (gender != null && gender != 'All') q.add('gender=$gender');
+    if (gotra != null && gotra != 'All') {
+      q.add('gotra=${Uri.encodeQueryComponent(gotra)}');
+    }
+    if (location != null && location != 'All') {
+      q.add('location=${Uri.encodeQueryComponent(location)}');
+    }
+    if (ageMin != null) q.add('ageMin=$ageMin');
+    if (ageMax != null) q.add('ageMax=$ageMax');
+
+    final data = await _api.getJson('/api/matrimonial/discover?${q.join('&')}');
+    if (data is Map && data['matches'] is List) {
+      return {
+        'count': data['count'] ?? (data['matches'] as List).length,
+        'matches': (data['matches'] as List)
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList(),
+      };
+    }
+    return const {'count': 0, 'matches': <Map<String, dynamic>>[]};
+  }
+
   /// GET /api/matrimonial/:id — one published profile in full.
   Future<Map<String, dynamic>> matrimonialProfile(String id) async {
     final data = await _api.getJson('/api/matrimonial/$id');
