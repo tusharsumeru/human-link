@@ -4,10 +4,13 @@ import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:http/http.dart' show ClientException;
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/api_client.dart';
+import '../data/api_config.dart';
 import '../data/comment_store.dart';
 import '../data/feed_store.dart';
 import '../data/repository.dart';
@@ -53,6 +56,10 @@ class _Feed extends StatefulWidget {
 class _FeedState extends State<_Feed> {
   List<_Post> _backendPosts = const [];
   bool _loading = true;
+  // Set when the feed request itself failed. Kept separate from "the backend
+  // returned zero posts": an unreachable server used to render as "No posts
+  // yet", which reads as an empty Samaj and hides the real problem.
+  String? _error;
 
   @override
   void initState() {
@@ -60,25 +67,69 @@ class _FeedState extends State<_Feed> {
     _loadFeed();
   }
 
-  /// Pulls the real feed from the backend. On failure/empty we fall back to the
-  /// embedded demo posts so the screen is never blank (the app's usual pattern).
+  /// Pulls the real feed from the backend. An empty backend shows an empty
+  /// feed; a failed request shows the error, with a retry.
   Future<void> _loadFeed() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final data = await Repository.instance.feed(limit: 20);
       final raw = (data['posts'] as List?) ?? const [];
+      final currentUserId =
+          mounted ? (context.read<AuthService>().user?.id ?? '') : '';
       final posts = raw
           .whereType<Map>()
-          .map((m) => _Post.fromBackend(Map<String, dynamic>.from(m)))
+          .map((m) => _Post.fromBackend(Map<String, dynamic>.from(m),
+              currentUserId: currentUserId))
           .toList();
       if (!mounted) return;
       setState(() {
         _backendPosts = posts;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false); // leave feed empty on error, no fallback
+      setState(() {
+        _error = _feedErrorMessage(e);
+        _loading = false;
+      });
     }
+  }
+
+  /// Drops [post] from the feed after it's deleted (or hidden). A post still
+  /// held by [FeedStore] (this session's own upload) is removed there too, so
+  /// it doesn't reappear on the next FeedStore notification.
+  void _removePost(_Post post) {
+    for (final u in FeedStore.instance.posts) {
+      if (u.feedId == post.id) {
+        FeedStore.instance.remove(u);
+        break;
+      }
+    }
+    if (mounted) {
+      setState(() => _backendPosts = _backendPosts.where((p) => p.id != post.id).toList());
+    }
+  }
+
+  /// A message that points at the actual failure. Network errors name the
+  /// server being dialled, since a stale `API_BASE_URL` is the usual cause.
+  String _feedErrorMessage(Object e) {
+    if (e is ApiException) {
+      return e.statusCode == null
+          ? '${e.message}\nCould not reach ${ApiConfig.baseUrl}'
+          : '${e.message} (${e.statusCode})';
+    }
+    if (e is SocketException ||
+        e is TimeoutException ||
+        e is HttpException ||
+        e is ClientException) {
+      return "Can't reach the server at ${ApiConfig.baseUrl}.\n"
+          'Check that the backend is running, or pass '
+          '--dart-define=API_BASE_URL=<host>.';
+    }
+    return 'Could not load the feed.\n$e';
   }
 
   @override
@@ -112,6 +163,34 @@ class _FeedState extends State<_Feed> {
                     child: CircularProgressIndicator(
                         color: AppColors.forest700, strokeWidth: 2)),
               )
+            else if (_error != null && all.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+                child: Column(
+                  children: [
+                    const Icon(Icons.cloud_off_rounded,
+                        size: 44, color: AppColors.hint),
+                    const SizedBox(height: 12),
+                    Text("Couldn't load the feed",
+                        style: display(16, color: AppColors.forest900)),
+                    const SizedBox(height: 4),
+                    Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: body(13, color: AppColors.textMuted)),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: _loadFeed,
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: Text('Retry',
+                          style: body(13, weight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.forest700,
+                        side: const BorderSide(color: AppColors.forest700),
+                      ),
+                    ),
+                  ],
+                ),
+              )
             else if (all.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
@@ -129,12 +208,16 @@ class _FeedState extends State<_Feed> {
                   ],
                 ),
               ),
-            for (final post in all) _PostCard(post: post),
+            for (final post in all)
+              _PostCard(post: post, onDeleted: () => _removePost(post)),
             const SizedBox(height: 24),
-            Center(
-              child: Text('You\'re all caught up ✦',
-                  style: body(12, color: AppColors.hint)),
-            ),
+            // "All caught up" would be a lie under a failed load — we don't
+            // know what's up there.
+            if (_error == null)
+              Center(
+                child: Text('You\'re all caught up ✦',
+                    style: body(12, color: AppColors.hint)),
+              ),
             const SizedBox(height: 32),
           ],
         );
@@ -605,6 +688,7 @@ class _Post {
     this.mediaPath,
     this.mediaUrl,
     this.isReel = false,
+    this.isMine = false,
     this.pending,
   });
 
@@ -621,6 +705,7 @@ class _Post {
   final String? mediaPath; // local upload file; null → use mediaUrl / placeholder
   final String? mediaUrl; // remote (Cloudinary) media from the backend feed
   final bool isReel; // true → the media is a video
+  final bool isMine; // true → the logged-in member authored this post
 
   /// Set while this card is a local upload that hasn't landed on the server
   /// yet (or failed) — drives the "Uploading… / Retry" overlay.
@@ -641,14 +726,20 @@ class _Post {
         time: 'Just now',
         mediaPath: p.mediaPath,
         isReel: p.isReel,
+        isMine: true,
       );
 
   /// Builds a feed card from a backend `/feed` post (Cloudinary-hosted media).
-  factory _Post.fromBackend(Map<String, dynamic> m) {
+  /// [currentUserId] decides whether the 3-dot menu offers Delete (mine) or
+  /// Report/Hide (someone else's) — `userId` comes back either as a populated
+  /// `{_id, userName}` map or a bare id string depending on the endpoint.
+  factory _Post.fromBackend(Map<String, dynamic> m, {String currentUserId = ''}) {
     final urls = m['mediaUrls'];
     final mediaUrl = (urls is List && urls.isNotEmpty) ? urls.first.toString() : null;
     final isVideo = (m['postType'] ?? '').toString() == 'video';
     final userField = m['userId'];
+    final authorId =
+        (userField is Map ? userField['_id'] : userField)?.toString() ?? '';
     final author = (m['userName'] ??
             (userField is Map ? userField['userName'] : null) ??
             'Samaj Member')
@@ -666,6 +757,7 @@ class _Post {
       time: _timeAgo(m['createdAt']?.toString()),
       mediaUrl: mediaUrl,
       isReel: isVideo,
+      isMine: authorId.isNotEmpty && authorId == currentUserId,
     );
   }
 
@@ -696,8 +788,9 @@ String _timeAgo(String? iso) {
 }
 
 class _PostCard extends StatefulWidget {
-  const _PostCard({required this.post});
+  const _PostCard({required this.post, this.onDeleted});
   final _Post post;
+  final VoidCallback? onDeleted;
 
   @override
   State<_PostCard> createState() => _PostCardState();
@@ -747,6 +840,135 @@ class _PostCardState extends State<_PostCard> {
     });
     // Double-tap always means "like", never unlike.
     if (!_liked) _toggleLike();
+  }
+
+  /// The 3-dot menu: Delete/Copy link for the caller's own post, Report/Hide/
+  /// Copy link for someone else's.
+  Future<void> _showPostMenu(BuildContext context) async {
+    final mine = widget.post.isMine;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999)),
+            ),
+            const SizedBox(height: 8),
+            if (mine)
+              _menuTile(
+                icon: Icons.delete_outline_rounded,
+                label: 'Delete post',
+                destructive: true,
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _confirmDelete(context);
+                },
+              )
+            else ...[
+              _menuTile(
+                icon: Icons.flag_outlined,
+                label: 'Report post',
+                destructive: true,
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _reportPost(context);
+                },
+              ),
+              _menuTile(
+                icon: Icons.visibility_off_outlined,
+                label: 'Hide from feed',
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  widget.onDeleted?.call();
+                  _showSnack(context, 'Post hidden');
+                },
+              ),
+            ],
+            _menuTile(
+              icon: Icons.link_rounded,
+              label: 'Copy link',
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _copyLink(context);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool destructive = false,
+  }) {
+    final color = destructive ? Colors.red : AppColors.forest900;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label, style: body(15, weight: FontWeight.w600, color: color)),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _copyLink(BuildContext context) async {
+    final slug = widget.post.author.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
+    final kind = widget.post.isReel ? 'reel' : 'post';
+    await Clipboard.setData(
+        ClipboardData(text: 'https://samaj.app/$kind/$slug'));
+    if (context.mounted) _showSnack(context, 'Link copied to clipboard');
+  }
+
+  /// No backend endpoint exists for reports yet, so this just acknowledges
+  /// the tap — matching how "Add to story" is stubbed in the share sheet.
+  void _reportPost(BuildContext context) {
+    _showSnack(context, 'Thanks — we\'ll take a look at this post');
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cream,
+        title: Text('Delete post?', style: display(18, color: AppColors.forest900)),
+        content: Text('This removes it for everyone in the Samaj.',
+            style: body(13, color: AppColors.textMuted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: body(14, color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Delete',
+                style: body(14, weight: FontWeight.w700, color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      if (isBackendPostId(widget.post.id)) {
+        await Repository.instance.deletePost(widget.post.id);
+      }
+      widget.onDeleted?.call();
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnack(context, e is ApiException ? e.message : 'Could not delete post');
+    }
   }
 
   @override
@@ -819,7 +1041,7 @@ class _PostCardState extends State<_PostCard> {
                 IconButton(
                   icon: const Icon(Icons.more_horiz_rounded,
                       color: AppColors.label),
-                  onPressed: () => _showSnack(context, 'Post options'),
+                  onPressed: () => _showPostMenu(context),
                 ),
               ],
             ),

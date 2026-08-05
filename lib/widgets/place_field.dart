@@ -16,11 +16,19 @@ class PlaceField extends StatefulWidget {
     required this.label,
     required this.controller,
     this.hint,
+    this.onPlaceSelected,
   });
 
   final String label;
   final TextEditingController controller;
   final String? hint;
+
+  /// Fires with the structured Nominatim result for whichever suggestion the
+  /// user tapped — `{city, state, country, countryCode, latitude, longitude}`
+  /// — so a caller that needs more than free text (e.g. birthplace geocoding)
+  /// doesn't have to re-search. Optional: existing callers that only want the
+  /// place name in [controller] can leave this unset.
+  final void Function(Map<String, dynamic> place)? onPlaceSelected;
 
   @override
   State<PlaceField> createState() => _PlaceFieldState();
@@ -28,7 +36,7 @@ class PlaceField extends StatefulWidget {
 
 class _PlaceFieldState extends State<PlaceField> {
   Timer? _debounce;
-  List<String> _suggestions = [];
+  List<Map<String, dynamic>> _suggestions = [];
   bool _loading = false;
   bool _suppress = false; // skip the search triggered by our own selection
 
@@ -59,9 +67,11 @@ class _PlaceFieldState extends State<PlaceField> {
   Future<void> _fetch(String q) async {
     setState(() => _loading = true);
     try {
+      // addressdetails=1 so callers that need structured city/state/country
+      // (not just the display string) can use it — see [onPlaceSelected].
       final uri = Uri.parse(
         'https://nominatim.openstreetmap.org/search'
-        '?format=json&addressdetails=0&limit=6&q=${Uri.encodeComponent(q)}',
+        '?format=json&addressdetails=1&limit=6&q=${Uri.encodeComponent(q)}',
       );
       final res = await http.get(uri, headers: {
         // Nominatim requires an identifying User-Agent.
@@ -72,8 +82,9 @@ class _PlaceFieldState extends State<PlaceField> {
         final data = jsonDecode(res.body) as List;
         setState(() {
           _suggestions = data
-              .map((e) => (e['display_name'] ?? '').toString())
-              .where((s) => s.isNotEmpty)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .where((e) => (e['display_name'] ?? '').toString().isNotEmpty)
               .toList();
           _loading = false;
         });
@@ -92,13 +103,45 @@ class _PlaceFieldState extends State<PlaceField> {
     }
   }
 
-  void _select(String place) {
+  void _select(Map<String, dynamic> place) {
+    final name = place['display_name'].toString();
     _suppress = true;
-    widget.controller.text = place;
+    widget.controller.text = name;
     widget.controller.selection =
-        TextSelection.collapsed(offset: place.length);
+        TextSelection.collapsed(offset: name.length);
     setState(() => _suggestions = []);
     FocusScope.of(context).unfocus();
+
+    final onPlaceSelected = widget.onPlaceSelected;
+    if (onPlaceSelected == null) return;
+    final address = place['address'];
+    final addr = address is Map ? address : const {};
+    // Broader results (a district, a state) don't carry city/town/village —
+    // fall back through county/state_district, then finally the searched
+    // place's own name, so a selection never comes back with an empty city.
+    final city = (addr['city'] ??
+            addr['town'] ??
+            addr['village'] ??
+            addr['municipality'] ??
+            addr['county'] ??
+            addr['state_district'] ??
+            place['name'] ??
+            '')
+        .toString();
+    final state = (addr['state'] ?? '').toString();
+    final country = (addr['country'] ?? '').toString();
+    final countryCode = (addr['country_code'] ?? '').toString();
+    final lat = double.tryParse((place['lat'] ?? '').toString());
+    final lon = double.tryParse((place['lon'] ?? '').toString());
+    onPlaceSelected({
+      'displayName': name,
+      'city': city,
+      'state': state,
+      'country': country,
+      'countryCode': countryCode,
+      'latitude': lat,
+      'longitude': lon,
+    });
   }
 
   @override
@@ -166,7 +209,7 @@ class _PlaceFieldState extends State<PlaceField> {
                               size: 15, color: AppColors.gold700),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(s,
+                            child: Text(s['display_name'].toString(),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: body(12, color: AppColors.ink)),

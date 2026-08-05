@@ -44,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _otpCtrl = TextEditingController();
   String _gotra = 'Kashyap';
   String _gender = 'M';
+  bool _isPurohit = false;
   String _step = 'details'; // 'details' | 'otp' | 'identity'
   String _error = '';
   bool _loading = false;
@@ -120,6 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         native: native,
         avatar: avatar,
         gender: _gender,
+        isPurohit: _isPurohit,
       );
       final map = res['user'] as Map<String, dynamic>;
       final token = (res['token'] ?? '') as String;
@@ -245,10 +247,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   weight: FontWeight.w600, color: AppColors.forest700)),
         ),
         const SizedBox(height: 18),
-        _label('Full Name'),
+        _label('Full Name', hint: '(as per aadhar)'),
         _field(_nameCtrl, 'e.g. Aditi Shanbhag Rao'),
         const SizedBox(height: 14),
-        _label('Mobile Number'),
+        _label('Mobile Number', hint: '(as per aadhar)'),
         _field(_phoneCtrl, '9876543210',
             keyboardType: TextInputType.phone,
             maxLength: 10,
@@ -284,6 +286,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onChanged: (v) => setState(() => _gotra = v ?? _gotra),
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        _label('Are you a purohit?'),
+        Row(
+          children: [
+            _yesNoButton(true, 'Yes'),
+            const SizedBox(width: 10),
+            _yesNoButton(false, 'No'),
+          ],
         ),
         const SizedBox(height: 14),
         PlaceField(
@@ -533,10 +544,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _label(String text) => Padding(
+  Widget _label(String text, {String? hint}) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: body(13, weight: FontWeight.w700, color: AppColors.forest800)),
+        child: RichText(
+          text: TextSpan(
+            style: body(13, weight: FontWeight.w700, color: AppColors.forest800),
+            children: [
+              TextSpan(text: text),
+              if (hint != null)
+                TextSpan(
+                  text: ' $hint',
+                  style: body(12,
+                      weight: FontWeight.w500, color: AppColors.textMuted),
+                ),
+            ],
+          ),
+        ),
       );
 
   Widget _genderButton(String value, String label) {
@@ -544,6 +567,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _gender = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? AppColors.forest800 : Colors.white,
+            border: Border.all(
+                color: active ? AppColors.forest800 : AppColors.border),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(label,
+              style: body(13,
+                  weight: FontWeight.w600,
+                  color: active ? Colors.white : AppColors.label)),
+        ),
+      ),
+    );
+  }
+
+  Widget _yesNoButton(bool value, String label) {
+    final active = _isPurohit == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _isPurohit = value),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
           alignment: Alignment.center,

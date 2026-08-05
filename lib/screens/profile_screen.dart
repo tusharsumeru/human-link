@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/api_client.dart';
 import '../data/avatars.dart';
 import '../data/repository.dart';
 import '../data/saved_store.dart';
@@ -208,6 +209,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
                 const SizedBox(height: 16),
                 _statsCard(_dash(user.gotra), _dash(user.native), 'Active'),
+                const SizedBox(height: 16),
+                const _PhonePrivacyCard(),
                 const SizedBox(height: 16),
                 const _SavedCard(),
                 const SizedBox(height: 24),
@@ -689,6 +692,150 @@ class _Header extends StatelessWidget {
                     bg: AppColors.gold500.withValues(alpha: 0.25),
                     fg: AppColors.goldSoft),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Controls whether other members can see this member's phone number.
+///
+/// The switch writes `showPhoneToMembers` through `PATCH /api/user/profile`.
+/// The server is what actually enforces the choice — with it off, the directory
+/// and `/api/user/:id` return `phone: ''`, so a hidden number is never sent to
+/// another member's device rather than being sent and hidden by the app.
+class _PhonePrivacyCard extends StatefulWidget {
+  const _PhonePrivacyCard();
+
+  @override
+  State<_PhonePrivacyCard> createState() => _PhonePrivacyCardState();
+}
+
+class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
+  bool _saving = false;
+
+  Future<void> _toggle(AuthService auth, bool next) async {
+    final user = auth.user;
+    if (user == null || _saving) return;
+    // Move the switch immediately, then confirm with the server. A rejected or
+    // unreachable save puts it back where it was — leaving it on the new
+    // position would tell the member their number is hidden when it isn't.
+    setState(() => _saving = true);
+    await auth.updateUser(user.copyWith(showPhoneToMembers: next));
+    try {
+      final saved =
+          await Repository.instance.saveProfile(showPhoneToMembers: next);
+      // Trust the server's echo over our optimistic value.
+      final confirmed = (saved['showPhoneToMembers'] ?? next) as bool;
+      if (!mounted) return;
+      if (confirmed != next) {
+        await auth.updateUser(
+            auth.user!.copyWith(showPhoneToMembers: confirmed));
+      }
+      setState(() => _saving = false);
+    } catch (e) {
+      if (!mounted) return;
+      await auth.updateUser(auth.user!.copyWith(showPhoneToMembers: !next));
+      setState(() => _saving = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e is ApiException
+            ? e.message
+            : "Couldn't save that. Check your connection and try again."),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final user = auth.user;
+    if (user == null) return const SizedBox.shrink();
+    final on = user.showPhoneToMembers;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.phone_outlined, size: 18, color: AppColors.gold700),
+              const SizedBox(width: 8),
+              Text('Phone Number',
+                  style: display(18, color: AppColors.forest900)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Share with members',
+                        style: body(14,
+                            weight: FontWeight.w600, color: AppColors.ink)),
+                    const SizedBox(height: 3),
+                    Text(
+                      on
+                          ? 'Members who open your profile can see and call your number.'
+                          : 'Your number stays private. Members can still message you in the app.',
+                      style: body(12, color: AppColors.textMuted, height: 1.45),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // The spinner replaces the switch while saving so the control
+              // can't be flipped again before the first write lands.
+              _saving
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 14),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.forest700),
+                      ),
+                    )
+                  : Switch(
+                      value: on,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: AppColors.forest700,
+                      inactiveThumbColor: Colors.white,
+                      inactiveTrackColor: AppColors.border,
+                      onChanged: (v) => _toggle(auth, v),
+                    ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: on ? const Color(0xFFF0FBF4) : AppColors.cream,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(on ? Icons.visibility_outlined : Icons.lock_outline,
+                    size: 16,
+                    color: on ? AppColors.forest700 : AppColors.textMuted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    on
+                        ? (user.phone.isEmpty ? 'Visible to members' : user.phone)
+                        : 'Hidden from other members',
+                    style: body(13,
+                        weight: FontWeight.w600,
+                        color: on ? AppColors.forest800 : AppColors.textMuted),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -59,6 +59,7 @@ const memberNav = [
   NavDest(Icons.map_rounded, 'Directory', '/directory'),
   NavDest(Icons.favorite_rounded, 'Matrimonial', '/matrimonial'),
   NavDest(Icons.groups_rounded, 'Welfare', '/welfare'),
+  NavDest(Icons.temple_hindu_rounded, 'Purohit', '/purohit'),
 ];
 
 const elderNav = [

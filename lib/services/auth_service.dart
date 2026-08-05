@@ -186,6 +186,10 @@ class AppUser {
   final String address;
   final CurrentAddress currentAddress;
   final bool matrimonialOptIn;
+  /// Whether other members may see this member's phone number. The server is
+  /// what enforces it: with this off, `/api/user/:id` and the directory return
+  /// `phone: ''`, so a hidden number never reaches another member's device.
+  final bool showPhoneToMembers;
   final String photoPath; // local file path to the user's photo/selfie
   final String photoUrl; // remote (MongoDB-served) photo URL
   final bool onboardingComplete; // false only for a brand-new registration
@@ -210,6 +214,7 @@ class AppUser {
     this.address = '',
     this.currentAddress = CurrentAddress.empty,
     this.matrimonialOptIn = false,
+    this.showPhoneToMembers = false,
     this.photoPath = '',
     this.photoUrl = '',
     this.onboardingComplete = true,
@@ -236,6 +241,10 @@ class AppUser {
         address: (m['address'] ?? '') as String,
         currentAddress: CurrentAddress.fromMap(m['currentAddress']),
         matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
+        // Defaults to false — matching the schema default, so a profile from
+        // before this field existed reads as "hidden" rather than exposing a
+        // number the member never agreed to share.
+        showPhoneToMembers: (m['showPhoneToMembers'] ?? false) as bool,
         photoPath: (m['photoPath'] ?? '') as String,
         // Login/register return the remote photo as `profileUrl`.
         photoUrl: (m['photoUrl'] ?? m['profileUrl'] ?? '') as String,
@@ -261,6 +270,7 @@ class AppUser {
         'address': address,
         'currentAddress': currentAddress.toMap(),
         'matrimonialOptIn': matrimonialOptIn,
+        'showPhoneToMembers': showPhoneToMembers,
         'photoPath': photoPath,
         'photoUrl': photoUrl,
         'onboardingComplete': onboardingComplete,
@@ -285,6 +295,7 @@ class AppUser {
     String? address,
     CurrentAddress? currentAddress,
     bool? matrimonialOptIn,
+    bool? showPhoneToMembers,
     String? photoPath,
     String? photoUrl,
     bool? onboardingComplete,
@@ -308,6 +319,7 @@ class AppUser {
         address: address ?? this.address,
         currentAddress: currentAddress ?? this.currentAddress,
         matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
+        showPhoneToMembers: showPhoneToMembers ?? this.showPhoneToMembers,
         photoPath: photoPath ?? this.photoPath,
         photoUrl: photoUrl ?? this.photoUrl,
         onboardingComplete: onboardingComplete ?? this.onboardingComplete,

@@ -206,6 +206,8 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           _text('rashi', 'Rashi', hint: 'e.g. Vrishabha'),
           _text('timeOfBirth', 'Time of birth', hint: 'e.g. 10:45 AM'),
           _mangalField(),
+          _compatibilityBirthDetailsLink(),
+          _compatibilityConsentLink(),
 
           const SizedBox(height: 16),
           _label('ABOUT YOU'),
@@ -347,6 +349,52 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   String _feetInches(int cm) {
     final inches = (cm / 2.54).round();
     return "${inches ~/ 12}'${inches % 12}\"";
+  }
+
+  /// Entry point to the separate, structured birth-data form the
+  /// Compatibility engine needs (exact birthplace + coordinates, time of
+  /// birth, accuracy) — kept out of this form since it's its own concern with
+  /// its own backend resource, not another matrimonial-profile field.
+  Widget _compatibilityBirthDetailsLink() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: OutlinedButton.icon(
+        onPressed: () => context.push('/matrimonial/birth-details'),
+        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+        label: Text('Add birth details for compatibility →',
+            style: body(13, weight: FontWeight.w600)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.forest700,
+          side: const BorderSide(color: AppColors.forest700),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          minimumSize: const Size.fromHeight(46),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  /// Entry point to the explicit, purpose-separated consent toggles the
+  /// Compatibility engine checks before every calculation — its own screen
+  /// for the same reason birth details get one: a distinct concern with its
+  /// own backend resource.
+  Widget _compatibilityConsentLink() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: OutlinedButton.icon(
+        onPressed: () => context.push('/matrimonial/compatibility-consent'),
+        icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+        label: Text('Manage compatibility consent →',
+            style: body(13, weight: FontWeight.w600)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.forest700,
+          side: const BorderSide(color: AppColors.forest700),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          minimumSize: const Size.fromHeight(46),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
   }
 
   Widget _mangalField() {

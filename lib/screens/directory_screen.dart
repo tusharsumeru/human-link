@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/repository.dart';
 import '../services/auth_service.dart';
@@ -379,49 +381,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  // "Connect" → POST /api/connections. If the other person already requested
-  // me, the server accepts it (mutual) and we say so.
-  Future<void> _connect(Map<String, dynamic> member) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final id = _str(member, 'id');
-    if (id.isEmpty) return;
-    messenger.hideCurrentSnackBar();
-    try {
-      final res = await Repository.instance.connect(id);
-      final accepted = (res['status'] ?? '').toString() == 'accepted';
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-            accepted
-                ? 'You are now connected with ${_str(member, 'name')}'
-                : 'Connection request sent to ${_str(member, 'name')}',
-            style: body(13, color: Colors.white)),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ));
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Could not send the request. Try again.',
-            style: body(13, color: Colors.white)),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
-  }
-
+  Future<void> _connect(Map<String, dynamic> member) => connectMember(context, member);
 
   // Tap a member → show their full details, fetched fresh via GET /api/user/:id.
-  void _openMember(Map<String, dynamic> member) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.cream,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (_) => _MemberSheet(initial: member, onConnect: _connect),
-    );
-  }
+  void _openMember(Map<String, dynamic> member) =>
+      showMemberProfile(context, member, onConnect: _connect);
 }
 
 // Known branch cities that have map coordinates; used to derive a member's
@@ -850,16 +814,16 @@ class _RowCard extends StatelessWidget {
 
 // ── Member detail sheet ───────────────────────────────────────────────────────
 
-class _MemberSheet extends StatefulWidget {
-  const _MemberSheet({required this.initial, required this.onConnect});
+class MemberSheet extends StatefulWidget {
+  const MemberSheet({super.key, required this.initial, required this.onConnect});
   final Map<String, dynamic> initial;
   final void Function(Map<String, dynamic>) onConnect;
 
   @override
-  State<_MemberSheet> createState() => _MemberSheetState();
+  State<MemberSheet> createState() => _MemberSheetState();
 }
 
-class _MemberSheetState extends State<_MemberSheet> {
+class _MemberSheetState extends State<MemberSheet> {
   late Map<String, dynamic> _m = widget.initial;
 
   @override
@@ -875,6 +839,13 @@ class _MemberSheetState extends State<_MemberSheet> {
   }
 
   String _s(String k) => (_m[k] ?? '').toString().trim();
+
+  Future<void> _copyPhone() async {
+    await Clipboard.setData(ClipboardData(text: _s('phone')));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Number copied')));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -942,6 +913,17 @@ class _MemberSheetState extends State<_MemberSheet> {
               _detail(Icons.place_outlined, 'Native', _s('native')),
             if (_s('occupation').isNotEmpty)
               _detail(Icons.work_outline, 'Occupation', _s('occupation')),
+            // Present only when this member turned on `showPhoneToMembers` —
+            // the server sends `phone: ''` for everyone else, so an empty
+            // string here means "withheld", not "missing".
+            if (_s('phone').isNotEmpty)
+              _detail(Icons.phone_outlined, 'Phone', _s('phone'),
+                  onTap: _copyPhone),
+            // Only members who turned "Share with members" on in their profile
+            // reach here with a number: the directory and /api/user/:id send
+            // `phone: ''` for everyone else, so a missing row is that member's
+            // own choice rather than a field the app decided to hide.
+            if (_s('phone').isNotEmpty) _phoneRow(_s('phone')),
             if (bio.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(bio, style: body(13, color: AppColors.label, height: 1.5)),
@@ -952,7 +934,8 @@ class _MemberSheetState extends State<_MemberSheet> {
                 Expanded(
                   child: ForestButton(
                     label: 'Connect',
-                    icon: Icons.person_add_alt_1_rounded,
+                    // A call icon, not person-add: the button dials now.
+                    icon: Icons.call_rounded,
                     expand: true,
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -979,8 +962,53 @@ class _MemberSheetState extends State<_MemberSheet> {
     );
   }
 
-  Widget _detail(IconData icon, String label, String value) {
+  /// Like [_detail], but with a one-tap copy — a number is shown to be dialled,
+  /// and retyping it from the sheet is the one thing a member would rather not
+  /// do by hand.
+  Widget _phoneRow(String phone) {
     return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.phone_outlined, size: 16, color: AppColors.gold700),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Phone', style: body(11, color: AppColors.textMuted)),
+                const SizedBox(height: 1),
+                Text(phone,
+                    style: body(14,
+                        weight: FontWeight.w600, color: AppColors.ink)),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: phone));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$phone copied'),
+                  backgroundColor: AppColors.forest800,
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child:
+                  Icon(Icons.copy_rounded, size: 18, color: AppColors.forest700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detail(IconData icon, String label, String value,
+      {VoidCallback? onTap}) {
+    final row = Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -998,8 +1026,16 @@ class _MemberSheetState extends State<_MemberSheet> {
               ],
             ),
           ),
+          if (onTap != null)
+            const Icon(Icons.copy_rounded, size: 15, color: AppColors.hint),
         ],
       ),
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: row,
     );
   }
 }
@@ -1122,6 +1158,77 @@ void _toast(BuildContext context, String msg) {
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 1),
     ));
+}
+
+// "Connect" → call the member. A number only reaches this device when that
+// member turned "Share with members" on; the server sends `phone: ''` to
+// everyone else. So an empty value here is that member's answer, not missing
+// data — say so rather than opening an empty dialer.
+Future<void> connectMember(BuildContext context, Map<String, dynamic> member) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final name = (member['name'] ?? '').toString().trim();
+  final id = (member['id'] ?? '').toString().trim();
+  messenger.hideCurrentSnackBar();
+
+  // Re-read the member first: the list that produced `member` was loaded once
+  // when the screen opened, so a number switched off since then would still be
+  // sitting in `member`. If that lookup fails (offline), fall back to what we
+  // have — the list already delivered that number legitimately.
+  var phone = (member['phone'] ?? '').toString().trim();
+  if (id.isNotEmpty) {
+    try {
+      final fresh = await Repository.instance.userById(id);
+      phone = (fresh['phone'] ?? '').toString().trim();
+    } catch (_) {/* keep the caller's copy */}
+  }
+  if (!context.mounted) return;
+
+  if (phone.isEmpty) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+          '${name.isEmpty ? 'This member' : name} has disabled their phone '
+          'number. You cannot call them - send a message instead.',
+          style: body(13, color: Colors.white)),
+      backgroundColor: AppColors.forest800,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+    ));
+    return;
+  }
+
+  // The dialer opens with the number filled in; placing the call is still the
+  // member's own tap, which is what keeps this off the CALL_PHONE permission.
+  try {
+    final ok = await launchUrl(Uri(scheme: 'tel', path: phone));
+    if (!ok) throw Exception('no dialer');
+  } catch (_) {
+    if (!context.mounted) return;
+    messenger.showSnackBar(SnackBar(
+      content: Text('Could not open the dialer for $phone',
+          style: body(13, color: Colors.white)),
+      backgroundColor: Colors.red.shade700,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+}
+
+// Tap a member → show their full details, fetched fresh via GET /api/user/:id.
+// `onConnect` defaults to [connectMember] (dial their number); pass a custom
+// one only when a screen needs different "Connect" behaviour.
+void showMemberProfile(BuildContext context, Map<String, dynamic> member,
+    {void Function(Map<String, dynamic>)? onConnect}) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.cream,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+    ),
+    builder: (_) => MemberSheet(
+      initial: member,
+      onConnect: onConnect ?? (m) => connectMember(context, m),
+    ),
+  );
 }
 
 // Open a real-time chat with a directory member (used by every "Message"

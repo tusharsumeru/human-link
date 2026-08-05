@@ -9,7 +9,10 @@ import 'screens/dashboard_screen.dart';
 import 'screens/family_tree_screen.dart';
 import 'screens/directory_screen.dart';
 import 'screens/invitations_screen.dart';
+import 'screens/purohit_screen.dart';
+import 'screens/compatibility_consent_screen.dart';
 import 'screens/matrimonial_edit_screen.dart';
+import 'screens/birth_details_screen.dart';
 import 'screens/matrimonial_gate_screen.dart';
 import 'screens/matrimonial_detail_screen.dart';
 import 'screens/profile_edit_screen.dart';
@@ -75,12 +78,21 @@ GoRouter buildRouter(AuthService auth) {
       GoRoute(path: '/family-tree', builder: (_, __) => const FamilyTreeScreen()),
       GoRoute(path: '/directory', builder: (_, __) => const DirectoryScreen()),
       GoRoute(path: '/invitations', builder: (_, __) => const InvitationsScreen()),
+      GoRoute(path: '/purohit', builder: (_, __) => const PurohitScreen()),
       // The gate, not the hub directly: it checks the age window, profile
       // completeness and elder approval, and only then renders the list.
       GoRoute(path: '/matrimonial', builder: (_, __) => const MatrimonialGateScreen()),
       // Declared before '/matrimonial/:id' so "edit" is never read as a
       // profile id.
       GoRoute(path: '/matrimonial/edit', builder: (_, __) => const MatrimonialEditScreen()),
+      GoRoute(
+        path: '/matrimonial/birth-details',
+        builder: (_, __) => const BirthDetailsScreen(),
+      ),
+      GoRoute(
+        path: '/matrimonial/compatibility-consent',
+        builder: (_, __) => const CompatibilityConsentScreen(),
+      ),
       GoRoute(
         path: '/matrimonial/:id',
         builder: (_, s) => MatrimonialDetailScreen(id: s.pathParameters['id']!),

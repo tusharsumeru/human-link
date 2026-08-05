@@ -1,9 +1,14 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
+import '../data/api_config.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
@@ -78,10 +83,19 @@ class _LoginScreenState extends State<LoginScreen> {
             : e.message;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Network error. Please try again.';
+        // Name the server we failed to reach. "Network error" alone sent us
+        // hunting for a wrong phone number when the real cause was a stale
+        // API_BASE_URL pointing at a dead tunnel.
+        _error = (e is SocketException ||
+                e is TimeoutException ||
+                e is HttpException ||
+                e is ClientException)
+            ? "Can't reach the server at ${ApiConfig.baseUrl}. "
+                'Check that the backend is running.'
+            : 'Network error. Please try again.';
         _loading = false;
       });
     }

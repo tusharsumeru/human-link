@@ -62,5 +62,12 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
         </intent>
+        <!-- Connect dials a member through the system dialer. Without this,
+             Android 11+ package visibility hides every tel: handler from the
+             app and canLaunchUrl/launchUrl fails even though a dialer exists. -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
     </queries>
 </manifest>

@@ -6,6 +6,7 @@ import 'api_client.dart';
 import 'api_config.dart';
 import 'demo_data.dart';
 import 'invitation_member.dart';
+import 'models/compatibility_models.dart';
 
 /// Single data source for the app.
 ///
@@ -62,6 +63,7 @@ class Repository {
     String avatar = '6',
     String gender = '',
     Map<String, dynamic>? currentAddress,
+    bool isPurohit = false,
   }) async {
     final data = await _api.postJson('/api/user/register', {
       'userName': userName.isNotEmpty ? userName : _deriveUserName(name, phone),
@@ -74,6 +76,7 @@ class Repository {
       // Send it as `CurrentAddress.toRequest()` builds it — parts only, no
       // empty strings. The server geocodes it and stores the coordinates.
       'currentAddress': ?currentAddress,
+      'isPurohit': isPurohit,
     });
     if (data is Map && data['user'] is Map) {
       return {
@@ -356,6 +359,23 @@ class Repository {
     return plan;
   }
 
+  /// GET /api/user/directory?isPurohit=true — members who answered "Yes" to
+  /// "Are you a purohit?" at registration. Also filters client-side on the
+  /// same field, in case the backend returns it without honoring the query
+  /// filter — so this never shows a non-purohit member.
+  Future<List<Map<String, dynamic>>> purohitDirectory({int limit = 100}) async {
+    final data =
+        await _api.getJson('/api/user/directory?limit=$limit&isPurohit=true');
+    if (data is Map && data['users'] is List) {
+      return (data['users'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((m) => m['isPurohit'] == true)
+          .toList();
+    }
+    return const [];
+  }
+
   /// GET /api/user/me — the authenticated member's own full profile (same shape
   /// as login/register, including `samajId`). Used to refresh a restored session
   /// so fields added after the session was cached (e.g. samajId) populate without
@@ -478,6 +498,11 @@ class Repository {
     await _api.deleteJson('/api/stories/$storyId');
   }
 
+  /// DELETE /api/posts/:postId — remove one of the caller's posts.
+  Future<void> deletePost(String postId) async {
+    await _api.deleteJson('/api/posts/$postId');
+  }
+
   /// POST /api/user/upload — uploads an image (base64) to MongoDB, keyed by
   /// phone + type ("selfie" | "id" | "familyDoc"). Returns the absolute URL to
   /// load it back, or null if the backend is unreachable.
@@ -517,6 +542,7 @@ class Repository {
     String? bio,
     String? occupation,
     bool? matrimonialOptIn,
+    bool? showPhoneToMembers,
     String? dob,
     String? gender,
     String? address,
@@ -532,6 +558,7 @@ class Repository {
       'bio': ?bio,
       'occupation': ?occupation,
       'matrimonialOptIn': ?matrimonialOptIn,
+      'showPhoneToMembers': ?showPhoneToMembers,
       'dob': ?dob,
       'gender': ?gender,
       'address': ?address,
@@ -557,6 +584,7 @@ class Repository {
     String? bio,
     String? occupation,
     bool? matrimonialOptIn,
+    bool? showPhoneToMembers,
     String? dob,
     String? gender,
     String? address,
@@ -573,6 +601,7 @@ class Repository {
         bio: bio,
         occupation: occupation,
         matrimonialOptIn: matrimonialOptIn,
+        showPhoneToMembers: showPhoneToMembers,
         dob: dob,
         gender: gender,
         address: address,
@@ -1047,6 +1076,100 @@ class Repository {
     final data = await _api.getJson('/api/matrimonial/$id');
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Profile not found');
+  }
+
+  // ── Marriage Compatibility ───────────────────────────────────────────────────
+
+  /// GET /api/birth-profile/me — the caller's saved birth data for
+  /// compatibility calculation (`birth_profiles` in the compatibility spec).
+  /// Flat shape — `{dateOfBirth, timeOfBirth, city, state, country, latitude,
+  /// longitude, timezone, birthTimeAccuracy, verificationStatus, ...}` — with
+  /// dateOfBirth merged in live from the account. This never 404s: a member
+  /// who hasn't filled it in yet gets the same shape back with blank/UNKNOWN
+  /// defaults, not an error.
+  Future<Map<String, dynamic>> myBirthProfile() async {
+    final data = await _api.getJson('/api/birth-profile/me');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not load your birth details');
+  }
+
+  /// PUT /api/birth-profile/me — save-as-you-go, like the matrimonial draft.
+  /// Flat fields only — `timeOfBirth`, `city`, `state`, `country`,
+  /// `latitude`, `longitude`, `timezone` (required), `birthTimeAccuracy` —
+  /// matching `UpsertBirthProfileDto` exactly. `dateOfBirth` is never sent
+  /// here: the server reads it live off the account (PATCH
+  /// /api/user/profile) and rejects the request with DATE_OF_BIRTH_REQUIRED
+  /// if that's still blank. No astrology calculation happens here or
+  /// anywhere in the app; this only stores the raw inputs the server-side
+  /// engine will read later.
+  Future<Map<String, dynamic>> saveBirthProfile(
+      Map<String, dynamic> fields) async {
+    final data = await _api.putJson('/api/birth-profile/me', fields);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not save your birth details');
+  }
+
+  /// POST /api/v1/compatibility/calculate — only the JATAKA module (South
+  /// Indian 10 Porutham) is implemented server-side; everything else in
+  /// `include` is accepted but produces nothing (see
+  /// `CompatibilityReport.notImplementedInclude`). No matching/astrology
+  /// logic runs here or anywhere in the app — this only submits the two
+  /// profile ids + roles and parses whatever report the server computed.
+  Future<CompatibilityReport> calculateCompatibility({
+    required String profileAId,
+    required String profileBId,
+    required TraditionalRole roleA,
+    required TraditionalRole roleB,
+    String ruleVersion = 'KARNATAKA_SOUTH_INDIAN_V1',
+    List<String> include = const ['JATAKA'],
+  }) async {
+    final data = await _api.postJson('/api/v1/compatibility/calculate', {
+      'profileAId': profileAId,
+      'profileBId': profileBId,
+      'traditionalRoles': {
+        'profileA': roleA.wireValue,
+        'profileB': roleB.wireValue,
+      },
+      'ruleVersion': ruleVersion,
+      'include': include,
+    });
+    if (data is Map) {
+      return CompatibilityReport.fromJson(Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Could not calculate compatibility');
+  }
+
+  /// GET /api/v1/compatibility/consent — the caller's own status for every
+  /// compatibility consent purpose. Self-service only, matching
+  /// ConsentController: there is no endpoint to read another profile's
+  /// consent, by design.
+  Future<List<ConsentStatus>> myCompatibilityConsent() async {
+    final data = await _api.getJson('/api/v1/compatibility/consent');
+    if (data is Map && data['consents'] is List) {
+      return (data['consents'] as List)
+          .whereType<Map>()
+          .map((e) => ConsentStatus.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/v1/compatibility/consent — grants one of the caller's own
+  /// compatibility consent types. Self-service only: there is no way to
+  /// grant consent on someone else's behalf, matching ConsentController.
+  Future<void> grantCompatibilityConsent(String consentType) async {
+    await _api.postJson('/api/v1/compatibility/consent', {
+      'consentType': consentType,
+    });
+  }
+
+  /// POST /api/v1/compatibility/consent/revoke — revokes one of the
+  /// caller's own compatibility consent types. A no-op server-side if
+  /// nothing was granted, matching ConsentService.revoke.
+  Future<void> revokeCompatibilityConsent(String consentType) async {
+    await _api.postJson('/api/v1/compatibility/consent/revoke', {
+      'consentType': consentType,
+    });
   }
 
   // ── Embedded content (same dataset the web pages use) ───────────────────────

@@ -118,7 +118,7 @@ class _ComposeResult {
   final String location;
 }
 
-/// Full-screen composer: preview + caption + Add location + Share. Returns the
+/// Full-screen composer: preview + caption + current location + Share. Returns the
 /// caption + location, or null if the user backed out.
 Future<_ComposeResult?> _composeCaption(
   BuildContext context, {
@@ -210,18 +210,11 @@ Future<_ComposeResult?> _composeCaption(
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Instagram-style "Add location": search-and-pick, or grab
-                    // the device's current location. Once set it shows as a
-                    // removable chip.
+                    // The device's current location, attached with one tap.
+                    // Once set it shows as a removable chip.
                     _LocationRow(
                       location: location,
                       locating: locating,
-                      onAdd: () async {
-                        final picked = await pickLocation(ctx);
-                        if (picked != null && picked.trim().isNotEmpty) {
-                          setSheetState(() => location = picked.trim());
-                        }
-                      },
                       onUseCurrent: () async {
                         if (locating) return;
                         setSheetState(() => locating = true);
@@ -275,45 +268,32 @@ Future<_ComposeResult?> _composeCaption(
   );
 }
 
-/// The location affordance in the composer — when empty, two actions ("Add
-/// location" to search, "Current location" for GPS); once set, a pin + place
-/// name with a clear button.
+/// The location affordance in the composer — when empty, a single "Current
+/// location" (GPS) action; once set, a pin + place name with a clear button.
 class _LocationRow extends StatelessWidget {
   const _LocationRow({
     required this.location,
     required this.locating,
-    required this.onAdd,
     required this.onUseCurrent,
     required this.onClear,
   });
   final String location;
   final bool locating;
-  final VoidCallback onAdd;
   final VoidCallback onUseCurrent;
   final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
     if (location.isEmpty) {
-      return Row(
-        children: [
-          _Action(
-            icon: Icons.add_location_alt_outlined,
-            label: 'Add location',
-            onTap: onAdd,
-          ),
-          const SizedBox(width: 8),
-          _Action(
-            icon: Icons.my_location_rounded,
-            label: locating ? 'Locating…' : 'Current location',
-            onTap: onUseCurrent,
-            busy: locating,
-          ),
-        ],
+      return _Action(
+        icon: Icons.my_location_rounded,
+        label: locating ? 'Locating…' : 'Current location',
+        onTap: onUseCurrent,
+        busy: locating,
       );
     }
     return InkWell(
-      onTap: onAdd, // tap the row to change it
+      onTap: onUseCurrent, // tap the row to refresh it
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),

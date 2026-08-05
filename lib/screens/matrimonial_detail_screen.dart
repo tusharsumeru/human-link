@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/repository.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_bar.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
+import 'compatibility_screen.dart';
 
 /// Matrimonial candidate detail — ported from
 /// `src/app/matrimonial/[id]/page.tsx` (static candidate view).
@@ -492,8 +495,28 @@ class _Footer extends StatelessWidget {
     );
   }
 
+  void _checkCompatibility(BuildContext context, String myProfileId) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => CompatibilityScreen(
+        profileAId: myProfileId,
+        // candidate['id'] is the matrimonial *profile's* own id (what
+        // /api/matrimonial/:id routes on) — compatibility, like every other
+        // endpoint, is keyed on the account id, which is candidate['userId'].
+        profileBId: (candidate['userId'] ?? '').toString(),
+        otherGender: (candidate['gender'] ?? '').toString(),
+        otherName: (candidate['name'] ?? '').toString(),
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Only offer this when viewing someone else's profile — a member can't
+    // run a compatibility check against their own.
+    final myId = context.watch<AuthService>().user?.id ?? '';
+    final candidateUserId = (candidate['userId'] ?? '').toString();
+    final showCompatibility = myId.isNotEmpty && myId != candidateUserId;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
@@ -502,19 +525,32 @@ class _Footer extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: premium
-            ? GoldButton(
-                label: 'Premium — Connect via Elder Committee',
-                icon: Icons.workspace_premium_rounded,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            premium
+                ? GoldButton(
+                    label: 'Premium — Connect via Elder Committee',
+                    icon: Icons.workspace_premium_rounded,
+                    expand: true,
+                    onPressed: () => _premiumNotice(context),
+                  )
+                : ForestButton(
+                    label: 'Express Interest',
+                    icon: Icons.favorite_rounded,
+                    expand: true,
+                    onPressed: () => _expressInterest(context),
+                  ),
+            if (showCompatibility) ...[
+              const SizedBox(height: 8),
+              OutlineButtonX(
+                label: 'Check Compatibility',
                 expand: true,
-                onPressed: () => _premiumNotice(context),
-              )
-            : ForestButton(
-                label: 'Express Interest',
-                icon: Icons.favorite_rounded,
-                expand: true,
-                onPressed: () => _expressInterest(context),
+                onPressed: () => _checkCompatibility(context, myId),
               ),
+            ],
+          ],
+        ),
       ),
     );
   }

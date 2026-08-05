@@ -63,7 +63,8 @@ dependencies:
   fl_chart: ^0.69.2
   intl: ^0.19.0
   # Hands the planned invitation route to the phone's maps app for turn-by-turn
-  # navigation — the in-app map plans it, Google/Apple Maps drives it.
+  # navigation (in-app map plans it, Google/Apple Maps drives it), and opens
+  # the phone dialer for the directory "Connect" action (tel: URIs).
   url_launcher: ^6.3.2
 
 dev_dependencies:
