@@ -7,6 +7,7 @@ import 'api_config.dart';
 import 'demo_data.dart';
 import 'invitation_member.dart';
 import 'models/compatibility_models.dart';
+import 'models/compatibility_prerequisites.dart';
 
 /// Single data source for the app.
 ///
@@ -1078,12 +1079,24 @@ class Repository {
   /// matchPercentage, matchLevel, sharedInterests, coverage}`). The
   /// percentage/level are computed entirely server-side — nothing here
   /// recomputes or re-sorts them.
+  ///
+  /// [minAge]/[maxAge]/[location]/[minMatchPercentage]/[marriageIntention]/
+  /// [foodPreference]/[interests] are the Discover-session filters added in
+  /// Step 23A (backend) / 23B (this screen) — temporary query filters, not a
+  /// rewrite of the member's saved matrimonial preferences. [sort] (Step 23D)
+  /// is one of `BEST_MATCH`/`NEWEST`/`AGE_LOW_TO_HIGH`/`AGE_HIGH_TO_LOW`; the
+  /// backend still owns the actual ordering — this only names the choice.
   Future<Map<String, dynamic>> discoverMatches({
     String? gender,
     String? gotra,
     String? location,
-    int? ageMin,
-    int? ageMax,
+    int? minAge,
+    int? maxAge,
+    int? minMatchPercentage,
+    String? marriageIntention,
+    String? foodPreference,
+    Set<String>? interests,
+    String? sort,
     int limit = 20,
     int skip = 0,
   }) async {
@@ -1092,11 +1105,24 @@ class Repository {
     if (gotra != null && gotra != 'All') {
       q.add('gotra=${Uri.encodeQueryComponent(gotra)}');
     }
-    if (location != null && location != 'All') {
+    if (location != null && location.isNotEmpty) {
       q.add('location=${Uri.encodeQueryComponent(location)}');
     }
-    if (ageMin != null) q.add('ageMin=$ageMin');
-    if (ageMax != null) q.add('ageMax=$ageMax');
+    if (minAge != null) q.add('minAge=$minAge');
+    if (maxAge != null) q.add('maxAge=$maxAge');
+    if (minMatchPercentage != null) {
+      q.add('minMatchPercentage=$minMatchPercentage');
+    }
+    if (marriageIntention != null && marriageIntention.isNotEmpty) {
+      q.add('marriageIntention=${Uri.encodeQueryComponent(marriageIntention)}');
+    }
+    if (foodPreference != null && foodPreference.isNotEmpty) {
+      q.add('foodPreference=${Uri.encodeQueryComponent(foodPreference)}');
+    }
+    if (interests != null && interests.isNotEmpty) {
+      q.add('interests=${Uri.encodeQueryComponent(interests.join(','))}');
+    }
+    if (sort != null && sort.isNotEmpty) q.add('sort=$sort');
 
     final data = await _api.getJson('/api/matrimonial/discover?${q.join('&')}');
     if (data is Map && data['matches'] is List) {
@@ -1177,6 +1203,35 @@ class Repository {
       return CompatibilityReport.fromJson(Map<String, dynamic>.from(data));
     }
     throw ApiException('Could not calculate compatibility');
+  }
+
+  /// GET /api/v1/compatibility/reports/:reportId — re-reads a saved report
+  /// in full, same shape as [calculateCompatibility]'s response. Used by
+  /// CompatibilityReportScreen (STEP 25D) once a calculate call hands back a
+  /// `reportId` to navigate to; nothing here recomputes anything.
+  Future<CompatibilityReport> compatibilityReport(String reportId) async {
+    final data = await _api.getJson('/api/v1/compatibility/reports/$reportId');
+    if (data is Map) {
+      return CompatibilityReport.fromJson(Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Could not load the compatibility report');
+  }
+
+  /// GET /api/v1/compatibility/prerequisites/:candidateProfileId — STEP 25A.
+  /// Read-only readiness check for the Check Compatibility preparation
+  /// screen: what's ready/missing per module (Jataka, Profile/Family/
+  /// Personality Compatibility, Family Relationship, Verification), never a
+  /// score. [candidateProfileId] is a User id (same identifier every other
+  /// compatibility endpoint keys on), not a MatrimonialProfile document id.
+  Future<CompatibilityPrerequisites> compatibilityPrerequisites(
+      String candidateProfileId) async {
+    final data = await _api
+        .getJson('/api/v1/compatibility/prerequisites/$candidateProfileId');
+    if (data is Map) {
+      return CompatibilityPrerequisites.fromJson(
+          Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Could not check compatibility readiness');
   }
 
   /// GET /api/v1/compatibility/consent — the caller's own status for every

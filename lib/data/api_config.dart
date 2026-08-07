@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// Base URL of the NestJS backend API.
 ///
 /// The Android emulator reaches the host machine at 10.0.2.2; other platforms
@@ -6,20 +10,32 @@
 class ApiConfig {
   ApiConfig._();
 
-  /// Backend base URL. Default targets the local NestJS server (port 4000) from
-  /// the Android emulator: 10.0.2.2 is the emulator's alias for the host
-  /// machine — inside the emulator `localhost` is the emulator itself, so a
-  /// local server is unreachable under that name. Using the IP (not a hostname)
-  /// also avoids the emulator's flaky DNS.
   // NOTE: no trailing `/api` — every request path already begins with `/api`
   // (e.g. `/api/user/login`), so keeping it here would double it.
   // For a physical device or a tunnel, override with
   // --dart-define=API_BASE_URL=https://<host> (see below).
-  static const String _localDev = "http://10.0.2.2:4000";
+  static const String _localDevPort = '4000';
   static const String _override = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
+
+  /// Local NestJS server (port 4000) as seen from each dev target: 10.0.2.2 is
+  /// the Android emulator's alias for the host machine — inside the emulator
+  /// `localhost` is the emulator itself, so a local server is unreachable
+  /// under that name. iOS Simulator, web and macOS desktop all share the
+  /// host's network, so `localhost` reaches it directly there.
+  //
+  // (A hardcoded ngrok URL used to live here. Free tunnels get a new address
+  // on every restart, so once it expired every call failed — and the screens
+  // swallowed the error, showing an empty feed and "Network error" on login.
+  // Only reach for a tunnel — via --dart-define=API_BASE_URL=https://<host>
+  // — for a physical device or a deployed backend; the simulator/emulator
+  // never needs one.)
+  static String get _localDev {
+    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:$_localDevPort';
+    return 'http://localhost:$_localDevPort';
+  }
 
   static String get baseUrl {
     // Trailing slashes are stripped: request paths already start with `/`, and
@@ -30,9 +46,6 @@ class ApiConfig {
     // Default to the local server so the app works against the dev backend out
     // of the box. A tunnel or deployment is a build-time override:
     //   --dart-define=API_BASE_URL=https://<host>
-    // (A hardcoded ngrok URL used to live here. Free tunnels get a new address
-    // on every restart, so once it expired every call failed — and the screens
-    // swallowed the error, showing an empty feed and "Network error" on login.)
     return _localDev;
   }
 

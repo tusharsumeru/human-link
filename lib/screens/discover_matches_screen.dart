@@ -5,6 +5,7 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/discover_filter_sheet.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -27,6 +28,17 @@ const Map<String, Color> _matchLevelColors = {
   'LOW': AppColors.hint,
 };
 
+/// Sort wire value (sent to the backend as-is) → its menu label, in render
+/// order. The backend does the actual ordering — this only names the option
+/// the member picked.
+const _sortOptions = <String, String>{
+  'BEST_MATCH': 'Best Match',
+  'NEWEST': 'Newest',
+  'AGE_LOW_TO_HIGH': 'Age: Low to High',
+  'AGE_HIGH_TO_LOW': 'Age: High to Low',
+};
+const _defaultSort = 'BEST_MATCH';
+
 /// Matrimony → Discover Matches. Same eligible pool as the Matrimonial Hub,
 /// but sorted by the backend's Discovery Match percentage (highest first)
 /// and rendered exactly as returned — no client-side sorting or scoring.
@@ -47,6 +59,22 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
   bool _loadingMore = false;
   String? _error;
 
+  // Session-only Discover filters (Step 23B) — never written to the member's
+  // saved matrimonial profile, and kept alive here for as long as this screen
+  // instance stays on the navigation stack (i.e. across pushing into and
+  // popping back from a profile).
+  DiscoverFilters _filters = const DiscoverFilters();
+
+  // Discover-session sort (Step 23D) — same lifetime/rules as [_filters]:
+  // temporary to this screen instance, combined with whatever filters are
+  // active, and never re-derived client-side. The backend does the ordering.
+  String _sort = _defaultSort;
+
+  // Bumped on every fresh _load() so a slow, superseded request can't clobber
+  // state after a newer one (e.g. two filter applies in quick succession)
+  // already landed.
+  int _loadReqId = 0;
+
   @override
   void initState() {
     super.initState();
@@ -54,14 +82,25 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
   }
 
   Future<void> _load() async {
+    final reqId = ++_loadReqId;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final result = await Repository.instance
-          .discoverMatches(limit: _pageSize, skip: 0);
-      if (!mounted) return;
+      final result = await Repository.instance.discoverMatches(
+        limit: _pageSize,
+        skip: 0,
+        minAge: _filters.minAge,
+        maxAge: _filters.maxAge,
+        location: _filters.location,
+        minMatchPercentage: _filters.minMatchPercentage,
+        marriageIntention: _filters.marriageIntention,
+        foodPreference: _filters.foodPreference,
+        interests: _filters.interests,
+        sort: _sort,
+      );
+      if (!mounted || reqId != _loadReqId) return;
       final matches = result['matches'] as List<Map<String, dynamic>>;
       setState(() {
         _matches
@@ -72,7 +111,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || reqId != _loadReqId) return;
       setState(() {
         _error = e is ApiException ? e.message : 'Could not load matches';
         _loading = false;
@@ -87,8 +126,18 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     if (_loadingMore) return;
     setState(() => _loadingMore = true);
     try {
-      final result = await Repository.instance
-          .discoverMatches(limit: _pageSize, skip: _skip);
+      final result = await Repository.instance.discoverMatches(
+        limit: _pageSize,
+        skip: _skip,
+        minAge: _filters.minAge,
+        maxAge: _filters.maxAge,
+        location: _filters.location,
+        minMatchPercentage: _filters.minMatchPercentage,
+        marriageIntention: _filters.marriageIntention,
+        foodPreference: _filters.foodPreference,
+        interests: _filters.interests,
+        sort: _sort,
+      );
       if (!mounted) return;
       final matches = result['matches'] as List<Map<String, dynamic>>;
       setState(() {
@@ -107,6 +156,19 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     }
   }
 
+  Future<void> _openFilters() async {
+    final result =
+        await showDiscoverFilterSheet(context, initial: _filters);
+    if (result == null || !mounted) return;
+    setState(() => _filters = result);
+    _load();
+  }
+
+  void _clearFilters() {
+    setState(() => _filters = const DiscoverFilters());
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppShell(
@@ -116,7 +178,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _Intro(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+          _filterBar(),
+          const SizedBox(height: 14),
           if (_loading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
@@ -125,7 +189,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           else if (_error != null)
             _errorState(_error!)
           else if (_matches.isEmpty)
-            _emptyState()
+            _filters.isEmpty ? _emptyState() : _emptyFilteredState()
           else ...[
             ..._matches.map((m) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
@@ -134,6 +198,111 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
             if (_hasMore) _loadMoreButton(),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _filterBar() {
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 8,
+      children: [
+        if (_totalCount != null)
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(
+                text: '${_totalCount ?? 0}',
+                style: body(13,
+                    weight: FontWeight.w700, color: AppColors.forest800),
+              ),
+              TextSpan(
+                text: _totalCount == 1 ? ' match' : ' matches',
+                style: body(13, color: AppColors.textMuted),
+              ),
+            ]),
+          )
+        else
+          const SizedBox.shrink(),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _filterButton(),
+            _sortButton(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _filterButton() {
+    final count = _filters.activeGroupCount;
+    return OutlinedButton.icon(
+      onPressed: _loading ? null : _openFilters,
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(
+            color: count > 0 ? AppColors.forest800 : AppColors.border),
+        backgroundColor: count > 0 ? AppColors.forest800 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      ),
+      icon: Icon(Icons.tune_rounded,
+          size: 16, color: count > 0 ? Colors.white : AppColors.forest800),
+      label: Text(count > 0 ? 'Filter ($count)' : 'Filter',
+          style: body(13,
+              weight: FontWeight.w700,
+              color: count > 0 ? Colors.white : AppColors.forest800)),
+    );
+  }
+
+  Widget _sortButton() {
+    return PopupMenuButton<String>(
+      enabled: !_loading,
+      initialValue: _sort,
+      onSelected: (wire) {
+        if (wire == _sort) return;
+        setState(() => _sort = wire);
+        _load();
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (_) => [
+        for (final entry in _sortOptions.entries)
+          PopupMenuItem<String>(
+            value: entry.key,
+            child: Row(
+              children: [
+                Icon(Icons.check_rounded,
+                    size: 16,
+                    color: entry.key == _sort
+                        ? AppColors.forest800
+                        : Colors.transparent),
+                const SizedBox(width: 8),
+                Text(entry.value, style: body(13, color: AppColors.ink)),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Sort: ${_sortOptions[_sort]}',
+                style: body(13,
+                    weight: FontWeight.w700, color: AppColors.forest800)),
+            const SizedBox(width: 2),
+            const Icon(Icons.arrow_drop_down_rounded,
+                size: 18, color: AppColors.forest800),
+          ],
+        ),
       ),
     );
   }
@@ -180,6 +349,29 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
             'Complete your marriage preferences and interests for better matches.',
             textAlign: TextAlign.center,
             style: body(13, color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyFilteredState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        children: [
+          const Icon(Icons.search_off_rounded, size: 30, color: AppColors.hint),
+          const SizedBox(height: 10),
+          Text('No matches found for these filters.',
+              textAlign: TextAlign.center,
+              style:
+                  body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: _clearFilters,
+            child: Text('Clear Filters',
+                style: body(13,
+                    weight: FontWeight.w700, color: AppColors.forest800)),
           ),
         ],
       ),
@@ -271,9 +463,6 @@ class _MatchCard extends StatelessWidget {
     final level = (m['matchLevel'] ?? '').toString();
     final levelLabel = _matchLevelLabels[level] ?? level;
     final levelColor = _matchLevelColors[level] ?? AppColors.hint;
-    final sharedInterests = ((m['sharedInterests'] as List?) ?? const [])
-        .map((e) => _titleCase(e.toString()))
-        .toList();
 
     return AppCard(
       padding: EdgeInsets.zero,
@@ -328,13 +517,6 @@ class _MatchCard extends StatelessWidget {
                         style: body(13,
                             weight: FontWeight.w700, color: levelColor)),
                   ],
-                  if (sharedInterests.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(sharedInterests.join(' • '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: body(12, color: AppColors.gold700)),
-                  ],
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
@@ -367,11 +549,5 @@ class _MatchCard extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  static String _titleCase(String wire) {
-    if (wire.isEmpty) return wire;
-    final lower = wire.toLowerCase().replaceAll('_', ' ');
-    return lower[0].toUpperCase() + lower.substring(1);
   }
 }

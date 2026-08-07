@@ -8,7 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/match_bar.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
-import 'compatibility_screen.dart';
+import 'compatibility_check_screen.dart';
 
 /// Matrimonial candidate detail — ported from
 /// `src/app/matrimonial/[id]/page.tsx` (static candidate view).
@@ -183,6 +183,23 @@ class _CandidateDetail extends StatelessWidget {
               child: Text(c['about'] as String,
                   style: body(13, color: AppColors.textMuted, height: 1.6)),
             ),
+            if ((c['interests'] as List?)?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 14),
+              _section(
+                title: 'Interests',
+                icon: Icons.interests_rounded,
+                iconColor: AppColors.gold700,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final i in (c['interests'] as List))
+                      Pill(_titleCase(i.toString()),
+                          bg: const Color(0xFFF7F0E8), fg: AppColors.gold700),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             _section(
               title: 'Partner Expectations',
@@ -203,6 +220,12 @@ class _CandidateDetail extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static String _titleCase(String wire) {
+    if (wire.isEmpty) return wire;
+    final lower = wire.toLowerCase().replaceAll('_', ' ');
+    return lower[0].toUpperCase() + lower.substring(1);
   }
 
   Widget _section({
@@ -428,48 +451,6 @@ class _Footer extends StatelessWidget {
   final Map<String, dynamic> candidate;
   final bool premium;
 
-  void _expressInterest(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1FAE5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle_outline_rounded,
-                  size: 20, color: Color(0xFF065F46)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text('Interest Initiated',
-                  style: display(18, color: AppColors.forest900)),
-            ),
-          ],
-        ),
-        content: Text(
-          'Your interest will be reviewed by the Elder Committee. '
-          'They will reach out within 3 working days to facilitate a '
-          'formal introduction.',
-          style: body(13, color: AppColors.textMuted, height: 1.5),
-        ),
-        actions: [
-          ForestButton(
-            label: 'Close',
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _premiumNotice(BuildContext context) {
     showDialog<void>(
       context: context,
@@ -495,16 +476,19 @@ class _Footer extends StatelessWidget {
     );
   }
 
+  // STEP 25B: opens the readiness/preparation screen first — it is what
+  // pushes CompatibilityScreen (and only then, on a further tap inside it,
+  // an actual calculation) once the member confirms Continue there.
   void _checkCompatibility(BuildContext context, String myProfileId) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => CompatibilityScreen(
-        profileAId: myProfileId,
+      builder: (_) => CompatibilityCheckScreen(
+        myProfileId: myProfileId,
         // candidate['id'] is the matrimonial *profile's* own id (what
         // /api/matrimonial/:id routes on) — compatibility, like every other
         // endpoint, is keyed on the account id, which is candidate['userId'].
-        profileBId: (candidate['userId'] ?? '').toString(),
-        otherGender: (candidate['gender'] ?? '').toString(),
-        otherName: (candidate['name'] ?? '').toString(),
+        candidateProfileId: (candidate['userId'] ?? '').toString(),
+        candidateName: (candidate['name'] ?? '').toString(),
+        candidateGender: (candidate['gender'] ?? '').toString(),
       ),
     ));
   }
@@ -517,6 +501,11 @@ class _Footer extends StatelessWidget {
     final candidateUserId = (candidate['userId'] ?? '').toString();
     final showCompatibility = myId.isNotEmpty && myId != candidateUserId;
 
+    // Nothing left to offer (a non-premium profile with compatibility not
+    // applicable, e.g. your own) — skip the bar rather than showing an empty
+    // padded strip.
+    if (!premium && !showCompatibility) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
@@ -528,21 +517,15 @@ class _Footer extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            premium
-                ? GoldButton(
-                    label: 'Premium — Connect via Elder Committee',
-                    icon: Icons.workspace_premium_rounded,
-                    expand: true,
-                    onPressed: () => _premiumNotice(context),
-                  )
-                : ForestButton(
-                    label: 'Express Interest',
-                    icon: Icons.favorite_rounded,
-                    expand: true,
-                    onPressed: () => _expressInterest(context),
-                  ),
+            if (premium)
+              GoldButton(
+                label: 'Premium — Connect via Elder Committee',
+                icon: Icons.workspace_premium_rounded,
+                expand: true,
+                onPressed: () => _premiumNotice(context),
+              ),
             if (showCompatibility) ...[
-              const SizedBox(height: 8),
+              if (premium) const SizedBox(height: 8),
               OutlineButtonX(
                 label: 'Check Compatibility',
                 expand: true,
