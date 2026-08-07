@@ -5,7 +5,7 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
-import '../widgets/match_bar.dart';
+import '../widgets/discovery_match_badge.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -424,11 +424,12 @@ class _CandidateCard extends StatelessWidget {
                   _detailRow(Icons.business_center_outlined,
                       (c['company'] as String).split('—').first.trim()),
                   const SizedBox(height: 10),
-                  // How well this profile fits the preferences both sides
-                  // filled in. Absent when the viewer has no profile yet.
-                  MatchBar(
-                    match: c['match'] as Map<String, dynamic>?,
-                    compact: true,
+                  // Same Discovery Match % shown on the Discover Matches
+                  // screen for this pair — one number for one pair of
+                  // people, never a second, differently-computed score.
+                  // Absent when the viewer has no profile yet.
+                  DiscoveryMatchBadge(
+                    discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?,
                   ),
                   const SizedBox(height: 10),
                   Row(

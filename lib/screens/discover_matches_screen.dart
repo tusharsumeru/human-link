@@ -6,27 +6,9 @@ import '../data/repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/discover_filter_sheet.dart';
+import '../widgets/discovery_match_badge.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
-
-/// Display-only label/colour for the backend's `matchLevel` string. The
-/// bucketing (which level a percentage falls into) is decided server-side —
-/// this only decides how each already-decided level is worded and coloured.
-const Map<String, String> _matchLevelLabels = {
-  'EXCELLENT': 'Excellent Match',
-  'HIGH': 'High Match',
-  'GOOD': 'Good Match',
-  'MODERATE': 'Moderate Match',
-  'LOW': 'Low Match',
-};
-
-const Map<String, Color> _matchLevelColors = {
-  'EXCELLENT': AppColors.forest700,
-  'HIGH': AppColors.forest600,
-  'GOOD': AppColors.gold700,
-  'MODERATE': AppColors.gold500,
-  'LOW': AppColors.hint,
-};
 
 /// Sort wire value (sent to the backend as-is) → its menu label, in render
 /// order. The backend does the actual ordering — this only names the option
@@ -461,8 +443,8 @@ class _MatchCard extends StatelessWidget {
         ? (m['matchPercentage'] as num).round()
         : null;
     final level = (m['matchLevel'] ?? '').toString();
-    final levelLabel = _matchLevelLabels[level] ?? level;
-    final levelColor = _matchLevelColors[level] ?? AppColors.hint;
+    final levelLabel = matchLevelLabels[level] ?? level;
+    final levelColor = matchLevelColors[level] ?? AppColors.hint;
 
     return AppCard(
       padding: EdgeInsets.zero,

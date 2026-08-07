@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/match_bar.dart';
+import '../widgets/discovery_match_badge.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 import 'compatibility_check_screen.dart';
@@ -122,12 +122,16 @@ class _CandidateDetail extends StatelessWidget {
             _PhotoHeader(candidate: c),
             const SizedBox(height: 16),
             // Placed first: whether this profile fits what you're looking for
-            // is the thing you want to know before reading the rest.
-            if (c['match'] != null) ...[
+            // is the thing you want to know before reading the rest. Same
+            // discoveryMatch percentage/level as the Hub card and Discover
+            // Matches — never the older, separately-computed match.score.
+            if (c['discoveryMatch'] != null &&
+                (c['discoveryMatch'] as Map)['matchPercentage'] != null) ...[
               _section(
                 title: 'Compatibility',
                 icon: Icons.favorite_rounded,
-                child: MatchDetail(match: c['match'] as Map<String, dynamic>?),
+                child: DiscoveryMatchDetail(
+                    discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?),
               ),
               const SizedBox(height: 14),
             ],
