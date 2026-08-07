@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/discovery_match_badge.dart';
@@ -10,7 +12,9 @@ import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
 /// Matrimonial Hub list — ported from `src/app/matrimonial/page.tsx`.
-/// Elder-mediated, verified profiles with gender/gotra/location filtering.
+/// Elder-mediated, verified profiles with gotra/location filtering. Gender is
+/// not a filter the member picks: a matrimonial hub only ever shows the
+/// opposite gender to the one on the viewer's own account.
 class MatrimonialListScreen extends StatefulWidget {
   const MatrimonialListScreen({super.key});
 
@@ -27,13 +31,18 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     'Atreya',
   ];
 
-  String _gender = 'All'; // All / M / F
+  // Fixed by the viewer's own gender, not a user-adjustable filter — a
+  // member registered as 'M' only ever sees 'F' profiles here, and vice
+  // versa. Falls back to showing everyone only if the viewer's own gender
+  // isn't on file, which shouldn't happen once past MatrimonialGateScreen.
+  late final String _gender;
   String _gotra = 'All';
   String _location = 'All';
 
-  // Approved profiles from GET /api/matrimonial. Reaching this screen means
-  // MatrimonialGateScreen already cleared the caller, so a 403 here would be a
-  // real error rather than the expected "not eligible" path.
+  // Approved profiles from GET /api/matrimonial, already narrowed to the
+  // opposite gender server-side. Reaching this screen means
+  // MatrimonialGateScreen already cleared the caller, so a 403 here would be
+  // a real error rather than the expected "not eligible" path.
   List<Map<String, dynamic>> _candidates = const [];
   bool _loading = true;
   String? _error;
@@ -41,6 +50,8 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
   @override
   void initState() {
     super.initState();
+    final myGender = context.read<AuthService>().user?.gender ?? '';
+    _gender = myGender == 'M' ? 'F' : (myGender == 'F' ? 'M' : 'All');
     _load();
   }
 
@@ -50,7 +61,8 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       _error = null;
     });
     try {
-      final profiles = await Repository.instance.matrimonialProfiles();
+      final profiles =
+          await Repository.instance.matrimonialProfiles(gender: _gender);
       if (!mounted) return;
       setState(() {
         _candidates = profiles;
@@ -76,10 +88,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
 
   List<Map<String, dynamic>> get _filtered {
     return _candidates.where((c) {
-      final matchGender = _gender == 'All' || c['gender'] == _gender;
       final matchGotra = _gotra == 'All' || c['gotra'] == _gotra;
       final matchLocation = _location == 'All' || c['location'] == _location;
-      return matchGender && matchGotra && matchLocation;
+      return matchGotra && matchLocation;
     }).toList();
   }
 
@@ -96,9 +107,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const _HeroBanner(),
           const SizedBox(height: 12),
           _discoverMatchesButton(context),
-          const SizedBox(height: 18),
-          _genderFilter(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+          _genderLabel(),
+          const SizedBox(height: 14),
           _label('GOTRA'),
           const SizedBox(height: 6),
           _gotraChips(),
@@ -164,24 +175,18 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           color: AppColors.gold700,
           letterSpacing: 1.6));
 
-  Widget _genderFilter() {
-    const options = [
-      ('All', 'All'),
-      ('M', 'Grooms'),
-      ('F', 'Brides'),
-    ];
+  Widget _genderLabel() {
+    final label = switch (_gender) {
+      'F' => 'Showing Brides',
+      'M' => 'Showing Grooms',
+      _ => 'Showing All Profiles',
+    };
     return Row(
       children: [
-        for (final (value, label) in options) ...[
-          Expanded(
-            child: _SegmentButton(
-              label: label,
-              active: _gender == value,
-              onTap: () => setState(() => _gender = value),
-            ),
-          ),
-          if (value != 'F') const SizedBox(width: 8),
-        ],
+        const Icon(Icons.favorite_rounded, size: 15, color: AppColors.forest700),
+        const SizedBox(width: 6),
+        Text(label,
+            style: body(13, weight: FontWeight.w700, color: AppColors.forest800)),
       ],
     );
   }
@@ -230,7 +235,6 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const SizedBox(height: 10),
           TextButton(
             onPressed: () => setState(() {
-              _gender = 'All';
               _gotra = 'All';
               _location = 'All';
             }),
@@ -492,35 +496,6 @@ class _PremiumChip extends StatelessWidget {
               style:
                   body(10, weight: FontWeight.w700, color: Colors.white)),
         ],
-      ),
-    );
-  }
-}
-
-class _SegmentButton extends StatelessWidget {
-  const _SegmentButton(
-      {required this.label, required this.active, required this.onTap});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? AppColors.forest800 : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: active ? AppColors.forest800 : AppColors.border),
-        ),
-        child: Text(label,
-            style: body(13,
-                weight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.label)),
       ),
     );
   }

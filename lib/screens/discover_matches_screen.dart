@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/discover_filter_sheet.dart';
@@ -57,9 +59,16 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
   // already landed.
   int _loadReqId = 0;
 
+  // Fixed by the viewer's own gender, same rule as the Matrimonial Hub —
+  // discovery only ever surfaces the opposite gender, never a filter the
+  // member can turn off.
+  late final String _gender;
+
   @override
   void initState() {
     super.initState();
+    final myGender = context.read<AuthService>().user?.gender ?? '';
+    _gender = myGender == 'M' ? 'F' : (myGender == 'F' ? 'M' : 'All');
     _load();
   }
 
@@ -73,6 +82,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       final result = await Repository.instance.discoverMatches(
         limit: _pageSize,
         skip: 0,
+        gender: _gender,
         minAge: _filters.minAge,
         maxAge: _filters.maxAge,
         location: _filters.location,
@@ -111,6 +121,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       final result = await Repository.instance.discoverMatches(
         limit: _pageSize,
         skip: _skip,
+        gender: _gender,
         minAge: _filters.minAge,
         maxAge: _filters.maxAge,
         location: _filters.location,
