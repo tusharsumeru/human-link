@@ -885,12 +885,12 @@ class _SavedCard extends StatelessWidget {
                 )
               else
                 GridView.count(
-                  crossAxisCount: 3,
+                  crossAxisCount: 4,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 0.72,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                  childAspectRatio: 0.85,
                   children: [
                     for (final item in items) _SavedTile(item: item),
                   ],
