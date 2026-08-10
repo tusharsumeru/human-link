@@ -23,10 +23,32 @@ class Repository {
 
   static final Repository instance = Repository();
 
+  /// POST /api/otp/send — asks the server to text a one-time code.
+  ///
+  /// Must be called before [login] or [register]: the server checks the code
+  /// against one it issued, so a code that was never requested is rejected. The
+  /// reply masks the destination (`******3210`) and never contains the code.
+  ///
+  /// `purpose` is `login` for an existing member and `register` for a new one —
+  /// a code issued for one is not accepted for the other.
+  Future<Map<String, dynamic>> sendOtp({
+    required String phone,
+    String purpose = 'login',
+  }) async {
+    final data = await _api.postJson('/api/otp/send', {
+      'channel': 'sms',
+      'destination': phone,
+      'purpose': purpose,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not send the code');
+  }
+
   /// POST /api/user/login — returns `{user, token}`: the authenticated user map
   /// from MongoDB plus the JWT bearer token for subsequent protected requests.
   /// Throws [ApiException] with the server's message ("Phone number not
-  /// registered", "Invalid OTP") — the backend validates the OTP.
+  /// registered", "Incorrect code…") — the backend validates the OTP against
+  /// the one it issued in [sendOtp].
   Future<Map<String, dynamic>> login(String phone, String otp) async {
     final data = await _api.postJson('/api/user/login', {
       'phone': phone,
@@ -45,7 +67,8 @@ class Repository {
   /// `{ available: bool, suggestions: [..] }`.
   Future<Map<String, dynamic>> checkUsername(String userName) async {
     final data = await _api.getJson(
-        '/api/user/username/check?userName=${Uri.encodeQueryComponent(userName)}');
+      '/api/user/username/check?userName=${Uri.encodeQueryComponent(userName)}',
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'available': false};
   }
@@ -57,6 +80,11 @@ class Repository {
   Future<Map<String, dynamic>> register({
     required String name,
     required String phone,
+
+    /// The code sent by [sendOtp] with `purpose: 'register'`. The server
+    /// requires it — an account is only created for a number whose owner
+    /// proved they can receive messages on it.
+    required String otp,
     String userName = '',
     String gotra = '',
     String native = '',
@@ -70,6 +98,7 @@ class Repository {
       'userName': userName.isNotEmpty ? userName : _deriveUserName(name, phone),
       'name': name,
       'phone': phone,
+      'otp': otp,
       if (gotra.isNotEmpty) 'gotra': gotra,
       if (native.isNotEmpty) 'native': native,
       'role': role,
@@ -92,7 +121,9 @@ class Repository {
   /// from the name, disambiguated with the last 4 phone digits.
   String _deriveUserName(String name, String phone) {
     final base = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9._]'), '');
-    final suffix = phone.length >= 4 ? phone.substring(phone.length - 4) : phone;
+    final suffix = phone.length >= 4
+        ? phone.substring(phone.length - 4)
+        : phone;
     final raw = '${base.isEmpty ? 'member' : base}_$suffix';
     return raw.length > 30 ? raw.substring(0, 30) : raw;
   }
@@ -123,7 +154,9 @@ class Repository {
       if (data is Map && data['count'] is num) {
         return (data['count'] as num).toInt();
       }
-    } catch (_) {/* best-effort */}
+    } catch (_) {
+      /* best-effort */
+    }
     return 0;
   }
 
@@ -183,8 +216,10 @@ class Repository {
   /// POST /api/posts/comments/:commentId/likes — toggles the caller's like on
   /// a comment. Returns `{liked, likeCount}`.
   Future<Map<String, dynamic>> likeComment(String commentId) async {
-    final data =
-        await _api.postJson('/api/posts/comments/$commentId/likes', const {});
+    final data = await _api.postJson(
+      '/api/posts/comments/$commentId/likes',
+      const {},
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'liked': true, 'likeCount': 0};
   }
@@ -207,7 +242,10 @@ class Repository {
 
   /// GET /api/stories — active stories grouped per author ("trays"). Returns the
   /// raw envelope: `{count, trays:[{author, latestAt, stories:[...]}], nextCursor}`.
-  Future<Map<String, dynamic>> storiesFeed({int limit = 30, String? cursor}) async {
+  Future<Map<String, dynamic>> storiesFeed({
+    int limit = 30,
+    String? cursor,
+  }) async {
     final q = <String>['limit=$limit'];
     if (cursor != null && cursor.isNotEmpty) q.add('cursor=$cursor');
     final data = await _api.getJson('/api/stories?${q.join('&')}');
@@ -247,8 +285,10 @@ class Repository {
         'caption': caption,
         'visibility': visibility,
         // taggedMembers is sent as a JSON-array string (per the API contract).
-        if (taggedMembers.isNotEmpty) 'taggedMembers': jsonEncode(taggedMembers),
-        if (treeNodeId != null && treeNodeId.isNotEmpty) 'treeNodeId': treeNodeId,
+        if (taggedMembers.isNotEmpty)
+          'taggedMembers': jsonEncode(taggedMembers),
+        if (treeNodeId != null && treeNodeId.isNotEmpty)
+          'treeNodeId': treeNodeId,
         if (locationName != null && locationName.isNotEmpty)
           'locationName': locationName,
         if (locationKind != null && locationKind.isNotEmpty)
@@ -343,17 +383,11 @@ class Repository {
   /// The ids go up in whatever order they were picked: working out the order is
   /// the server's job. It always answers with a usable route — see
   /// [RoutePlan.isEstimate] for whether the distances are real road distances.
-  Future<RoutePlan> planRoute(
-    List<String> memberIds, {
-    LatLng? origin,
-  }) async {
+  Future<RoutePlan> planRoute(List<String> memberIds, {LatLng? origin}) async {
     final data = await _api.postJson('/api/user/route', {
       'memberIds': memberIds,
       if (origin != null)
-        'origin': {
-          'latitude': origin.latitude,
-          'longitude': origin.longitude,
-        },
+        'origin': {'latitude': origin.latitude, 'longitude': origin.longitude},
     });
     final plan = RoutePlan.fromMap(data);
     if (plan == null) throw ApiException('Could not plan the route');
@@ -365,8 +399,9 @@ class Repository {
   /// same field, in case the backend returns it without honoring the query
   /// filter — so this never shows a non-purohit member.
   Future<List<Map<String, dynamic>>> purohitDirectory({int limit = 100}) async {
-    final data =
-        await _api.getJson('/api/user/directory?limit=$limit&isPurohit=true');
+    final data = await _api.getJson(
+      '/api/user/directory?limit=$limit&isPurohit=true',
+    );
     if (data is Map && data['users'] is List) {
       return (data['users'] as List)
           .whereType<Map>()
@@ -396,10 +431,13 @@ class Repository {
 
   /// GET /api/family/search — members matching [q] (for tagging / tree link):
   /// `[{ _id, name, gotra, native, photoUrl, generation, branch }]`.
-  Future<List<Map<String, dynamic>>> familySearch(String q,
-      {int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> familySearch(
+    String q, {
+    int limit = 20,
+  }) async {
     final data = await _api.getJson(
-        '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit');
+      '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit',
+    );
     if (data is List) {
       return data
           .whereType<Map>()
@@ -425,12 +463,16 @@ class Repository {
   }
 
   /// GET /api/conversations/:userId/messages — history, oldest→newest.
-  Future<List<Map<String, dynamic>>> messageHistory(String userId,
-      {int limit = 40, String? before}) async {
+  Future<List<Map<String, dynamic>>> messageHistory(
+    String userId, {
+    int limit = 40,
+    String? before,
+  }) async {
     final q = <String>['limit=$limit'];
     if (before != null && before.isNotEmpty) q.add('before=$before');
-    final data = await _api
-        .getJson('/api/conversations/$userId/messages?${q.join('&')}');
+    final data = await _api.getJson(
+      '/api/conversations/$userId/messages?${q.join('&')}',
+    );
     if (data is Map && data['messages'] is List) {
       return (data['messages'] as List)
           .whereType<Map>()
@@ -442,8 +484,10 @@ class Repository {
 
   /// POST /api/messages — send over REST (fallback when the socket is down).
   Future<Map<String, dynamic>> sendMessage(String toUserId, String text) async {
-    final data = await _api
-        .postJson('/api/messages', {'toUserId': toUserId, 'text': text});
+    final data = await _api.postJson('/api/messages', {
+      'toUserId': toUserId,
+      'text': text,
+    });
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not send message');
   }
@@ -455,7 +499,9 @@ class Repository {
 
   /// POST /api/connections — send a connection request (directory "Connect").
   Future<Map<String, dynamic>> connect(String toUserId) async {
-    final data = await _api.postJson('/api/connections', {'toUserId': toUserId});
+    final data = await _api.postJson('/api/connections', {
+      'toUserId': toUserId,
+    });
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not send connection request');
   }
@@ -523,7 +569,9 @@ class Repository {
       if (res is Map && res['url'] is String) {
         return '${ApiConfig.baseUrl}${res['url']}';
       }
-    } catch (_) {/* offline / endpoint not deployed yet */}
+    } catch (_) {
+      /* offline / endpoint not deployed yet */
+    }
     return null;
   }
 
@@ -650,8 +698,8 @@ class Repository {
     final data = _unwrapSurepass(res);
     final clientId = (data['client_id'] ?? '').toString();
     // Via Link returns a URL to open; the field name varies by product.
-    final url =
-        (data['url'] ?? data['link'] ?? data['digilocker_url'] ?? '').toString();
+    final url = (data['url'] ?? data['link'] ?? data['digilocker_url'] ?? '')
+        .toString();
     if (clientId.isEmpty || url.isEmpty) {
       throw ApiException('Could not start DigiLocker');
     }
@@ -683,11 +731,12 @@ class Repository {
       'full_name': (data['full_name'] ?? data['name'] ?? '').toString(),
       'dob': (data['dob'] ?? data['date_of_birth'] ?? '').toString(),
       'gender': _normalizeGender(data['gender']),
-      'masked_aadhaar': (data['masked_aadhaar'] ??
-              data['aadhaar_id'] ??
-              data['aadhaar_number'] ??
-              '')
-          .toString(),
+      'masked_aadhaar':
+          (data['masked_aadhaar'] ??
+                  data['aadhaar_id'] ??
+                  data['aadhaar_number'] ??
+                  '')
+              .toString(),
       'full_address': _fullAddress(data),
     };
   }
@@ -720,8 +769,16 @@ class Repository {
     if (address is String) return address;
     if (address is Map) {
       const order = [
-        'house', 'street', 'landmark', 'loc', 'vtc', 'po',
-        'subdist', 'dist', 'state', 'country',
+        'house',
+        'street',
+        'landmark',
+        'loc',
+        'vtc',
+        'po',
+        'subdist',
+        'dist',
+        'state',
+        'country',
       ];
       final line = [
         for (final key in order) (address[key] ?? '').toString().trim(),
@@ -749,7 +806,9 @@ class Repository {
   /// Aadhaar (Surepass) — step 2: submit the OTP. Returns the verified KYC
   /// data map (full_name, dob, gender, address, …). Throws on invalid OTP.
   Future<Map<String, dynamic>> aadhaarSubmitOtp(
-      String clientId, String otp) async {
+    String clientId,
+    String otp,
+  ) async {
     final data = await _api.postJson('/api/aadhaar/submit-otp', {
       'client_id': clientId,
       'otp': otp,
@@ -765,13 +824,17 @@ class Repository {
     try {
       final data = await _api.getJson('/api/stats');
       if (data is Map) return Map<String, dynamic>.from(data);
-    } catch (_) {/* fall through */}
+    } catch (_) {
+      /* fall through */
+    }
     return _demoStats();
   }
 
   Map<String, dynamic> _demoStats() {
     final donations = kWelfareCampaigns.fold<int>(
-        0, (sum, c) => sum + (c['raised'] as int));
+      0,
+      (sum, c) => sum + (c['raised'] as int),
+    );
     return {
       'totalMembers': 1428,
       'pendingVerifications': kVerificationRequests.length,
@@ -805,7 +868,9 @@ class Repository {
   /// spouseId / generation). Returns the new `id` and `matchedExistingUser`
   /// (true when the phone already belongs to a registered account, in which
   /// case a pending link request was auto-created server-side).
-  Future<Map<String, dynamic>> addFamilyMember(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> addFamilyMember(
+    Map<String, dynamic> body,
+  ) async {
     final data = await _api.postJson('/api/family', body);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not add member');
@@ -920,7 +985,8 @@ class Repository {
       if (placeOfDeath != null && placeOfDeath.isNotEmpty) {
         body['placeOfDeath'] = placeOfDeath;
       }
-      if (biography != null && biography.isNotEmpty) body['biography'] = biography;
+      if (biography != null && biography.isNotEmpty)
+        body['biography'] = biography;
       if (photoUrl != null && photoUrl.isNotEmpty) body['photoUrl'] = photoUrl;
     }
     final data = await _api.postJson('/api/family-tree/members', body);
@@ -972,7 +1038,10 @@ class Repository {
   /// POST /api/family-tree/invites/accept — merge matching placeholders into my
   /// account and connect the trees. Returns `{merged, tree}`.
   Future<Map<String, dynamic>> acceptFamilyTreeInvites() async {
-    final data = await _api.postJson('/api/family-tree/invites/accept', const {});
+    final data = await _api.postJson(
+      '/api/family-tree/invites/accept',
+      const {},
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'merged': 0};
   }
@@ -1020,7 +1089,8 @@ class Repository {
 
   /// PUT /api/matrimonial/me — save-as-you-go draft. Every field optional.
   Future<Map<String, dynamic>> saveMatrimonialProfile(
-      Map<String, dynamic> fields) async {
+    Map<String, dynamic> fields,
+  ) async {
     final data = await _api.putJson('/api/matrimonial/me', fields);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not save your matrimonial profile');
@@ -1169,7 +1239,8 @@ class Repository {
   /// anywhere in the app; this only stores the raw inputs the server-side
   /// engine will read later.
   Future<Map<String, dynamic>> saveBirthProfile(
-      Map<String, dynamic> fields) async {
+    Map<String, dynamic> fields,
+  ) async {
     final data = await _api.putJson('/api/birth-profile/me', fields);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not save your birth details');
@@ -1224,12 +1295,15 @@ class Repository {
   /// score. [candidateProfileId] is a User id (same identifier every other
   /// compatibility endpoint keys on), not a MatrimonialProfile document id.
   Future<CompatibilityPrerequisites> compatibilityPrerequisites(
-      String candidateProfileId) async {
-    final data = await _api
-        .getJson('/api/v1/compatibility/prerequisites/$candidateProfileId');
+    String candidateProfileId,
+  ) async {
+    final data = await _api.getJson(
+      '/api/v1/compatibility/prerequisites/$candidateProfileId',
+    );
     if (data is Map) {
       return CompatibilityPrerequisites.fromJson(
-          Map<String, dynamic>.from(data));
+        Map<String, dynamic>.from(data),
+      );
     }
     throw ApiException('Could not check compatibility readiness');
   }

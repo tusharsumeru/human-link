@@ -16,7 +16,7 @@ import '../widgets/ui_kit.dart';
 
 /// Register screen — mirrors web `src/app/register/page.tsx`.
 /// Collects member details (name, phone, gender, gotra, native), verifies the
-/// fixed demo OTP (121212), creates a member, then offers Aadhaar identity
+/// a real SMS code, creates a member, then offers Aadhaar identity
 /// verification via DigiLocker before landing on the dashboard. Verification is
 /// skippable (it's also on the profile); lineage/heritage onboarding stays
 /// optional, done later at the member's own pace.
@@ -48,6 +48,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _step = 'details'; // 'details' | 'otp' | 'identity'
   String _error = '';
   bool _loading = false;
+
+  /// Masked destination the server reports (e.g. `******3210`).
+  String _sentTo = '';
+  int _resendIn = 0;
+  Timer? _resendTimer;
   bool _identityVerified = false;
   // KYC captured by DigiLocker before the account existed (details step); it's
   // written to the profile as soon as registration returns a token.
@@ -59,12 +64,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneCtrl.dispose();
     _nativeCtrl.dispose();
     _otpCtrl.dispose();
+    _resendTimer?.cancel();
     super.dispose();
   }
 
-  /// Validate the details and advance to OTP entry. No SMS is sent — the
-  /// backend accepts the fixed demo OTP (matches the web register flow).
-  void _handleNext() {
+  /// Validate the details, ask the server to text a code, then advance to OTP
+  /// entry. Only advances once the send succeeds — the server checks the code
+  /// against one it issued, so there is nothing to type until it has.
+  Future<void> _handleNext() async {
     if (_nameCtrl.text.trim().isEmpty) {
       setState(() => _error = 'Please enter your full name');
       return;
@@ -74,8 +81,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     setState(() {
+      _loading = true;
       _error = '';
-      _step = 'otp';
+    });
+    try {
+      final res = await Repository.instance.sendOtp(
+        phone: _phoneCtrl.text,
+        purpose: 'register',
+      );
+      setState(() {
+        _sentTo = (res['destination'] ?? '').toString();
+        _resendIn = (res['resendAfterSeconds'] as num?)?.toInt() ?? 60;
+        _step = 'otp';
+      });
+      _startResendTimer();
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Could not send the code. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Mirrors the server's resend cooldown so the button is not offered early.
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || _resendIn <= 0) {
+        t.cancel();
+        return;
+      }
+      setState(() => _resendIn--);
     });
   }
 
@@ -90,8 +127,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleVerify() async {
-    if (_otpCtrl.text != '121212') {
-      setState(() => _error = 'Invalid OTP. Please try again.');
+    // The server is the only judge of the code — checking it here would just
+    // be a second, weaker opinion.
+    if (_otpCtrl.text.length != 6) {
+      setState(() => _error = 'Enter the 6-digit code');
       return;
     }
     setState(() {
@@ -109,14 +148,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _completeRegistration() async {
     final auth = context.read<AuthService>();
     final phone = _phoneCtrl.text;
-    final native =
-        _nativeCtrl.text.trim().isEmpty ? 'Karnataka' : _nativeCtrl.text.trim();
+    final native = _nativeCtrl.text.trim().isEmpty
+        ? 'Karnataka'
+        : _nativeCtrl.text.trim();
     // Assign a random avatar (1–8), as the web register page does.
     final avatar = (Random().nextInt(8) + 1).toString();
     try {
       final res = await Repository.instance.register(
         name: _nameCtrl.text.trim(),
         phone: phone,
+        otp: _otpCtrl.text,
         gotra: _gotra,
         native: native,
         avatar: avatar,
@@ -207,9 +248,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Center(
                 child: GestureDetector(
                   onTap: () => context.go('/login'),
-                  child: Text('← Back to Sign in',
-                      style: body(13,
-                          weight: FontWeight.w600, color: AppColors.gold500)),
+                  child: Text(
+                    '← Back to Sign in',
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: AppColors.gold500,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -221,20 +267,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildForm() => switch (_step) {
-        'details' => _buildDetails(),
-        'otp' => _buildOtp(),
-        _ => _buildIdentity(),
-      };
+    'details' => _buildDetails(),
+    'otp' => _buildOtp(),
+    _ => _buildIdentity(),
+  };
 
   Widget _buildDetails() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Join the Samaj',
-            style: display(26, color: AppColors.forest900)),
+        Text('Join the Samaj', style: display(26, color: AppColors.forest900)),
         const SizedBox(height: 6),
-        Text('Create your account and begin documenting your lineage',
-            style: body(13, color: AppColors.textMuted)),
+        Text(
+          'Create your account and begin documenting your lineage',
+          style: body(13, color: AppColors.textMuted),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -242,19 +289,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: const Color(0xFFEAF7EE),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('An OTP will be sent to your mobile via SMS',
-              style: body(12,
-                  weight: FontWeight.w600, color: AppColors.forest700)),
+          child: Text(
+            'An OTP will be sent to your mobile via SMS',
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: AppColors.forest700,
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         _label('Full Name', hint: '(as per aadhar)'),
         _field(_nameCtrl, 'e.g. Aditi Shanbhag Rao'),
         const SizedBox(height: 14),
         _label('Mobile Number', hint: '(as per aadhar)'),
-        _field(_phoneCtrl, '9876543210',
-            keyboardType: TextInputType.phone,
-            maxLength: 10,
-            digitsOnly: true),
+        _field(
+          _phoneCtrl,
+          '9876543210',
+          keyboardType: TextInputType.phone,
+          maxLength: 10,
+          digitsOnly: true,
+        ),
         const SizedBox(height: 14),
         _label('Gender'),
         Row(
@@ -277,8 +332,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: DropdownButton<String>(
               value: _gotra,
               isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.hint),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.hint,
+              ),
               style: body(14, color: AppColors.ink),
               items: _gotras
                   .map((g) => DropdownMenuItem(value: g, child: Text(g)))
@@ -342,13 +399,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Wrap(
             alignment: WrapAlignment.center,
             children: [
-              Text('Already a member?  ',
-                  style: body(13, color: AppColors.textMuted)),
+              Text(
+                'Already a member?  ',
+                style: body(13, color: AppColors.textMuted),
+              ),
               GestureDetector(
                 onTap: () => context.go('/login'),
-                child: Text('Sign in',
-                    style: body(13,
-                        weight: FontWeight.w700, color: AppColors.forest800)),
+                child: Text(
+                  'Sign in',
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
               ),
             ],
           ),
@@ -361,8 +425,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Verify your number',
-            style: display(26, color: AppColors.forest900)),
+        Text(
+          'Verify your number',
+          style: display(26, color: AppColors.forest900),
+        ),
         const SizedBox(height: 6),
         Text.rich(
           TextSpan(
@@ -371,8 +437,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const TextSpan(text: 'OTP sent to '),
               TextSpan(
                 text: '+91 ${_phoneCtrl.text}',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800),
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest800,
+                ),
               ),
             ],
           ),
@@ -384,9 +453,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: const Color(0xFFEAF7EE),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
-              style: body(12,
-                  weight: FontWeight.w600, color: AppColors.forest700)),
+          child: Text(
+            _sentTo.isNotEmpty
+                ? 'Enter the 6-digit code sent to $_sentTo'
+                : 'Enter the 6-digit code sent to your phone',
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: AppColors.forest700,
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         TextField(
@@ -405,16 +481,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
             counterText: '',
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.forest800, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.forest800,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -438,8 +518,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _error = '';
               _otpCtrl.clear();
             }),
-            child: Text('← Back',
-                style: body(13, color: AppColors.textMuted)),
+            child: Text('← Back', style: body(13, color: AppColors.textMuted)),
           ),
         ),
       ],
@@ -455,28 +534,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Row(
           children: [
-            const Icon(Icons.check_circle,
-                size: 18, color: AppColors.forest700),
+            const Icon(
+              Icons.check_circle,
+              size: 18,
+              color: AppColors.forest700,
+            ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Account created',
-                  style: body(13,
-                      weight: FontWeight.w700, color: AppColors.forest700)),
+              child: Text(
+                'Account created',
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest700,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        Text(_identityVerified ? 'You\'re all set' : 'Verify your identity',
-            style: display(26, color: AppColors.forest900)),
+        Text(
+          _identityVerified ? 'You\'re all set' : 'Verify your identity',
+          style: display(26, color: AppColors.forest900),
+        ),
         const SizedBox(height: 6),
         Text(
           _identityVerified
               ? 'Your Aadhaar is verified and saved to your profile — the ✓ '
-                  'badge is already yours.'
+                    'badge is already yours.'
               : 'Aadhaar KYC through the government DigiLocker earns your '
-                  'profile the ✓ verified badge and keeps our ancestral records '
-                  'trustworthy. We store only a masked reference — never your '
-                  'full Aadhaar number.',
+                    'profile the ✓ verified badge and keeps our ancestral records '
+                    'trustworthy. We store only a masked reference — never your '
+                    'full Aadhaar number.',
           style: body(13, color: AppColors.textMuted, height: 1.5),
         ),
         const SizedBox(height: 16),
@@ -519,16 +608,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified_rounded,
-              size: 20, color: AppColors.forest700),
+          const Icon(
+            Icons.verified_rounded,
+            size: 20,
+            color: AppColors.forest700,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Aadhaar verified via DigiLocker',
-                    style: body(12,
-                        weight: FontWeight.w700, color: AppColors.forest800)),
+                Text(
+                  'Aadhaar verified via DigiLocker',
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   detail.isEmpty
@@ -545,22 +642,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _label(String text, {String? hint}) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: RichText(
-          text: TextSpan(
-            style: body(13, weight: FontWeight.w700, color: AppColors.forest800),
-            children: [
-              TextSpan(text: text),
-              if (hint != null)
-                TextSpan(
-                  text: ' $hint',
-                  style: body(12,
-                      weight: FontWeight.w500, color: AppColors.textMuted),
-                ),
-            ],
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: RichText(
+      text: TextSpan(
+        style: body(13, weight: FontWeight.w700, color: AppColors.forest800),
+        children: [
+          TextSpan(text: text),
+          if (hint != null)
+            TextSpan(
+              text: ' $hint',
+              style: body(
+                12,
+                weight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 
   Widget _genderButton(String value, String label) {
     final active = _gender == value;
@@ -573,13 +673,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           decoration: BoxDecoration(
             color: active ? AppColors.forest800 : Colors.white,
             border: Border.all(
-                color: active ? AppColors.forest800 : AppColors.border),
+              color: active ? AppColors.forest800 : AppColors.border,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(label,
-              style: body(13,
-                  weight: FontWeight.w600,
-                  color: active ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              13,
+              weight: FontWeight.w600,
+              color: active ? Colors.white : AppColors.label,
+            ),
+          ),
         ),
       ),
     );
@@ -596,13 +701,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           decoration: BoxDecoration(
             color: active ? AppColors.forest800 : Colors.white,
             border: Border.all(
-                color: active ? AppColors.forest800 : AppColors.border),
+              color: active ? AppColors.forest800 : AppColors.border,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(label,
-              style: body(13,
-                  weight: FontWeight.w600,
-                  color: active ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              13,
+              weight: FontWeight.w600,
+              color: active ? Colors.white : AppColors.label,
+            ),
+          ),
         ),
       ),
     );
@@ -619,8 +729,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       controller: controller,
       keyboardType: keyboardType,
       maxLength: maxLength,
-      inputFormatters:
-          digitsOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
+      inputFormatters: digitsOnly
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : null,
       onChanged: (_) {
         if (_error.isNotEmpty) setState(() => _error = '');
       },
@@ -630,8 +741,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         counterText: '',
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border),
@@ -658,7 +771,11 @@ class _Header extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.forest950, AppColors.forest900, AppColors.forest800],
+          colors: [
+            AppColors.forest950,
+            AppColors.forest900,
+            AppColors.forest800,
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.forestGlow,
@@ -679,25 +796,34 @@ class _Header extends StatelessWidget {
                     gradient: AppGradients.gold,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.park_rounded,
-                      size: 20, color: Colors.white),
+                  child: const Icon(
+                    Icons.park_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Daivajna Samaja',
-                        style: display(16, color: Colors.white)),
-                    Text('Heritage Portal · Bangalore',
-                        style: body(11, color: AppColors.forest500)),
+                    Text(
+                      'Daivajna Samaja',
+                      style: display(16, color: Colors.white),
+                    ),
+                    Text(
+                      'Heritage Portal · Bangalore',
+                      style: body(11, color: AppColors.forest500),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Text('Begin your lineage journey today.',
-              style: display(24, color: Colors.white, height: 1.25)),
+          Text(
+            'Begin your lineage journey today.',
+            style: display(24, color: Colors.white, height: 1.25),
+          ),
           const SizedBox(height: 10),
           Text(
             'Join 1,428 families who have documented their heritage and '

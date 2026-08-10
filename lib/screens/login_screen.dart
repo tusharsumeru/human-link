@@ -9,12 +9,14 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
+import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login using the fixed demo OTP (121212) verified by the backend.
+/// Phone → OTP: the server texts a real one-time code (`/api/otp/send`) and
+/// verifies it on login. There is no fixed demo code in production.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -29,23 +31,65 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = '';
   bool _loading = false;
 
+  /// Masked destination the server reports (e.g. `******3210`).
+  String _sentTo = '';
+  int _resendIn = 0;
+  Timer? _resendTimer;
+
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
   }
 
-  /// Validate the number and advance to OTP entry. No SMS is sent — the
-  /// backend accepts the fixed demo OTP (matches the web login flow).
-  void _handlePhoneNext() {
+  /// Ask the server to text a code, then advance to OTP entry.
+  ///
+  /// The step only advances once the send succeeds: the server verifies the
+  /// code against one it issued, so moving to OTP entry after a failed send
+  /// would leave the member typing a code that could never match.
+  Future<void> _handlePhoneNext() async {
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = 'Enter a valid 10-digit phone number');
       return;
     }
     setState(() {
+      _loading = true;
       _error = '';
-      _phoneStep = 'otp';
+    });
+    try {
+      final res = await Repository.instance.sendOtp(
+        phone: _phoneCtrl.text,
+        purpose: 'login',
+      );
+      setState(() {
+        _sentTo = (res['destination'] ?? '').toString();
+        _resendIn = (res['resendAfterSeconds'] as num?)?.toInt() ?? 60;
+        _phoneStep = 'otp';
+      });
+      _startResendTimer();
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(
+        () => _error = "Can't reach the server at ${ApiConfig.baseUrl}.",
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Counts down the server's own resend cooldown, so the member is not
+  /// invited to tap a button that will answer 429.
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || _resendIn <= 0) {
+        t.cancel();
+        return;
+      }
+      setState(() => _resendIn--);
     });
   }
 
@@ -78,7 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
+        _error =
+            (e.statusCode == 404 || e.message == 'Phone number not registered')
             ? "This number isn't registered. Please create an account first."
             : e.message;
         _loading = false;
@@ -89,12 +134,13 @@ class _LoginScreenState extends State<LoginScreen> {
         // Name the server we failed to reach. "Network error" alone sent us
         // hunting for a wrong phone number when the real cause was a stale
         // API_BASE_URL pointing at a dead tunnel.
-        _error = (e is SocketException ||
+        _error =
+            (e is SocketException ||
                 e is TimeoutException ||
                 e is HttpException ||
                 e is ClientException)
             ? "Can't reach the server at ${ApiConfig.baseUrl}. "
-                'Check that the backend is running.'
+                  'Check that the backend is running.'
             : 'Network error. Please try again.';
         _loading = false;
       });
@@ -120,14 +166,21 @@ class _LoginScreenState extends State<LoginScreen> {
               OutlinedButton.icon(
                 onPressed: () => context.push('/'),
                 icon: const Icon(Icons.auto_stories_rounded, size: 16),
-                label: Text('About the Daivajna Samaja',
-                    style: body(14, weight: FontWeight.w600, color: AppColors.gold500)),
+                label: Text(
+                  'About the Daivajna Samaja',
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: AppColors.gold500,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.gold500,
                   side: const BorderSide(color: AppColors.gold500, width: 1.4),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -135,14 +188,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   children: [
-                    Text('New member?  ',
-                        style: body(13, color: AppColors.forest300)),
+                    Text(
+                      'New member?  ',
+                      style: body(13, color: AppColors.forest300),
+                    ),
                     GestureDetector(
                       onTap: () => context.go('/register'),
-                      child: Text('Create an account',
-                          style: body(13,
-                              weight: FontWeight.w700,
-                              color: AppColors.gold500)),
+                      child: Text(
+                        'Create an account',
+                        style: body(
+                          13,
+                          weight: FontWeight.w700,
+                          color: AppColors.gold500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -159,8 +218,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Access the Portal',
-            style: display(26, color: AppColors.forest900)),
+        Text(
+          'Access the Portal',
+          style: display(26, color: AppColors.forest900),
+        ),
         const SizedBox(height: 6),
         Text(
           'Login with your registered mobile number.',
@@ -184,9 +245,14 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Registered Mobile Number',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            Text(
+              'Registered Mobile Number',
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: AppColors.forest800,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _phoneCtrl,
@@ -223,18 +289,9 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('OTP sent to ${_phoneCtrl.text}',
-              style: body(13, color: AppColors.textMuted)),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF7EE),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
-                style: body(12,
-                    weight: FontWeight.w600, color: AppColors.forest700)),
+          Text(
+            'Code sent to ${_sentTo.isNotEmpty ? _sentTo : _phoneCtrl.text}',
+            style: body(13, color: AppColors.textMuted),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -262,16 +319,38 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _otpCtrl.text.length == 6 ? _handleOtpVerify : null,
           ),
           const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: () => setState(() {
-                _phoneStep = 'phone';
-                _error = '';
-                _otpCtrl.clear();
-              }),
-              child: Text('← Change number',
-                  style: body(13, color: AppColors.textMuted)),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => setState(() {
+                  _phoneStep = 'phone';
+                  _error = '';
+                  _otpCtrl.clear();
+                }),
+                child: Text(
+                  '← Change number',
+                  style: body(13, color: AppColors.textMuted),
+                ),
+              ),
+              // Disabled until the server's own cooldown has elapsed, so the
+              // member never spends a tap earning a 429.
+              TextButton(
+                onPressed: (_resendIn > 0 || _loading)
+                    ? null
+                    : _handlePhoneNext,
+                child: Text(
+                  _resendIn > 0 ? 'Resend in ${_resendIn}s' : 'Resend code',
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: _resendIn > 0
+                        ? AppColors.textMuted
+                        : AppColors.forest700,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -279,21 +358,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.forest800, width: 1.5),
-        ),
-      );
+    hintText: hint,
+    counterText: '',
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.forest800, width: 1.5),
+    ),
+  );
 }
 
 // ─── Header card ─────────────────────────────────────────────────────────────
@@ -309,7 +387,11 @@ class _HeaderCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.forest950, AppColors.forest900, AppColors.forest800],
+          colors: [
+            AppColors.forest950,
+            AppColors.forest900,
+            AppColors.forest800,
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.forestGlow,
@@ -330,25 +412,34 @@ class _HeaderCard extends StatelessWidget {
                     gradient: AppGradients.gold,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.park_rounded,
-                      size: 20, color: Colors.white),
+                  child: const Icon(
+                    Icons.park_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Daivajna Samaja',
-                        style: display(16, color: Colors.white)),
-                    Text('Heritage Portal · Bangalore',
-                        style: body(11, color: AppColors.forest500)),
+                    Text(
+                      'Daivajna Samaja',
+                      style: display(16, color: Colors.white),
+                    ),
+                    Text(
+                      'Heritage Portal · Bangalore',
+                      style: body(11, color: AppColors.forest500),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Text('Your lineage.\nYour legacy. One portal.',
-              style: display(24, color: Colors.white, height: 1.25)),
+          Text(
+            'Your lineage.\nYour legacy. One portal.',
+            style: display(24, color: Colors.white, height: 1.25),
+          ),
           const SizedBox(height: 10),
           Text(
             'Connect with 1,428 families, trace your ancestral roots, and '
