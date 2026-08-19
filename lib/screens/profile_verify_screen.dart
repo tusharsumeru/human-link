@@ -59,7 +59,7 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
           Text(
             'Verify your Aadhaar securely through the government DigiLocker. Your '
             'profile stays Not Verified until this is complete. We never see or '
-            'store your full Aadhaar number — only a masked reference.',
+            'store your full Aadhaar number - only a masked reference.',
             style: body(13, color: AppColors.textMuted, height: 1.5),
           ),
           const SizedBox(height: 18),

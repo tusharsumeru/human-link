@@ -49,9 +49,13 @@ class ForestButton extends StatelessWidget {
                         strokeWidth: 2, color: Colors.white),
                   )
                 else ...[
-                  Text(label,
-                      style: body(14,
-                          weight: FontWeight.w600, color: Colors.white)),
+                  Flexible(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: body(14,
+                            weight: FontWeight.w600, color: Colors.white)),
+                  ),
                   if (icon != null) ...[
                     const SizedBox(width: 8),
                     Icon(icon, size: 16, color: Colors.white),
@@ -116,7 +120,10 @@ class OutlineButtonX extends StatelessWidget {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Text(label, style: body(14, weight: FontWeight.w600, color: color)),
+      child: Text(label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: body(14, weight: FontWeight.w600, color: color)),
     );
   }
 }
@@ -274,6 +281,79 @@ class ProgressBar extends StatelessWidget {
             child: Container(
                 height: height,
                 decoration: BoxDecoration(gradient: gradient)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Circular percentage ring (Marriage Compatibility's Overall/Profile/
+/// Astrology figures) — reuses [CircularProgressIndicator] (already the
+/// app's one loading-spinner primitive) in determinate mode rather than
+/// pulling in a charting library. [percentage] null renders an empty grey
+/// track with an em dash instead of a colored ring — this widget never
+/// invents a 0% for missing data; that decision belongs to the caller.
+class PercentageRing extends StatelessWidget {
+  const PercentageRing({
+    super.key,
+    required this.percentage,
+    this.size = 132,
+    this.strokeWidth = 12,
+    this.color = AppColors.forest700,
+    this.trackColor = const Color(0xFFEDE6D8),
+    this.label,
+  });
+
+  /// 0-100, or null when the backend has no percentage to show.
+  final int? percentage;
+  final double size;
+  final double strokeWidth;
+  final Color color;
+  final Color trackColor;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = percentage;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: size,
+            height: size,
+            child: CircularProgressIndicator(
+              value: 1,
+              strokeWidth: strokeWidth,
+              valueColor: AlwaysStoppedAnimation<Color>(trackColor),
+            ),
+          ),
+          if (pct != null)
+            SizedBox(
+              width: size,
+              height: size,
+              child: CircularProgressIndicator(
+                value: pct.clamp(0, 100) / 100,
+                strokeWidth: strokeWidth,
+                strokeCap: StrokeCap.round,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(pct != null ? '$pct%' : '-',
+                  style: display(size * 0.2, color: pct != null ? AppColors.forest900 : AppColors.hint)),
+              if (label != null) ...[
+                const SizedBox(height: 2),
+                Text(label!,
+                    textAlign: TextAlign.center,
+                    style: body(size * 0.075, weight: FontWeight.w600, color: AppColors.textMuted)),
+              ],
+            ],
           ),
         ],
       ),

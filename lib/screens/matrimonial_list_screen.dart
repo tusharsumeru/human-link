@@ -104,8 +104,6 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _HeroBanner(),
-          const SizedBox(height: 12),
           _discoverMatchesButton(context),
           const SizedBox(height: 14),
           _genderLabel(),
@@ -263,55 +261,6 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
             child: Text('Try again',
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroBanner extends StatelessWidget {
-  const _HeroBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: AppGradients.deepForest,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: AppGradients.gold,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.shield_rounded,
-                size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Daivajna Samaja Matches',
-                    style: display(16, color: Colors.white)),
-                const SizedBox(height: 6),
-                Text(
-                  'Everyone here is a Samaj member aged 18–50 who has '
-                  'completed a full profile — gotra, family and horoscope '
-                  'included — and chosen to publish it. You can see them '
-                  'because you have done the same.',
-                  style:
-                      body(12, color: AppColors.forest300, height: 1.5),
-                ),
-              ],
-            ),
           ),
         ],
       ),

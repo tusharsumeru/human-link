@@ -300,7 +300,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       }
       if (link.dropped > 0) {
         _snack(
-          'Navigating the first 10 stops — maps can only take that many at once '
+          'Navigating the first 10 stops - maps can only take that many at once '
           '(${link.dropped} left for the next trip).',
         );
       }
@@ -379,7 +379,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
               icon: Icons.travel_explore_rounded,
               title: 'Putting $_unmapped members on the map',
               detail:
-                  'Their addresses are being looked up now — a few at a time, '
+                  'Their addresses are being looked up now - a few at a time, '
                   'which is all the maps service allows. Refresh in a moment to '
                   'see them.',
               action: 'Refresh',
@@ -388,7 +388,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
               icon: Icons.person_pin_circle_outlined,
               title: 'No members on the map yet',
               detail:
-                  'A member appears here once they save their current address — '
+                  'A member appears here once they save their current address - '
                   'the address is what puts them on the map.',
               action: 'Refresh',
             );
@@ -419,7 +419,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
             const SizedBox(height: 6),
             Text(
               '$_unmapped more ${_unmapped == 1 ? 'member is' : 'members are'} '
-              'still being mapped — refresh shortly to see them.',
+              'still being mapped - refresh shortly to see them.',
               style: body(11, color: AppColors.gold700, height: 1.4),
             ),
           ],
@@ -500,7 +500,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         if (!hasAddress && !_useGps) ...[
           const SizedBox(height: 6),
           Text(
-            'Your profile has no mapped address yet — add one, or start from your '
+            'Your profile has no mapped address yet - add one, or start from your '
             'current location.',
             style: body(11, color: AppColors.gold700, height: 1.4),
           ),

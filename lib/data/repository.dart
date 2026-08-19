@@ -6,8 +6,13 @@ import 'api_client.dart';
 import 'api_config.dart';
 import 'demo_data.dart';
 import 'invitation_member.dart';
+import 'models/compatibility_astrology_modules.dart';
 import 'models/compatibility_models.dart';
 import 'models/compatibility_prerequisites.dart';
+import 'models/compatibility_summary.dart';
+import 'models/kundli_chart.dart';
+import 'models/parampara.dart';
+import 'models/south_indian_jataka.dart';
 
 /// Single data source for the app.
 ///
@@ -21,7 +26,10 @@ class Repository {
   Repository({ApiClient? api}) : _api = api ?? ApiClient();
   final ApiClient _api;
 
-  static final Repository instance = Repository();
+  /// Mutable (not `final`) so tests can swap in a `Repository(api:
+  /// FakeApiClient())` for a screen under test, then restore the real one —
+  /// the app itself only ever assigns this once, at startup.
+  static Repository instance = Repository();
 
   /// POST /api/user/login — returns `{user, token}`: the authenticated user map
   /// from MongoDB plus the JWT bearer token for subsequent protected requests.
@@ -504,6 +512,12 @@ class Repository {
     await _api.deleteJson('/api/posts/$postId');
   }
 
+  /// PATCH /api/posts/:postId — author-only caption edit. Caption is the
+  /// only editable field (media/type/author are immutable after posting).
+  Future<void> editPostCaption(String postId, String caption) async {
+    await _api.patchJson('/api/posts/$postId', {'caption': caption});
+  }
+
   /// POST /api/user/upload — uploads an image (base64) to MongoDB, keyed by
   /// phone + type ("selfie" | "id" | "familyDoc"). Returns the absolute URL to
   /// load it back, or null if the backend is unreachable.
@@ -628,6 +642,52 @@ class Repository {
     );
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not upload your photo');
+  }
+
+  // ── Parampara (Gotra/Pravara/Kuladevata/Kuladevi declarations) ─────────────
+  // A separate backend resource from the basic profile above — see
+  // ParamparaProfile's own doc comment on why the two coexist.
+
+  /// GET /api/parampara/me — the caller's own declared Kuladevata (this app
+  /// only reads that one field today). Never 404s for a member who hasn't
+  /// filled this in yet.
+  Future<ParamparaProfile> myParampara() async {
+    final data = await _api.getJson('/api/parampara/me');
+    if (data is Map) {
+      return ParamparaProfile.fromJson(Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Could not load your Parampara profile');
+  }
+
+  /// PUT /api/parampara/me — saves only the Kuladevata declaration.
+  /// Save-as-you-go: every field on this resource is independently settable,
+  /// so sending just `kuladevata` leaves Gotra/Pravara/Kuladevi (if any)
+  /// untouched server-side. [value] null/blank clears it back to
+  /// NOT_PROVIDED. Always sent as USER_DECLARED free text — the backend's
+  /// Kuladevata master list is deliberately empty (see kKuladevatas' own
+  /// doc comment), so MASTER_DATA/masterId is never a valid source here.
+  Future<void> saveKuladevata(String? value) async {
+    final trimmed = value?.trim() ?? '';
+    await _api.putJson('/api/parampara/me', {
+      'kuladevata': trimmed.isEmpty
+          ? {'status': 'NOT_PROVIDED'}
+          : {'status': 'PROVIDED', 'source': 'USER_DECLARED', 'customValue': trimmed},
+    });
+  }
+
+  /// PUT /api/parampara/me — saves the Gotra declaration used by the
+  /// Daivagna Parampara compatibility comparison. Deliberately separate from
+  /// the basic profile's own `User.gotra` field (sagotra matrimonial
+  /// matching, saved via [saveProfile]) — see ParamparaProfile's doc comment
+  /// on why the two coexist. Same independently-settable-fields behavior as
+  /// [saveKuladevata]: this never touches Kuladevata/Pravara/Kuladevi.
+  Future<void> saveParamparaGotra(String? value) async {
+    final trimmed = value?.trim() ?? '';
+    await _api.putJson('/api/parampara/me', {
+      'gotra': trimmed.isEmpty
+          ? {'status': 'NOT_PROVIDED'}
+          : {'status': 'PROVIDED', 'source': 'USER_DECLARED', 'customValue': trimmed},
+    });
   }
 
   // ── Aadhaar KYC via DigiLocker (backend `/api/adhar/*`, Surepass behind it) ─
@@ -835,23 +895,23 @@ class Repository {
     });
   }
 
-  // ── Family Tree (new normalized backend, /api/family-tree/*) ────────────────
+  // ── Family Tree (new normalized backend, /api/family/*) ─────────────────────
   //
   // The redesigned family tree: a Person + Relationship graph with an approval /
-  // invitation / placeholder-merge workflow. Distinct from the legacy `/api/family`
-  // methods above (which are a flat read/write view over `family_members`).
+  // invitation / placeholder-merge workflow. Served by FamilyController
+  // (@Controller('api/family')) — NOT a separate /api/family-tree base path.
 
-  /// GET /api/family-tree — my tree, built by traversing accepted relationships.
+  /// GET /api/family/tree — my tree, built by traversing accepted relationships.
   /// Returns the envelope `{rootId, nodes, edges, truncated}`, where each node is
   /// `{id, name, gender, status, photoUrl, isPlaceholder, deceased, linkedUserId,
   /// generation, relationToRoot, isSelf}` and each edge is `{from, to, relation}`.
   Future<Map<String, dynamic>> familyTreeGraph() async {
-    final data = await _api.getJson('/api/family-tree');
+    final data = await _api.getJson('/api/family/tree');
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'rootId': '', 'nodes': const [], 'edges': const []};
   }
 
-  /// GET /api/family-tree/search — find an existing account to connect to. Any
+  /// GET /api/family/users/search — find an existing account to connect to. Any
   /// combination of criteria narrows the match (all ANDed server-side). Returns
   /// account previews `[{_id, userName, name, profileUrl, samajId, gotra, native,
   /// gender, phone}]`.
@@ -879,7 +939,7 @@ class Repository {
     if (dob != null && dob.isNotEmpty) {
       q.add('dob=${Uri.encodeQueryComponent(dob)}');
     }
-    final data = await _api.getJson('/api/family-tree/search?${q.join('&')}');
+    final data = await _api.getJson('/api/family/users/search?${q.join('&')}');
     if (data is List) {
       return data
           .whereType<Map>()
@@ -889,7 +949,7 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family-tree/members — add a family member. Set [relation] plus
+  /// POST /api/family/members — add a family member. Set [relation] plus
   /// either [targetUserId] (send a request to an existing account) or the
   /// placeholder fields (name/gender/status/...). Deceased members are added
   /// immediately; alive placeholders return an `inviteLink` + `whatsappUrl`.
@@ -923,15 +983,15 @@ class Repository {
       if (biography != null && biography.isNotEmpty) body['biography'] = biography;
       if (photoUrl != null && photoUrl.isNotEmpty) body['photoUrl'] = photoUrl;
     }
-    final data = await _api.postJson('/api/family-tree/members', body);
+    final data = await _api.postJson('/api/family/members', body);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not add member');
   }
 
-  /// GET /api/family-tree/requests — pending relationship requests addressed to
+  /// GET /api/family/requests — pending relationship requests addressed to
   /// me, each with the requester's details.
   Future<List<Map<String, dynamic>>> familyTreeRequests() async {
-    final data = await _api.getJson('/api/family-tree/requests');
+    final data = await _api.getJson('/api/family/requests');
     if (data is List) {
       return data
           .whereType<Map>()
@@ -941,25 +1001,25 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family-tree/requests/:id/accept — accept an incoming request.
+  /// POST /api/family/requests/:id/accept — accept an incoming request.
   Future<void> acceptFamilyTreeRequest(String id) async {
-    await _api.postJson('/api/family-tree/requests/$id/accept', const {});
+    await _api.postJson('/api/family/requests/$id/accept', const {});
   }
 
-  /// POST /api/family-tree/requests/:id/decline — decline an incoming request.
+  /// POST /api/family/requests/:id/decline — decline an incoming request.
   Future<void> declineFamilyTreeRequest(String id) async {
-    await _api.postJson('/api/family-tree/requests/$id/decline', const {});
+    await _api.postJson('/api/family/requests/$id/decline', const {});
   }
 
-  /// POST /api/family-tree/requests/:id/cancel — withdraw a request I sent.
+  /// POST /api/family/requests/:id/cancel — withdraw a request I sent.
   Future<void> cancelFamilyTreeRequest(String id) async {
-    await _api.postJson('/api/family-tree/requests/$id/cancel', const {});
+    await _api.postJson('/api/family/requests/$id/cancel', const {});
   }
 
-  /// GET /api/family-tree/invites — invitations matching my phone (placeholders
+  /// GET /api/family/invites — invitations matching my phone (placeholders
   /// others created for me). Call after registering / verifying my number.
   Future<List<Map<String, dynamic>>> familyTreeInvites() async {
-    final data = await _api.getJson('/api/family-tree/invites');
+    final data = await _api.getJson('/api/family/invites');
     if (data is List) {
       return data
           .whereType<Map>()
@@ -969,22 +1029,22 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family-tree/invites/accept — merge matching placeholders into my
+  /// POST /api/family/invites/accept — merge matching placeholders into my
   /// account and connect the trees. Returns `{merged, tree}`.
   Future<Map<String, dynamic>> acceptFamilyTreeInvites() async {
-    final data = await _api.postJson('/api/family-tree/invites/accept', const {});
+    final data = await _api.postJson('/api/family/invites/accept', const {});
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'merged': 0};
   }
 
-  /// POST /api/family-tree/invites/decline — decline invitations matching my phone.
+  /// POST /api/family/invites/decline — decline invitations matching my phone.
   Future<void> declineFamilyTreeInvites() async {
-    await _api.postJson('/api/family-tree/invites/decline', const {});
+    await _api.postJson('/api/family/invites/decline', const {});
   }
 
-  /// GET /api/family-tree/notifications — my family-tree inbox (newest first).
+  /// GET /api/family/notifications — my family-tree inbox (newest first).
   Future<List<Map<String, dynamic>>> familyTreeNotifications() async {
-    final data = await _api.getJson('/api/family-tree/notifications');
+    final data = await _api.getJson('/api/family/notifications');
     if (data is List) {
       return data
           .whereType<Map>()
@@ -994,9 +1054,9 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family-tree/notifications/:id/read — mark a notification read.
+  /// POST /api/family/notifications/:id/read — mark a notification read.
   Future<void> markFamilyTreeNotificationRead(String id) async {
-    await _api.postJson('/api/family-tree/notifications/$id/read', const {});
+    await _api.postJson('/api/family/notifications/$id/read', const {});
   }
 
   // ── Matrimonial ─────────────────────────────────────────────────────────────
@@ -1177,11 +1237,14 @@ class Repository {
 
   /// POST /api/v1/compatibility/calculate — only the JATAKA module (South
   /// Indian 10 Porutham) is implemented server-side; everything else in
-  /// `include` is accepted but produces nothing (see
-  /// `CompatibilityReport.notImplementedInclude`). No matching/astrology
-  /// logic runs here or anywhere in the app — this only submits the two
-  /// profile ids + roles and parses whatever report the server computed.
-  Future<CompatibilityReport> calculateCompatibility({
+  /// `include` is accepted but produces nothing. No matching/astrology logic
+  /// runs here or anywhere in the app — this only submits the two profile
+  /// ids + roles and parses the concise `{reportId, ...moduleStatuses}` the
+  /// server hands back. This is deliberately NOT [CompatibilityReport] — the
+  /// full per-module detail lives at `GET /reports/:reportId` instead; a
+  /// caller that needs it must fetch it separately using the `reportId`
+  /// returned here (see [compatibilityReport]/[southIndianJataka]).
+  Future<CalculateCompatibilityResponse> calculateCompatibility({
     required String profileAId,
     required String profileBId,
     required TraditionalRole roleA,
@@ -1200,21 +1263,90 @@ class Repository {
       'include': include,
     });
     if (data is Map) {
-      return CompatibilityReport.fromJson(Map<String, dynamic>.from(data));
+      return CalculateCompatibilityResponse.fromJson(Map<String, dynamic>.from(data));
     }
     throw ApiException('Could not calculate compatibility');
   }
 
   /// GET /api/v1/compatibility/reports/:reportId — re-reads a saved report
-  /// in full, same shape as [calculateCompatibility]'s response. Used by
-  /// CompatibilityReportScreen (STEP 25D) once a calculate call hands back a
-  /// `reportId` to navigate to; nothing here recomputes anything.
+  /// in full. Used by CompatibilityReportScreen (STEP 25D) once a calculate
+  /// call hands back a `reportId` to navigate to; nothing here recomputes
+  /// anything. Guards against ever calling `GET /reports/` with a missing id
+  /// (a blank [reportId] fails fast, client-side, with no network request).
   Future<CompatibilityReport> compatibilityReport(String reportId) async {
+    if (reportId.trim().isEmpty) {
+      throw ApiException('Missing compatibility report id');
+    }
     final data = await _api.getJson('/api/v1/compatibility/reports/$reportId');
     if (data is Map) {
       return CompatibilityReport.fromJson(Map<String, dynamic>.from(data));
     }
     throw ApiException('Could not load the compatibility report');
+  }
+
+  // ── STEP 72 — dedicated single-module report endpoints. Each is a pure
+  // reshaping of the same already-calculated/saved report [compatibilityReport]
+  // returns in full (never a second calculation) — useful for a future screen
+  // that only needs one module's detail without the full report payload.
+  // Reuses the exact same module models the full report uses (the dedicated
+  // response is that module's own fields plus a top-level `reportId`, which
+  // each model's `fromJson` simply ignores).
+
+  /// GET /reports/:reportId/advanced-jataka
+  Future<AdvancedJataka> advancedJataka(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'advanced-jataka');
+    return AdvancedJataka.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/kuja-dosha
+  Future<KujaDosha> kujaDosha(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'kuja-dosha');
+    return KujaDosha.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/dasha-compatibility
+  Future<DashaCompatibility> dashaCompatibility(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'dasha-compatibility');
+    return DashaCompatibility.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/daivagna-parampara
+  Future<DaivagnaParampara> daivagnaParampara(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'daivagna-parampara');
+    return DaivagnaParampara.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/vivaha-kala-bala
+  Future<VivahaKalaBala> vivahaKalaBala(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'vivaha-kala-bala');
+    return VivahaKalaBala.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/kundli-chart — STEP 80: the Kundli / Janma
+  /// Kundali D1+D9 chart snapshot for both partners. Pure reshaping of an
+  /// already-calculated/saved report, same as every other dedicated module
+  /// endpoint above — no chart math happens client-side.
+  Future<KundliChart> kundliChart(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'kundli-chart');
+    return KundliChart.fromJson(data);
+  }
+
+  /// GET /reports/:reportId/profile-compatibility
+  Future<ProfileCompatibility> profileCompatibilityReport(String reportId) async {
+    final data = await _dedicatedModuleJson(reportId, 'profile-compatibility');
+    return ProfileCompatibility.fromJson(data);
+  }
+
+  /// Shared fetch for every `/reports/:reportId/<module>` endpoint above —
+  /// same empty-id guard as [compatibilityReport]/[southIndianJataka], so a
+  /// missing report id never reaches the network.
+  Future<Map<String, dynamic>> _dedicatedModuleJson(String reportId, String module) async {
+    if (reportId.trim().isEmpty) {
+      throw ApiException('Missing compatibility report id');
+    }
+    final data = await _api.getJson('/api/v1/compatibility/reports/$reportId/$module');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not load the $module result');
   }
 
   /// GET /api/v1/compatibility/prerequisites/:candidateProfileId — STEP 25A.
@@ -1232,6 +1364,27 @@ class Repository {
           Map<String, dynamic>.from(data));
     }
     throw ApiException('Could not check compatibility readiness');
+  }
+
+  /// GET /api/v1/compatibility/reports/:reportId/south-indian-jataka — STEP
+  /// 49/F1: the Check Compatibility screen's South Indian Jataka card.
+  /// Karnataka 10-Porutham (reshaped, never recomputed) and Ashtakoota
+  /// 36-Guna, kept explicitly separate; `overallAstrologyScore` is always
+  /// null (no approved formula combines the two systems). Pure read of an
+  /// already-calculated report — nothing here runs any astrology math.
+  /// Guards against ever calling `GET /reports//south-indian-jataka` with a
+  /// missing id (a blank [reportId] fails fast, client-side, with no network
+  /// request) — this is the one endpoint STEP F1 actually consumes.
+  Future<SouthIndianJatakaResult> southIndianJataka(String reportId) async {
+    if (reportId.trim().isEmpty) {
+      throw ApiException('Missing compatibility report id');
+    }
+    final data =
+        await _api.getJson('/api/v1/compatibility/reports/$reportId/south-indian-jataka');
+    if (data is Map) {
+      return SouthIndianJatakaResult.fromJson(Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Could not load the South Indian Jataka result');
   }
 
   /// GET /api/v1/compatibility/consent — the caller's own status for every

@@ -9,18 +9,19 @@ import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
-import 'compatibility_report_screen.dart';
+import 'compatibility_dashboard_screen.dart';
+import 'south_indian_jataka_screen.dart';
 
 /// STEP 25B/25D — Check Compatibility preparation screen: shown between a
-/// candidate's profile and the actual [CompatibilityReportScreen]. Reads the
-/// Step 25A readiness check and shows, per module, whether it's ready to
-/// calculate and — only for gaps the signed-in member can fix themselves —
-/// an action to fix it. Tapping Continue submits
-/// `POST /api/v1/compatibility/calculate` (Step 25D) and, on success,
-/// navigates to the report screen by the `reportId` the backend returns.
-/// Nothing in this file computes a Nakshatra, Rashi, Porutham, or any
-/// percentage — it only decides which already-ready modules to ask the
-/// backend to calculate.
+/// candidate's profile and the Marriage Compatibility dashboard
+/// ([CompatibilityDashboardScreen], STEP 73). Reads the Step 25A readiness
+/// check and shows, per module, whether it's ready to calculate and — only
+/// for gaps the signed-in member can fix themselves — an action to fix it.
+/// Tapping Continue submits `POST /api/v1/compatibility/calculate` (Step
+/// 25D) and, on success, navigates to the dashboard by the `reportId` the
+/// backend returns. Nothing in this file computes a Nakshatra, Rashi,
+/// Porutham, or any percentage — it only decides which already-ready
+/// modules to ask the backend to calculate.
 class CompatibilityCheckScreen extends StatefulWidget {
   const CompatibilityCheckScreen({
     super.key,
@@ -28,6 +29,7 @@ class CompatibilityCheckScreen extends StatefulWidget {
     required this.candidateProfileId,
     required this.candidateName,
     required this.candidateGender,
+    this.discoveryMatch,
   });
 
   /// The signed-in member's own User id (becomes profileA if Continue is
@@ -40,6 +42,14 @@ class CompatibilityCheckScreen extends StatefulWidget {
   final String candidateProfileId;
   final String candidateName;
   final String candidateGender;
+
+  /// The candidate's `discoveryMatch` object (`{matchPercentage, matchLevel,
+  /// factors}`), already loaded by the caller (matrimonial profile fetch) —
+  /// carried through to [CompatibilityDashboardScreen] purely as a display
+  /// fallback for its Profile Compatibility card when the questionnaire-based
+  /// `ProfileCompatibility` hasn't been calculated yet. Never merged with or
+  /// treated as equivalent to that figure.
+  final Map<String, dynamic>? discoveryMatch;
 
   @override
   State<CompatibilityCheckScreen> createState() => _CompatibilityCheckScreenState();
@@ -54,6 +64,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   // (the initial readiness fetch above).
   bool _calculating = false;
   CompatibilityRequestError? _calcError;
+
+  // STEP F1 — South Indian Jataka's own scoped "Check Compatibility" action
+  // on its module card, independent of the bulk [_calculate]/[_continueBar]
+  // flow above (which still calculates every ready module together and is
+  // left untouched). Guards against a double tap the same way [_calculating]
+  // does for the bulk flow.
+  bool _jatakaCalculating = false;
+  CompatibilityRequestError? _jatakaCalcError;
 
   @override
   void initState() {
@@ -104,7 +122,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         _calcError = CompatibilityRequestError(
           reason: CompatibilityErrorReason.missingRole,
           message: myRole == null
-              ? 'Add your gender in Profile → Edit first — it decides your '
+              ? 'Add your gender in Profile → Edit first - it decides your '
                   'traditional bride/groom role.'
               : "This member's profile doesn't have a gender on file, so "
                   "their traditional role can't be determined.",
@@ -121,9 +139,6 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     final include = <String>[
       if (prereqs.jataka.isReady) 'JATAKA',
       if (prereqs.profileCompatibility.isReady) 'PROFILE',
-      if (prereqs.familyCompatibility.isReady) 'FAMILY',
-      if (prereqs.personalityCompatibility.isReady) 'PERSONALITY',
-      if (prereqs.verification.isReady) 'VERIFICATION',
     ];
     if (include.isEmpty) return; // Continue is disabled in this case already
 
@@ -132,7 +147,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       _calcError = null;
     });
     try {
-      final report = await Repository.instance.calculateCompatibility(
+      final response = await Repository.instance.calculateCompatibility(
         profileAId: widget.myProfileId,
         profileBId: widget.candidateProfileId,
         roleA: myRole,
@@ -140,14 +155,33 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         include: include,
       );
       if (!mounted) return;
+      // The persisted report's id is `response.reportId` — POST /calculate's
+      // own response shape, NOT `response.id` (that field belongs to the
+      // richer GET /reports/:id shape only). A blank id here means the
+      // backend didn't actually hand back a usable report; surface that as
+      // an error instead of navigating to a screen that can only 404.
+      if (response.reportId.trim().isEmpty) {
+        setState(() {
+          _calculating = false;
+          _calcError = const CompatibilityRequestError(
+            reason: CompatibilityErrorReason.apiError,
+            message: 'Could not calculate compatibility right now.',
+          );
+        });
+        return;
+      }
       setState(() => _calculating = false);
       // §4 — a report with some modules NOT_CALCULABLE/notImplementedInclude
       // is still a valid report; it's rendered as-is, never treated as a
-      // failure here.
+      // failure here. STEP 73 — lands on the Marriage Compatibility
+      // dashboard (Overall/Profile/Astrology summary) rather than the
+      // detailed report directly; "View Detailed Report" on that screen is
+      // what reaches [CompatibilityReportScreen] now.
       Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CompatibilityReportScreen(
-          reportId: report.id,
+        builder: (_) => CompatibilityDashboardScreen(
+          reportId: response.reportId,
           otherName: widget.candidateName,
+          discoveryMatch: widget.discoveryMatch,
         ),
       ));
     } on ApiException catch (e) {
@@ -161,6 +195,92 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       setState(() {
         _calculating = false;
         _calcError = const CompatibilityRequestError(
+          reason: CompatibilityErrorReason.apiError,
+          message: 'Could not calculate compatibility right now.',
+        );
+      });
+    }
+  }
+
+  /// STEP F1 — South Indian Jataka's own scoped calculate action, fired from
+  /// the Jataka module card's own "Check Compatibility" button rather than
+  /// the bulk Continue bar. Submits only `include: ['JATAKA']`, then opens
+  /// [SouthIndianJatakaScreen] (the richer Karnataka-Porutham + Ashtakoota
+  /// card) instead of the generic [CompatibilityReportScreen]. Never touches
+  /// [_calculate]/[_calculating]/[_calcError] — the bulk flow for the other
+  /// modules is unaffected.
+  Future<void> _checkJataka() async {
+    if (_jatakaCalculating) return; // guards against a double tap firing twice
+
+    final prereqs = _prereqs;
+    if (prereqs == null || !prereqs.jataka.isReady) return;
+
+    final myRole =
+        TraditionalRole.forGender(context.read<AuthService>().user?.gender ?? '');
+    final otherRole = TraditionalRole.forGender(widget.candidateGender);
+
+    if (myRole == null || otherRole == null) {
+      setState(() {
+        _jatakaCalcError = CompatibilityRequestError(
+          reason: CompatibilityErrorReason.missingRole,
+          message: myRole == null
+              ? 'Add your gender in Profile → Edit first - it decides your '
+                  'traditional bride/groom role.'
+              : "This member's profile doesn't have a gender on file, so "
+                  "their traditional role can't be determined.",
+          profile:
+              myRole == null ? CompatibilityErrorProfile.a : CompatibilityErrorProfile.b,
+        );
+      });
+      return;
+    }
+
+    setState(() {
+      _jatakaCalculating = true;
+      _jatakaCalcError = null;
+    });
+    try {
+      final response = await Repository.instance.calculateCompatibility(
+        profileAId: widget.myProfileId,
+        profileBId: widget.candidateProfileId,
+        roleA: myRole,
+        roleB: otherRole,
+        include: const ['JATAKA'],
+      );
+      if (!mounted) return;
+      // Same fix as [_calculate]: the persisted report's id is
+      // `response.reportId` (POST /calculate's own response shape), never
+      // `response.id`. A blank id must never reach [SouthIndianJatakaScreen]
+      // — that would call `GET /reports//south-indian-jataka` with a missing
+      // segment, exactly the bug this guard prevents.
+      if (response.reportId.trim().isEmpty) {
+        setState(() {
+          _jatakaCalculating = false;
+          _jatakaCalcError = const CompatibilityRequestError(
+            reason: CompatibilityErrorReason.apiError,
+            message: 'Could not calculate compatibility right now.',
+          );
+        });
+        return;
+      }
+      setState(() => _jatakaCalculating = false);
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SouthIndianJatakaScreen(
+          reportId: response.reportId,
+          otherName: widget.candidateName,
+        ),
+      ));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _jatakaCalculating = false;
+        _jatakaCalcError = CompatibilityRequestError.fromApiException(e);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _jatakaCalculating = false;
+        _jatakaCalcError = const CompatibilityRequestError(
           reason: CompatibilityErrorReason.apiError,
           message: 'Could not calculate compatibility right now.',
         );
@@ -219,21 +339,18 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
                 style: display(18, color: AppColors.forest900)),
             const SizedBox(height: 6),
             Text(
-              'See your Jataka, profile, family and personality compatibility.',
+              'See your Jataka and profile compatibility.',
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 16),
-            _moduleCard(context, 'South Indian Jataka', p.jataka),
+            _moduleCard(
+              context,
+              'South Indian Jataka',
+              p.jataka,
+              readyExtra: p.jataka.isReady ? _jatakaReadyAction() : null,
+            ),
             const SizedBox(height: 10),
             _moduleCard(context, 'Profile Compatibility', p.profileCompatibility),
-            const SizedBox(height: 10),
-            _moduleCard(context, 'Family Compatibility', p.familyCompatibility),
-            const SizedBox(height: 10),
-            _moduleCard(context, 'Personality Compatibility', p.personalityCompatibility),
-            const SizedBox(height: 10),
-            _moduleCard(context, 'Family Relationship Check', p.familyRelationship),
-            const SizedBox(height: 10),
-            _moduleCard(context, 'Verification', p.verification, readyLabel: 'Available'),
           ],
         ),
         Positioned(
@@ -372,6 +489,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     String title,
     ModuleReadiness readiness, {
     String readyLabel = 'Ready',
+    Widget? readyExtra,
   }) {
     final visual = _statusVisual(readiness.status, readyLabel: readyLabel);
     final action = (readiness.status == ReadinessStatus.actionRequired &&
@@ -413,8 +531,41 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             Text('Compatibility data is not available for this section yet.',
                 style: body(12, color: AppColors.textMuted)),
           ],
+          if (readiness.status == ReadinessStatus.ready && readyExtra != null) ...[
+            const SizedBox(height: 10),
+            readyExtra,
+          ],
         ],
       ),
+    );
+  }
+
+  /// STEP F1 — the South Indian Jataka module card's own scoped action:
+  /// button → loading → inline error, independent of the bulk Continue bar.
+  Widget _jatakaReadyAction() {
+    if (_jatakaCalculating) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text('Checking compatibility...',
+              style: body(12, weight: FontWeight.w600, color: AppColors.forest700)),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_jatakaCalcError != null) ...[
+          _calcErrorBanner(_jatakaCalcError!),
+          const SizedBox(height: 8),
+        ],
+        OutlineButtonX(label: 'Check Compatibility', onPressed: _checkJataka),
+      ],
     );
   }
 

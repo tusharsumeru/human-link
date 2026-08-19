@@ -28,7 +28,7 @@ class ElderArchiveScreen extends StatelessWidget {
       'tag': 'Heritage',
       'photo': 17815020,
       'caption':
-          'Inauguration of the community-built Samaja Bhavan in Basavanagudi — funded entirely by member contributions.',
+          'Inauguration of the community-built Samaja Bhavan in Basavanagudi - funded entirely by member contributions.',
       'contributor': 'Shri Narayanarao Suvarna',
     },
     {
@@ -113,7 +113,7 @@ class ElderArchiveScreen extends StatelessWidget {
             label: 'Upload a Memory',
             icon: Icons.upload_rounded,
             onPressed: () =>
-                _toast(context, 'Memory upload — opening contributor form'),
+                _toast(context, 'Memory upload - opening contributor form'),
           ),
           const SizedBox(height: 18),
           ..._memories.map((m) => Padding(

@@ -81,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   static String _dash(Object? v) {
     final s = (v ?? '').toString().trim();
-    return s.isEmpty ? '—' : s;
+    return s.isEmpty ? '-' : s;
   }
 
   @override

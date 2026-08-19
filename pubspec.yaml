@@ -66,6 +66,14 @@ dependencies:
   # navigation (in-app map plans it, Google/Apple Maps drives it), and opens
   # the phone dialer for the directory "Connect" action (tel: URIs).
   url_launcher: ^6.3.2
+  # STEP 77-78 — generates the Marriage Compatibility PDF report client-side
+  # from the already-fetched CompatibilityReport (pure Dart, no native PDF
+  # engine needed). path_provider was already a transitive dependency (via
+  # image_picker/file_picker/camera); declared directly now that this file
+  # imports it to find a place to save the generated PDF before sharing it
+  # with the existing share_plus package.
+  pdf: ^3.11.1
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +85,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # STEP 77-78 tests fake the path_provider/share_plus platform channels
+  # (flutter_test has no real platform to answer them) via
+  # MockPlatformInterfaceMixin — declared directly since test code imports
+  # them, even though both are already transitive dependencies.
+  path_provider_platform_interface: ^2.1.2
+  share_plus_platform_interface: ^5.0.2
+  plugin_platform_interface: ^2.1.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

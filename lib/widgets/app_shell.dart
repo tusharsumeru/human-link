@@ -137,26 +137,6 @@ class AppShell extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const ConversationsScreen()),
             ),
           ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none_rounded,
-                    color: AppColors.forest700),
-                onPressed: () {},
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                      color: AppColors.gold700, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
           if (user != null)
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
@@ -521,7 +501,7 @@ class _BottomBar extends StatelessWidget {
                   size: 22, color: Colors.white),
             ),
             const SizedBox(height: 2),
-            Text('Create',
+            Text('Post',
                 style: body(11,
                     weight: FontWeight.w600, color: AppColors.forest800)),
           ],

@@ -106,7 +106,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
         _error = CompatibilityRequestError(
           reason: CompatibilityErrorReason.missingRole,
           message: myRole == null
-              ? 'Add your gender in Profile → Edit first — it decides your '
+              ? 'Add your gender in Profile → Edit first - it decides your '
                   'traditional bride/groom role.'
               : "This member's profile doesn't have a gender on file, so "
                   "their traditional role can't be determined.",
@@ -123,12 +123,30 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
       _error = null;
     });
     try {
-      final report = await Repository.instance.calculateCompatibility(
+      // POST /calculate only hands back `{reportId, ...moduleStatuses}` —
+      // the full per-module detail this screen renders (via
+      // CompatibilityReportView, which needs `jataka` populated) lives at
+      // GET /reports/:reportId instead, so it must be fetched separately
+      // using the id calculate just gave back.
+      final response = await Repository.instance.calculateCompatibility(
         profileAId: widget.profileAId,
         profileBId: widget.profileBId,
         roleA: myRole,
         roleB: otherRole,
       );
+      if (!mounted) return;
+      if (response.reportId.trim().isEmpty) {
+        setState(() {
+          _report = null;
+          _error = const CompatibilityRequestError(
+            reason: CompatibilityErrorReason.apiError,
+            message: 'Could not calculate compatibility right now.',
+          );
+          _loading = false;
+        });
+        return;
+      }
+      final report = await Repository.instance.compatibilityReport(response.reportId);
       if (!mounted) return;
       setState(() {
         _report = report;
@@ -246,10 +264,10 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
                 const SizedBox(height: 2),
                 Text(
                   ok
-                      ? 'Allowed — required for this calculation.'
+                      ? 'Allowed - required for this calculation.'
                       : outdated
-                          ? 'Our consent policy changed — please re-confirm.'
-                          : 'Not allowed yet — required before calculating.',
+                          ? 'Our consent policy changed - please re-confirm.'
+                          : 'Not allowed yet - required before calculating.',
                   style: body(11, color: AppColors.textMuted),
                 ),
               ],
@@ -311,7 +329,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               : 'Their birth details are incomplete',
           message: mine
               ? 'Add your exact birth time and place to calculate the Jataka match.'
-              : "This member hasn't finished their birth details yet — "
+              : "This member hasn't finished their birth details yet - "
                   'check back later.',
           actionLabel: mine ? 'Add birth details' : null,
           onAction: mine ? () => context.push('/matrimonial/birth-details') : null,
@@ -320,7 +338,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
           icon: Icons.privacy_tip_outlined,
           title: mine ? 'Your consent is needed' : 'Their consent is needed',
           message: mine
-              ? "You haven't allowed birth-data matching yet — review and "
+              ? "You haven't allowed birth-data matching yet - review and "
                   'grant it to run this check.'
               : "This member hasn't allowed birth-data matching yet.",
           actionLabel: mine ? 'Review consent' : null,

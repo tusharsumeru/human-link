@@ -599,7 +599,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
 
   Widget _statusCard(bool deceased, bool placeholder) {
     final (String title, String body_) = deceased
-        ? ('Verified Deceased', 'Added directly to the tree — no approval needed.')
+        ? ('Verified Deceased', 'Added directly to the tree - no approval needed.')
         : placeholder
             ? ('Pending Invitation',
                 'This person has not joined yet. The relationship activates when '
@@ -667,7 +667,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       return _message(
         Icons.account_tree_outlined,
         'Your family tree is empty',
-        'Add your immediate family — father, mother, spouse, siblings, children. '
+        'Add your immediate family - father, mother, spouse, siblings, children. '
             'Their trees connect to yours as they join.',
         action: ForestButton(
           label: 'Add Family Member',
@@ -1241,8 +1241,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         'whatsappUrl': res['whatsappUrl']?.toString() ?? '',
         'message': switch (mode) {
           'request' =>
-            'Request sent to $personName — they’ll appear once they accept.',
-          'invitation' => '$personName invited — share the link so they can join.',
+            'Request sent to $personName - they’ll appear once they accept.',
+          'invitation' => '$personName invited - share the link so they can join.',
           'deceased' => '$personName added to the family tree.',
           _ => '$personName added.',
         },
@@ -1535,7 +1535,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         const SizedBox(height: 4),
         Text(
           _isDeceased
-              ? 'A deceased person is added immediately — no invitation or approval.'
+              ? 'A deceased person is added immediately - no invitation or approval.'
               : 'A living person is invited: they join and confirm the relationship.',
           style: body(11, color: AppColors.hint, height: 1.4),
         ),
@@ -1793,7 +1793,7 @@ class _InvitesSheetState extends State<_InvitesSheet> {
         final merged = ((res['merged'] ?? 0) as num).toInt();
         if (!mounted) return;
         setState(() => _done =
-            merged > 0 ? 'Connected — your trees are now merged.' : 'Done.');
+            merged > 0 ? 'Connected - your trees are now merged.' : 'Done.');
       } else {
         await Repository.instance.declineFamilyTreeInvites();
         if (!mounted) return;
@@ -1915,7 +1915,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
             )
           : _items.isEmpty
               ? _emptyState('No notifications',
-                  'Relationship activity — requests, joins, merges — appears here.')
+                  'Relationship activity - requests, joins, merges - appears here.')
               : Column(
                   children: [
                     for (final n in _items)

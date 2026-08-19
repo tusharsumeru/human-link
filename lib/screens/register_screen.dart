@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
+import '../data/gotras.dart';
+import '../data/kuladevatas.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -27,22 +29,15 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-const _gotras = [
-  'Kashyap',
-  'Bharadwaja',
-  'Vasishtha',
-  'Atreya',
-  'Kaundinya',
-  'Vishwamitra',
-  'Gautama',
-];
-
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _nativeCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
-  String _gotra = 'Kashyap';
+  String _gotra = kDaivajnaGotras.first;
+  // Optional, unlike Gotra — starts unselected rather than defaulting to the
+  // first entry in the list.
+  String? _kuladevata;
   String _gender = 'M';
   bool _isPurohit = false;
   String _step = 'details'; // 'details' | 'otp' | 'identity'
@@ -144,6 +139,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
       if (!mounted) return;
       await auth.loginWithUser(user, token: token.isEmpty ? null : token);
+      // Only now is there a bearer token to save against the Parampara
+      // resource too — the Daivagna Parampara compatibility comparison reads
+      // its own Gotra/Kuladevata declarations from there, separate from the
+      // basic `gotra` just sent to /api/user/register above (see
+      // ParamparaProfile's doc comment). Best-effort: never blocks account
+      // creation, which has already succeeded by this point.
+      try {
+        await Repository.instance.saveParamparaGotra(_gotra);
+        if (_kuladevata != null) {
+          await Repository.instance.saveKuladevata(_kuladevata);
+        }
+      } catch (_) {
+        // Can be completed later from Profile → Edit Profile.
+      }
       // Only now is there a bearer token to save the KYC against the profile.
       if (kyc != null) {
         await Repository.instance.updateProfile(
@@ -176,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? 'the server took too long to respond'
           : e.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _error = 'Network error — $detail';
+        _error = 'Network error - $detail';
         _loading = false;
       });
     }
@@ -280,10 +289,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
               icon: const Icon(Icons.keyboard_arrow_down_rounded,
                   color: AppColors.hint),
               style: body(14, color: AppColors.ink),
-              items: _gotras
+              items: kDaivajnaGotras
                   .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                   .toList(),
               onChanged: (v) => setState(() => _gotra = v ?? _gotra),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _label('Kuladevata', hint: '(optional)'),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _kuladevata,
+              isExpanded: true,
+              hint: Text('Select your Kuladevata', style: body(14, color: AppColors.hint)),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.hint),
+              style: body(14, color: AppColors.ink),
+              items: kKuladevatas
+                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+                  .toList(),
+              onChanged: (v) => setState(() => _kuladevata = v),
             ),
           ),
         ),
@@ -320,7 +353,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             child: DigilockerCard(
               description:
-                  'Optional — verify now and your profile carries the ✓ badge '
+                  'Optional - verify now and your profile carries the ✓ badge '
                   'from day one. We never ask for or store your Aadhaar number, '
                   'only the masked reference DigiLocker returns.',
               onVerified: _onKycVerified,
@@ -471,11 +504,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 6),
         Text(
           _identityVerified
-              ? 'Your Aadhaar is verified and saved to your profile — the ✓ '
+              ? 'Your Aadhaar is verified and saved to your profile - the ✓ '
                   'badge is already yours.'
               : 'Aadhaar KYC through the government DigiLocker earns your '
                   'profile the ✓ verified badge and keeps our ancestral records '
-                  'trustworthy. We store only a masked reference — never your '
+                  'trustworthy. We store only a masked reference - never your '
                   'full Aadhaar number.',
           style: body(13, color: AppColors.textMuted, height: 1.5),
         ),
@@ -492,7 +525,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ForestButton(
           label: _identityVerified
               ? 'Continue to Dashboard'
-              : 'Skip for now — verify later',
+              : 'Skip for now - verify later',
           icon: Icons.arrow_forward_rounded,
           expand: true,
           onPressed: () => context.go('/dashboard'),

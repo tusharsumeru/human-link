@@ -426,7 +426,7 @@ class _Intro extends StatelessWidget {
                 Text('Discover Matches', style: display(16, color: Colors.white)),
                 const SizedBox(height: 6),
                 Text(
-                  'Ranked by how well each profile fits your marriage preferences, food, interests, location and age — highest match first.',
+                  'Ranked by how well each profile fits your marriage preferences, food, interests, location and age - highest match first.',
                   style: body(12, color: AppColors.forest300, height: 1.5),
                 ),
               ],

@@ -140,7 +140,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                         const SizedBox(height: 6),
                         Text(c['subject'] as String,
                             style: display(22, color: AppColors.forest900)),
-                        Text('${c['born']} – ${c['died']}',
+                        Text('${c['born']} - ${c['died']}',
                             style: body(13, color: AppColors.textMuted)),
                       ],
                     ),

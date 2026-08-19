@@ -108,7 +108,7 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                   children: [
                     Text(
-                      'Each purpose below is separate — turning one on never turns on '
+                      'Each purpose below is separate - turning one on never turns on '
                       'another. You can revoke at any time; the compatibility engine '
                       'checks this directly before every calculation.',
                       style: body(12, color: AppColors.textMuted, height: 1.5),
@@ -220,7 +220,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Our consent policy was updated since you last agreed — '
+                      'Our consent policy was updated since you last agreed - '
                       'switch this back on to confirm again.',
                       style: body(11, color: AppColors.gold700, height: 1.4),
                     ),

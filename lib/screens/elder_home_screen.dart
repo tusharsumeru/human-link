@@ -290,7 +290,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                     style: display(15, color: AppColors.forest900)),
                 const SizedBox(height: 4),
                 Text(
-                  '"Ananth Rao (1892–1954)" appears in both Mysore and '
+                  '"Ananth Rao (1892-1954)" appears in both Mysore and '
                   'Bangalore branches with conflicting parentage.',
                   style: body(12, color: AppColors.textMuted, height: 1.45),
                 ),
