@@ -8,7 +8,7 @@ import 'ui_kit.dart';
 /// discover filters query the same fields.
 const _marriageIntentionOptions = <String, String>{
   'SOON': 'Soon',
-  'ONE_TO_TWO_YEARS': '1–2 Years',
+  'ONE_TO_TWO_YEARS': '1-2 Years',
   'NOT_DECIDED': 'Not Decided',
 };
 const _foodPreferenceOptions = <String, String>{

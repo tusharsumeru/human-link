@@ -10,7 +10,7 @@ import '../theme/app_theme.dart';
 /// in, left to right.
 const _marriageIntentionOptions = <String, String>{
   'SOON': 'Soon',
-  'ONE_TO_TWO_YEARS': '1–2 Years',
+  'ONE_TO_TWO_YEARS': '1-2 Years',
   'NOT_DECIDED': 'Not Decided',
 };
 const _childrenPreferenceOptions = <String, String>{
@@ -253,7 +253,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               hint: 'e.g. MBA Finance, IIM Bangalore'),
           _text('company', 'Company / organisation'),
           _text('designation', 'Designation'),
-          _text('income', 'Income range', hint: 'e.g. ₹22–28L'),
+          _text('income', 'Income range', hint: 'e.g. ₹22-28L'),
 
           const SizedBox(height: 16),
           _label('PHYSICAL'),

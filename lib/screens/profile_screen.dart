@@ -111,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   static String _dash(Object? v) {
     final s = (v ?? '').toString().trim();
-    return s.isEmpty ? '—' : s;
+    return s.isEmpty ? '-' : s;
   }
 
   /// Member dates come back as ISO timestamps (`1938-02-11T00:00:00.000Z`); only

@@ -113,6 +113,17 @@ class _FeedState extends State<_Feed> {
     }
   }
 
+  /// Reflects a successful caption edit in the feed without a full re-fetch.
+  void _updatePostCaption(_Post post, String newCaption) {
+    if (!mounted) return;
+    setState(() {
+      _backendPosts = [
+        for (final p in _backendPosts)
+          if (p.id == post.id) p.copyWithCaption(newCaption) else p,
+      ];
+    });
+  }
+
   /// A message that points at the actual failure. Network errors name the
   /// server being dialled, since a stale `API_BASE_URL` is the usual cause.
   String _feedErrorMessage(Object e) {
@@ -209,7 +220,12 @@ class _FeedState extends State<_Feed> {
                 ),
               ),
             for (final post in all)
-              _PostCard(post: post, onDeleted: () => _removePost(post)),
+              _PostCard(
+                key: ValueKey(post.id),
+                post: post,
+                onDeleted: () => _removePost(post),
+                onCaptionUpdated: (caption) => _updatePostCaption(post, caption),
+              ),
             const SizedBox(height: 24),
             // "All caught up" would be a lie under a failed load — we don't
             // know what's up there.
@@ -689,6 +705,7 @@ class _Post {
     this.mediaUrl,
     this.isReel = false,
     this.isMine = false,
+    this.likedByMe = false,
     this.pending,
   });
 
@@ -706,6 +723,7 @@ class _Post {
   final String? mediaUrl; // remote (Cloudinary) media from the backend feed
   final bool isReel; // true → the media is a video
   final bool isMine; // true → the logged-in member authored this post
+  final bool likedByMe; // the viewer's own like, as the server sees it
 
   /// Set while this card is a local upload that hasn't landed on the server
   /// yet (or failed) — drives the "Uploading… / Retry" overlay.
@@ -758,8 +776,30 @@ class _Post {
       mediaUrl: mediaUrl,
       isReel: isVideo,
       isMine: authorId.isNotEmpty && authorId == currentUserId,
+      likedByMe: m['likedByMe'] == true,
     );
   }
+
+  /// A copy with only the caption changed — used after a successful "Edit
+  /// caption" so the feed reflects the new text without a full re-fetch.
+  _Post copyWithCaption(String newCaption) => _Post(
+        id: id,
+        author: author,
+        location: location,
+        emoji: emoji,
+        gradient: gradient,
+        caption: newCaption,
+        likes: likes,
+        comments: comments,
+        shareCount: shareCount,
+        time: time,
+        mediaPath: mediaPath,
+        mediaUrl: mediaUrl,
+        isReel: isReel,
+        isMine: isMine,
+        likedByMe: likedByMe,
+        pending: pending,
+      );
 
   /// The bookmarkable form of this post/reel for the app-wide [SavedStore].
   SavedItem toSavedItem() => SavedItem(
@@ -788,19 +828,31 @@ String _timeAgo(String? iso) {
 }
 
 class _PostCard extends StatefulWidget {
-  const _PostCard({required this.post, this.onDeleted});
+  const _PostCard({super.key, required this.post, this.onDeleted, this.onCaptionUpdated});
   final _Post post;
   final VoidCallback? onDeleted;
+  final ValueChanged<String>? onCaptionUpdated;
 
   @override
   State<_PostCard> createState() => _PostCardState();
 }
 
 class _PostCardState extends State<_PostCard> {
-  bool _liked = false;
+  // Seeded from the server's own `likedByMe` (see _Post.fromBackend) so a
+  // post the viewer already liked shows filled from the first frame, rather
+  // than always starting unliked and flipping the real like off on the next
+  // tap. [_initiallyLiked] is the value the feed's own [widget.post.likes]
+  // total already reflects — see [_likeCount] below.
+  late bool _liked = widget.post.likedByMe;
+  late final bool _initiallyLiked = widget.post.likedByMe;
   bool _burst = false;
   Timer? _burstTimer;
   int? _serverLikeCount; // set once the API confirms a like/unlike
+
+  // Bumped on every _toggleLike call so a rapid double-tap's two in-flight
+  // requests can't apply their responses out of order — only the response
+  // matching the CURRENT (latest) request is ever written into state.
+  int _likeRequestId = 0;
 
   @override
   void dispose() {
@@ -808,7 +860,16 @@ class _PostCardState extends State<_PostCard> {
     super.dispose();
   }
 
-  int get _likeCount => _serverLikeCount ?? (widget.post.likes + (_liked ? 1 : 0));
+  /// Optimistic count while a toggle is in flight. [widget.post.likes]
+  /// already includes the viewer's own like when they'd liked it before this
+  /// card was built, so only the DELTA away from that starting state is
+  /// applied — never a flat +1, which would double-count an already-liked
+  /// post the moment it renders.
+  int get _likeCount {
+    if (_serverLikeCount != null) return _serverLikeCount!;
+    final delta = _liked == _initiallyLiked ? 0 : (_liked ? 1 : -1);
+    return widget.post.likes + delta;
+  }
 
   /// POST /api/posts/:postId/likes — the endpoint toggles, so one call covers
   /// both like and unlike. The heart flips immediately and reverts if the
@@ -818,15 +879,18 @@ class _PostCardState extends State<_PostCard> {
     setState(() => _liked = !wasLiked);
     if (!isBackendPostId(widget.post.id)) return; // local/demo post
 
+    final requestId = ++_likeRequestId;
     try {
       final res = await Repository.instance.likePost(widget.post.id);
-      if (!mounted) return;
+      // A newer tap already superseded this request — its own response (or
+      // this one, if it arrives later) is what state should reflect, not us.
+      if (!mounted || requestId != _likeRequestId) return;
       setState(() {
         _liked = res['liked'] == true;
         _serverLikeCount = (res['likeCount'] as num?)?.toInt();
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _likeRequestId) return;
       setState(() => _liked = wasLiked);
       _showSnack(context, e is ApiException ? e.message : 'Could not update like');
     }
@@ -842,8 +906,8 @@ class _PostCardState extends State<_PostCard> {
     if (!_liked) _toggleLike();
   }
 
-  /// The 3-dot menu: Delete/Copy link for the caller's own post, Report/Hide/
-  /// Copy link for someone else's.
+  /// The 3-dot menu: Delete/Edit caption/Copy link for the caller's own
+  /// post, Report/Hide from feed/Copy link for someone else's.
   Future<void> _showPostMenu(BuildContext context) async {
     final mine = widget.post.isMine;
     await showModalBottomSheet<void>(
@@ -865,7 +929,7 @@ class _PostCardState extends State<_PostCard> {
                   borderRadius: BorderRadius.circular(999)),
             ),
             const SizedBox(height: 8),
-            if (mine)
+            if (mine) ...[
               _menuTile(
                 icon: Icons.delete_outline_rounded,
                 label: 'Delete post',
@@ -874,8 +938,16 @@ class _PostCardState extends State<_PostCard> {
                   Navigator.of(sheetCtx).pop();
                   _confirmDelete(context);
                 },
-              )
-            else ...[
+              ),
+              _menuTile(
+                icon: Icons.edit_outlined,
+                label: 'Edit caption',
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _editCaption(context);
+                },
+              ),
+            ] else ...[
               _menuTile(
                 icon: Icons.flag_outlined,
                 label: 'Report post',
@@ -935,7 +1007,7 @@ class _PostCardState extends State<_PostCard> {
   /// No backend endpoint exists for reports yet, so this just acknowledges
   /// the tap — matching how "Add to story" is stubbed in the share sheet.
   void _reportPost(BuildContext context) {
-    _showSnack(context, 'Thanks — we\'ll take a look at this post');
+    _showSnack(context, 'Thanks - we\'ll take a look at this post');
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -968,6 +1040,48 @@ class _PostCardState extends State<_PostCard> {
     } catch (e) {
       if (!context.mounted) return;
       _showSnack(context, e is ApiException ? e.message : 'Could not delete post');
+    }
+  }
+
+  Future<void> _editCaption(BuildContext context) async {
+    if (!isBackendPostId(widget.post.id)) {
+      _showSnack(context, "Can't edit the caption until the upload finishes.");
+      return;
+    }
+    final controller = TextEditingController(text: widget.post.caption);
+    final newCaption = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cream,
+        title: Text('Edit caption', style: display(18, color: AppColors.forest900)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          maxLength: 2000,
+          decoration: const InputDecoration(hintText: 'Write a caption…'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: body(14, color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text('Save', style: body(14, weight: FontWeight.w700, color: AppColors.forest700)),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (newCaption == null || newCaption == widget.post.caption) return;
+    try {
+      await Repository.instance.editPostCaption(widget.post.id, newCaption);
+      widget.onCaptionUpdated?.call(newCaption);
+      if (context.mounted) _showSnack(context, 'Caption updated');
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnack(context, e is ApiException ? e.message : 'Could not update caption');
     }
   }
 

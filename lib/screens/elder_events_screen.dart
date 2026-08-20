@@ -20,7 +20,7 @@ class ElderEventsScreen extends StatelessWidget {
       'status': 'Upcoming',
     },
     {
-      'title': 'Elder Committee Meeting — Q3',
+      'title': 'Elder Committee Meeting - Q3',
       'date': '28 Jun',
       'type': 'Admin',
       'venue': 'Committee Room, Samaj Bhavan',
@@ -87,7 +87,7 @@ class ElderEventsScreen extends StatelessWidget {
           ForestButton(
             label: 'Add Event',
             icon: Icons.add_circle_outline_rounded,
-            onPressed: () => _toast(context, 'New event — opening event form'),
+            onPressed: () => _toast(context, 'New event - opening event form'),
           ),
           const SizedBox(height: 18),
           ..._events.map((e) => Padding(

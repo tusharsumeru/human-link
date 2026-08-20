@@ -163,7 +163,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                   const SizedBox(height: 14),
                   Text(
                     'Optional: Upload Family Documents (birth certificate, old '
-                    'letters or heirlooms — JPG / PNG)',
+                    'letters or heirlooms - JPG / PNG)',
                     style: body(11, color: AppColors.textMuted, height: 1.4),
                   ),
                   const SizedBox(height: 6),

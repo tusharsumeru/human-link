@@ -128,7 +128,7 @@ class _CandidateDetail extends StatelessWidget {
             if (c['discoveryMatch'] != null &&
                 (c['discoveryMatch'] as Map)['matchPercentage'] != null) ...[
               _section(
-                title: 'Compatibility',
+                title: 'Match Summary',
                 icon: Icons.favorite_rounded,
                 child: DiscoveryMatchDetail(
                     discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?),
@@ -493,6 +493,7 @@ class _Footer extends StatelessWidget {
         candidateProfileId: (candidate['userId'] ?? '').toString(),
         candidateName: (candidate['name'] ?? '').toString(),
         candidateGender: (candidate['gender'] ?? '').toString(),
+        discoveryMatch: candidate['discoveryMatch'] as Map<String, dynamic>?,
       ),
     ));
   }
@@ -523,7 +524,7 @@ class _Footer extends StatelessWidget {
           children: [
             if (premium)
               GoldButton(
-                label: 'Premium — Connect via Elder Committee',
+                label: 'Premium - Connect via Elder Committee',
                 icon: Icons.workspace_premium_rounded,
                 expand: true,
                 onPressed: () => _premiumNotice(context),

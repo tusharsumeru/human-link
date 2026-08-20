@@ -56,13 +56,13 @@ class WelfareImpactScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          Text('DAIVAJNA SAMAJA BANGALORE — ANNUAL TRANSPARENCY REPORT',
+          Text('DAIVAJNA SAMAJA BANGALORE - ANNUAL TRANSPARENCY REPORT',
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.gold700,
                   letterSpacing: 1.2)),
           const SizedBox(height: 8),
-          Text('Heritage Impact 2024–25',
+          Text('Heritage Impact 2024-25',
               style: display(26, color: AppColors.forest900)),
           const SizedBox(height: 6),
           Text(
@@ -148,7 +148,7 @@ class WelfareImpactScreen extends StatelessWidget {
                 const Divider(color: AppColors.border, height: 1),
                 const SizedBox(height: 12),
                 Text(
-                    '“Every rupee documented. Every decision transparent.” — Daivajna Audit Committee',
+                    '“Every rupee documented. Every decision transparent.” - Daivajna Audit Committee',
                     style: body(12,
                         color: AppColors.hint,
                         height: 1.5,
@@ -462,7 +462,7 @@ class _Testimonial extends StatelessWidget {
                         height: 1.5,
                         weight: FontWeight.w500)),
                 const SizedBox(height: 6),
-                Text('— $author',
+                Text('- $author',
                     style: body(12,
                         color: AppColors.gold700, weight: FontWeight.w600)),
               ],

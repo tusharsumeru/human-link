@@ -259,10 +259,10 @@ class _ImpactCta extends StatelessWidget {
           const Icon(Icons.bar_chart_rounded,
               color: AppColors.forest300, size: 26),
           const SizedBox(height: 10),
-          Text('Heritage Impact 2024–25',
+          Text('Heritage Impact 2024-25',
               style: display(17, color: Colors.white)),
           const SizedBox(height: 6),
-          Text('See exactly where every rupee goes — full transparency report.',
+          Text('See exactly where every rupee goes - full transparency report.',
               style: body(13, color: AppColors.forest300, height: 1.5)),
           const SizedBox(height: 14),
           GoldButton(

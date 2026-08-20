@@ -133,13 +133,6 @@ class DiscoveryMatchDetail extends StatelessWidget {
           const SizedBox(height: 14),
           for (final f in factors) _factorRow(f),
         ],
-        const SizedBox(height: 10),
-        Text(
-          'Based on the marriage preferences, food, interests, location and '
-          'age you and they have both filled in. It is a comparison of '
-          'stated preferences, not advice.',
-          style: body(11, color: AppColors.textMuted, height: 1.4),
-        ),
       ],
     );
   }
@@ -160,7 +153,7 @@ class DiscoveryMatchDetail extends StatelessWidget {
                 size: 15, color: AppColors.hint),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('$label — not enough information to compare',
+              child: Text('$label - not enough information to compare',
                   style: body(13, color: AppColors.textMuted, height: 1.35)),
             ),
           ],
@@ -177,7 +170,7 @@ class DiscoveryMatchDetail extends StatelessWidget {
           const Icon(Icons.circle, size: 8, color: AppColors.gold700),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('$label — $factorPercentage% aligned',
+            child: Text('$label - $factorPercentage% aligned',
                 style: body(13, color: AppColors.label, height: 1.35)),
           ),
         ],

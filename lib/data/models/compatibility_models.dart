@@ -1,4 +1,9 @@
 import '../api_client.dart';
+import 'compatibility_astrology_modules.dart';
+import 'compatibility_summary.dart';
+import 'kundli_chart.dart' show KundliChart;
+import 'parampara.dart' show DaivagnaParampara;
+import 'south_indian_jataka.dart' show AshtakootaResult, AstrologyModuleStatus;
 
 /// GROOM/BRIDE — matches `TRADITIONAL_ROLES` in the backend's
 /// compatibility-report.types.ts. Derived from the existing `gender` field
@@ -77,6 +82,10 @@ class PoruthamResult {
     required this.ruleId,
     required this.details,
     this.isCritical = false,
+    this.critical = false,
+    this.explanation = '',
+    this.reasonCode = '',
+    this.reviewRequired = false,
   });
 
   final String code;
@@ -84,7 +93,30 @@ class PoruthamResult {
   final double? score;
   final String ruleId;
   final Map<String, dynamic> details;
+
+  /// True only when the backend flagged this specific result `severity:
+  /// 'CRITICAL'` (a prominent failure, e.g. a Rajju mismatch) — what the
+  /// existing report view highlights. See [critical] for the always-true-for-
+  /// Rajju/Vedha flag instead.
   final bool isCritical;
+
+  /// Matches `PoruthamResult.critical` — true for every RAJJU/VEDHA result
+  /// regardless of its own status (an independent gate, distinct from
+  /// [isCritical]/`severity`, which only flags one specific failure).
+  final bool critical;
+
+  /// The backend's own explanation for this result — use directly, never
+  /// re-derive one from [details] client-side.
+  final String explanation;
+
+  /// Machine-readable reason code for why this status was reached (matches
+  /// `PoruthamResult.reasonCode`).
+  final String reasonCode;
+
+  /// Matches `PoruthamResult.reviewRequired` — derived purely from `status`
+  /// on the backend (`status === 'REVIEW_REQUIRED'`), re-exposed here as a
+  /// plain boolean convenience.
+  final bool reviewRequired;
 
   factory PoruthamResult.fromJson(Map<String, dynamic> json) => PoruthamResult(
         code: (json['code'] ?? '').toString(),
@@ -95,6 +127,10 @@ class PoruthamResult {
             ? Map<String, dynamic>.from(json['details'] as Map)
             : const {},
         isCritical: json['severity'] == 'CRITICAL',
+        critical: json['critical'] == true,
+        explanation: (json['explanation'] ?? '').toString(),
+        reasonCode: (json['reasonCode'] ?? '').toString(),
+        reviewRequired: json['reviewRequired'] == true,
       );
 }
 
@@ -195,6 +231,9 @@ class CompatibilityJataka {
     required this.brideBoundaryRisk,
     required this.groomBoundaryRisk,
     required this.nakshatraBoundaryRiskOverride,
+    this.ruleVersionId,
+    this.ruleVersionStatus = '',
+    this.ruleVersionChecksum,
   });
 
   final String ruleVersion;
@@ -225,6 +264,18 @@ class CompatibilityJataka {
   /// only displayed.
   final bool nakshatraBoundaryRiskOverride;
 
+  /// The AstrologyRuleVersion actually resolved and used for [poruthams] —
+  /// null when the requested rule version had nothing PUBLISHED (or failed
+  /// its checksum check) at calculation time, in which case every Porutham
+  /// above is NOT_CALCULABLE for that reason.
+  final String? ruleVersionId;
+
+  /// DRAFT/UNDER_REVIEW/APPROVED/PUBLISHED/RETIRED, or 'UNRESOLVED' when
+  /// [ruleVersionId] is null — kept as a raw wire string (a low-priority
+  /// informational field, same convention as [PoruthamResult.code]).
+  final String ruleVersionStatus;
+  final String? ruleVersionChecksum;
+
   factory CompatibilityJataka.fromJson(Map<String, dynamic> json) => CompatibilityJataka(
         ruleVersion: (json['ruleVersion'] ?? '').toString(),
         brideProfileId: (json['brideProfileId'] ?? '').toString(),
@@ -246,6 +297,9 @@ class CompatibilityJataka {
             ? BoundaryRisk.fromJson(Map<String, dynamic>.from(json['groomBoundaryRisk'] as Map))
             : null,
         nakshatraBoundaryRiskOverride: json['nakshatraBoundaryRiskOverride'] == true,
+        ruleVersionId: json['ruleVersionId'] as String?,
+        ruleVersionStatus: (json['ruleVersionStatus'] ?? '').toString(),
+        ruleVersionChecksum: json['ruleVersionChecksum'] as String?,
       );
 
   static List<PoruthamResult> _poruthamList(dynamic value) => (value is List ? value : const [])
@@ -254,11 +308,81 @@ class CompatibilityJataka {
       .toList();
 }
 
-/// What `POST /calculate` and `GET /reports/:id` both hand back — matches
-/// `CompatibilityReportView`. Only the JATAKA module is implemented on the
-/// backend today, so [jataka] is the only section with real content;
-/// [notImplementedInclude] echoes back anything else requested (Profile,
-/// Family, Personality, …) that the server accepted but couldn't compute yet.
+/// What `POST /api/v1/compatibility/calculate` actually hands back — matches
+/// the backend's `CalculateCompatibilityResponse` type EXACTLY:
+/// `{ reportId: string } & Partial<Record<ModuleStatusKey, ModuleResultStatus>>`.
+/// This is NOT the same shape as [CompatibilityReport]/`GET /reports/:id` —
+/// there is no `id` field here (only `reportId`), and no `jataka` object
+/// (only a top-level status string per requested module). A caller that
+/// needs the full per-module detail (Poruthams, Ashtakoota, …) must follow
+/// up with `Repository.compatibilityReport(reportId)` or
+/// `Repository.southIndianJataka(reportId)` using [reportId] from here.
+class CalculateCompatibilityResponse {
+  const CalculateCompatibilityResponse({
+    required this.reportId,
+    required this.moduleStatuses,
+  });
+
+  /// The persisted report's id — the ONLY id `POST /calculate` returns.
+  /// Everything downstream (`GET /reports/:id`, `.../south-indian-jataka`,
+  /// …) keys on this, never on a candidate/profile id, and never a value
+  /// invented client-side.
+  final String reportId;
+
+  /// One entry per requested module ('jataka', 'profile', 'family',
+  /// 'personality', 'relationshipGraph', 'verification') → its wire status
+  /// ('CALCULATED'/'REVIEW_REQUIRED'/'NOT_CALCULABLE'). Kept as raw wire
+  /// strings — callers needing the enum use
+  /// `AstrologyModuleStatus.fromWire` (south_indian_jataka.dart).
+  final Map<String, String> moduleStatuses;
+
+  factory CalculateCompatibilityResponse.fromJson(Map<String, dynamic> json) {
+    final statuses = <String, String>{};
+    for (final entry in json.entries) {
+      if (entry.key == 'reportId') continue;
+      if (entry.value is String) statuses[entry.key] = entry.value as String;
+    }
+    return CalculateCompatibilityResponse(
+      reportId: (json['reportId'] ?? '').toString(),
+      moduleStatuses: statuses,
+    );
+  }
+}
+
+/// Matches `ConfidenceLevel` — a coarse, deterministic signal derived purely
+/// from which modules actually calculated vs. required review vs. couldn't
+/// run at all. Never an AI score or a probability.
+enum ConfidenceLevel {
+  none,
+  low,
+  moderate,
+  high,
+  unknown;
+
+  static ConfidenceLevel fromWire(String value) => switch (value) {
+        'NONE' => ConfidenceLevel.none,
+        'LOW' => ConfidenceLevel.low,
+        'MODERATE' => ConfidenceLevel.moderate,
+        'HIGH' => ConfidenceLevel.high,
+        _ => ConfidenceLevel.unknown,
+      };
+}
+
+/// What `GET /reports/:id` hands back — matches `CompatibilityReportView`.
+///
+/// STEP 72 note on model naming/reuse (per the existing architecture's own
+/// "prefer composition over duplicated models" rule): the backend's
+/// `CompatibilityReportJataka`/`CompatibilityReportAshtakoota` sections are
+/// exposed here as [jataka] ([CompatibilityJataka], already existed) and
+/// [ashtakoota] ([AshtakootaResult], already existed in
+/// south_indian_jataka.dart for the dedicated south-indian-jataka endpoint —
+/// reused as-is rather than duplicated, since the two backend types are
+/// identical). `family`/`personality`/`relationshipGraph`/`familyCompatibility`
+/// and the raw `moduleStatuses` map are deliberately NOT modeled — STEP 72
+/// explicitly excludes Family/Personality Compatibility, and every other
+/// field they'd carry is either always the same
+/// `{status: NOT_CALCULABLE, reason: 'ENGINE_NOT_IMPLEMENTED'}` stub or
+/// already covered by [notImplementedInclude].
 class CompatibilityReport {
   const CompatibilityReport({
     required this.id,
@@ -270,6 +394,21 @@ class CompatibilityReport {
     required this.requestedInclude,
     required this.notImplementedInclude,
     required this.jataka,
+    required this.ashtakoota,
+    required this.advancedJataka,
+    required this.kujaDosha,
+    required this.dasha,
+    required this.daivagnaParampara,
+    required this.vivahaKalaBala,
+    required this.kundliChart,
+    required this.astrologyCompatibility,
+    required this.profileCompatibility,
+    required this.overallCompatibility,
+    required this.discussionPoints,
+    required this.overallStatus,
+    required this.disclaimer,
+    required this.coverage,
+    required this.confidence,
     required this.createdAt,
   });
 
@@ -281,7 +420,66 @@ class CompatibilityReport {
   final String ruleVersion;
   final List<String> requestedInclude;
   final List<String> notImplementedInclude;
+
+  /// The Karnataka 10-Porutham section — null under exactly the same
+  /// conditions every sibling module below is null (JATAKA not requested,
+  /// missing consent, or missing/invalid birth data).
   final CompatibilityJataka? jataka;
+
+  /// The Ashtakoota 36-Guna section — computed alongside [jataka] (same
+  /// charts, same consent gate; Ashtakoota is not a separately requestable
+  /// `include` module), null under the same conditions.
+  final AshtakootaResult? ashtakoota;
+
+  final AdvancedJataka? advancedJataka;
+  final KujaDosha? kujaDosha;
+  final DashaCompatibility? dasha;
+  final DaivagnaParampara? daivagnaParampara;
+  final VivahaKalaBala? vivahaKalaBala;
+
+  /// STEP 80 — the Kundli / Janma Kundali D1+D9 chart snapshot, computed
+  /// alongside [jataka] (same charts, same consent gate; Kundli Chart is not
+  /// a separately requestable `include` module), null under the same
+  /// conditions. A purely presentational addition — not an eighth
+  /// traditional-astrology system.
+  final KundliChart? kundliChart;
+
+  /// STEP 64 — Karnataka's own percentage as the PRIMARY astrology figure
+  /// (Ashtakoota's reported separately alongside it, never blended in) —
+  /// null under the same conditions [jataka] itself is null.
+  final AstrologyCompatibility? astrologyCompatibility;
+
+  /// STEP 65 — the questionnaire-based system, independent of every
+  /// astrology module above. Gated on its own PROFILE_ANSWER_COMPARISON
+  /// consent — null when either profile hasn't granted it, independently of
+  /// whether the astrology modules ran at all.
+  final ProfileCompatibility? profileCompatibility;
+
+  /// STEP 69 — combines ONLY [profileCompatibility]/[astrologyCompatibility]
+  /// (50/50). Always present (never null) — its own `status` carries
+  /// NOT_CALCULABLE when neither input is available, rather than the field
+  /// itself being absent.
+  final OverallCompatibility overallCompatibility;
+
+  /// STEP 69 §11 — deterministic discussion points derived from
+  /// already-computed results above. Never alters, and must never be used by
+  /// this app to alter, any percentage.
+  final List<DiscussionPoint> discussionPoints;
+
+  /// FINAL BACKEND COMPLETION §3 — a single neutral summary of the 7
+  /// astrology modules (never a percentage or score; the different systems
+  /// are never combined into one number).
+  final AstrologyModuleStatus overallStatus;
+
+  /// FINAL BACKEND COMPLETION §9 — the exact, verbatim disclaimer every
+  /// report carries, regardless of [overallStatus]. Always present — display
+  /// as-is, never paraphrased.
+  final String disclaimer;
+
+  /// 0-100: % of the requested compatibility modules that produced
+  /// CALCULATED or REVIEW_REQUIRED rather than NOT_CALCULABLE.
+  final int coverage;
+  final ConfidenceLevel confidence;
   final DateTime? createdAt;
 
   factory CompatibilityReport.fromJson(Map<String, dynamic> json) => CompatibilityReport(
@@ -296,6 +494,40 @@ class CompatibilityReport {
         jataka: json['jataka'] is Map
             ? CompatibilityJataka.fromJson(Map<String, dynamic>.from(json['jataka'] as Map))
             : null,
+        ashtakoota: json['ashtakoota'] is Map
+            ? AshtakootaResult.fromJson(Map<String, dynamic>.from(json['ashtakoota'] as Map))
+            : null,
+        advancedJataka: json['advancedJataka'] is Map
+            ? AdvancedJataka.fromJson(Map<String, dynamic>.from(json['advancedJataka'] as Map))
+            : null,
+        kujaDosha: json['kujaDosha'] is Map
+            ? KujaDosha.fromJson(Map<String, dynamic>.from(json['kujaDosha'] as Map))
+            : null,
+        dasha: json['dasha'] is Map
+            ? DashaCompatibility.fromJson(Map<String, dynamic>.from(json['dasha'] as Map))
+            : null,
+        daivagnaParampara: json['daivagnaParampara'] is Map
+            ? DaivagnaParampara.fromJson(Map<String, dynamic>.from(json['daivagnaParampara'] as Map))
+            : null,
+        vivahaKalaBala: json['vivahaKalaBala'] is Map
+            ? VivahaKalaBala.fromJson(Map<String, dynamic>.from(json['vivahaKalaBala'] as Map))
+            : null,
+        kundliChart: json['kundliChart'] is Map
+            ? KundliChart.fromJson(Map<String, dynamic>.from(json['kundliChart'] as Map))
+            : null,
+        astrologyCompatibility: json['astrologyCompatibility'] is Map
+            ? AstrologyCompatibility.fromJson(Map<String, dynamic>.from(json['astrologyCompatibility'] as Map))
+            : null,
+        profileCompatibility: json['profileCompatibility'] is Map
+            ? ProfileCompatibility.fromJson(Map<String, dynamic>.from(json['profileCompatibility'] as Map))
+            : null,
+        overallCompatibility: OverallCompatibility.fromJson(
+            json['overallCompatibility'] is Map ? Map<String, dynamic>.from(json['overallCompatibility'] as Map) : const {}),
+        discussionPoints: discussionPointsFromJson(json['discussionPoints']),
+        overallStatus: AstrologyModuleStatus.fromWire((json['overallStatus'] ?? '').toString()),
+        disclaimer: (json['disclaimer'] ?? '').toString(),
+        coverage: (json['coverage'] as num?)?.toInt() ?? 0,
+        confidence: ConfidenceLevel.fromWire((json['confidence'] ?? '').toString()),
         createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()),
       );
 

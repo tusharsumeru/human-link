@@ -11,11 +11,11 @@ import '../widgets/place_field.dart';
 /// Human-readable labels for the compatibility spec's `birthTimeAccuracy`
 /// enum, in the order they should be offered.
 const _accuracyOptions = <String, String>{
-  'EXACT_DOCUMENT_VERIFIED': 'Exact — verified by a document (e.g. birth certificate)',
-  'EXACT_FAMILY_CONFIRMED': 'Exact — confirmed by family',
-  'APPROXIMATE_15_MINUTES': 'Approximate — within 15 minutes',
-  'APPROXIMATE_30_MINUTES': 'Approximate — within 30 minutes',
-  'APPROXIMATE_60_MINUTES': 'Approximate — within 60 minutes',
+  'EXACT_DOCUMENT_VERIFIED': 'Exact - verified by a document (e.g. birth certificate)',
+  'EXACT_FAMILY_CONFIRMED': 'Exact - confirmed by family',
+  'APPROXIMATE_15_MINUTES': 'Approximate - within 15 minutes',
+  'APPROXIMATE_30_MINUTES': 'Approximate - within 30 minutes',
+  'APPROXIMATE_60_MINUTES': 'Approximate - within 60 minutes',
   'UNKNOWN': 'Unknown',
 };
 
@@ -176,7 +176,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       return;
     }
     if (role == null) {
-      _snack('Add your gender in Profile → Edit first — it decides your '
+      _snack('Add your gender in Profile → Edit first - it decides your '
           'traditional bride/groom role.');
       return;
     }
@@ -188,15 +188,15 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       return;
     }
     if (_latitude! < -90 || _latitude! > 90) {
-      _snack('That birthplace has an invalid latitude — try searching again.');
+      _snack('That birthplace has an invalid latitude - try searching again.');
       return;
     }
     if (_longitude! < -180 || _longitude! > 180) {
-      _snack('That birthplace has an invalid longitude — try searching again.');
+      _snack('That birthplace has an invalid longitude - try searching again.');
       return;
     }
     if (_timezone.isEmpty) {
-      _snack('Could not determine a timezone for that place — try a more '
+      _snack('Could not determine a timezone for that place - try a more '
           'specific search, including the country.');
       return;
     }
@@ -276,7 +276,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       children: [
         Text(
           'Used only for the South Indian Jataka and horoscope compatibility '
-          'check — never shown on your public profile.',
+          'check - never shown on your public profile.',
           style: body(12, color: AppColors.textMuted, height: 1.5),
         ),
         const SizedBox(height: 16),

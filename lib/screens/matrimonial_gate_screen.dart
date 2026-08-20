@@ -136,8 +136,8 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
         icon: age == null ? Icons.event_rounded : Icons.lock_outline_rounded,
         title: age == null ? 'Add your date of birth' : 'Not available',
         message: age == null
-            ? 'The matrimonial section is open to members aged ${range['min']}–${range['max']}. Add your date of birth in your profile to continue.'
-            : 'The matrimonial section is open to members aged ${range['min']}–${range['max']}. Your age is $age.',
+            ? 'The matrimonial section is open to members aged ${range['min']}-${range['max']}. Add your date of birth in your profile to continue.'
+            : 'The matrimonial section is open to members aged ${range['min']}-${range['max']}. Your age is $age.',
         action: age == null ? ('Go to my profile', _goToProfile) : null,
       );
     }
@@ -314,7 +314,7 @@ class _ChecklistPanel extends StatelessWidget {
 
         const SizedBox(height: 14),
         Text(
-          'Aadhaar verification is optional — every detail can be entered by hand. Your details are visible only to other members who have completed and published their own profile, and you can withdraw yours at any time.',
+          'Aadhaar verification is optional - every detail can be entered by hand. Your details are visible only to other members who have completed and published their own profile, and you can withdraw yours at any time.',
           style: body(12, color: AppColors.textMuted, height: 1.4),
         ),
       ],

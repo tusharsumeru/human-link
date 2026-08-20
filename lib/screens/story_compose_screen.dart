@@ -116,7 +116,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             _visTile('followers', Icons.groups_outlined, 'Family & Followers',
                 'People connected to you'),
             _visTile('private', Icons.lock_outline, 'Only me',
-                'Private — nobody else can see it'),
+                'Private - nobody else can see it'),
             const SizedBox(height: 12),
           ],
         ),
@@ -159,7 +159,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
       if (!mounted) return;
       navigator.pop(); // back to the feed
       messenger.showSnackBar(SnackBar(
-        content: Text('Story shared — live for 24 hours ✨',
+        content: Text('Story shared - live for 24 hours ✨',
             style: body(13, color: Colors.white)),
         backgroundColor: AppColors.forest800,
         behavior: SnackBarBehavior.floating,
@@ -181,7 +181,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: Text('$label — coming soon', style: body(13, color: Colors.white)),
+        content: Text('$label - coming soon', style: body(13, color: Colors.white)),
         backgroundColor: AppColors.forest800,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),

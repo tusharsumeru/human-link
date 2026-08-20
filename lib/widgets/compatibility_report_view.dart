@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../data/models/compatibility_models.dart';
 import '../theme/app_theme.dart';
+import 'compatibility_advanced_jataka_section.dart';
+import 'compatibility_ashtakoota_section.dart';
+import 'compatibility_dasha_section.dart';
+import 'compatibility_kuja_dosha_section.dart';
+import 'compatibility_kundli_chart_section.dart';
+import 'compatibility_parampara_section.dart';
+import 'compatibility_vivaha_kala_bala_section.dart';
 import 'ui_kit.dart';
 
 /// Renders a [CompatibilityReport]'s Jataka section — extracted from
@@ -18,32 +25,74 @@ class CompatibilityReportView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jataka = report.jataka;
-    if (jataka == null) {
-      return _notice(
-        icon: Icons.info_outline_rounded,
-        title: 'No Jataka result',
-        message: 'The report was generated but did not include a Jataka section.',
-      );
-    }
-    final boundaryRiskCard = _boundaryRiskCard(jataka);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (boundaryRiskCard != null) ...[boundaryRiskCard, const SizedBox(height: 14)],
-        _verdictCard(jataka),
+        if (jataka == null)
+          _notice(
+            icon: Icons.info_outline_rounded,
+            title: 'No Jataka result',
+            message: 'The report was generated but did not include a Jataka section.',
+          )
+        else
+          ..._karnatakaSections(jataka),
         const SizedBox(height: 14),
-        _countsRow(jataka),
+        AshtakootaSection(ashtakoota: report.ashtakoota, summary: report.astrologyCompatibility?.ashtakoota),
         const SizedBox(height: 14),
-        if (jataka.criticalAlerts.isNotEmpty) ...[
-          _criticalAlertsCard(jataka.criticalAlerts),
+        AdvancedJatakaSection(advancedJataka: report.advancedJataka),
+        const SizedBox(height: 14),
+        KujaDoshaSection(kujaDosha: report.kujaDosha),
+        const SizedBox(height: 14),
+        DashaCompatibilitySection(dasha: report.dasha),
+        const SizedBox(height: 14),
+        VivahaKalaBalaSection(vivahaKalaBala: report.vivahaKalaBala),
+        const SizedBox(height: 14),
+        DaivagnaParamparaSection(parampara: report.daivagnaParampara),
+        const SizedBox(height: 14),
+        KundliChartSection(kundliChart: report.kundliChart),
+        if (report.disclaimer.isNotEmpty) ...[
           const SizedBox(height: 14),
+          _disclaimerCard(report.disclaimer),
         ],
-        _poruthamListCard(jataka),
         if (report.notImplementedInclude.isNotEmpty) ...[
           const SizedBox(height: 14),
           _notImplementedCard(report.notImplementedInclude),
         ],
       ],
+    );
+  }
+
+  List<Widget> _karnatakaSections(CompatibilityJataka jataka) {
+    final boundaryRiskCard = _boundaryRiskCard(jataka);
+    return [
+      if (boundaryRiskCard != null) ...[boundaryRiskCard, const SizedBox(height: 14)],
+      _verdictCard(jataka),
+      const SizedBox(height: 14),
+      _countsRow(jataka),
+      const SizedBox(height: 14),
+      if (jataka.criticalAlerts.isNotEmpty) ...[
+        _criticalAlertsCard(jataka.criticalAlerts),
+        const SizedBox(height: 14),
+      ],
+      _poruthamListCard(jataka),
+    ];
+  }
+
+  Widget _disclaimerCard(String disclaimer) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.creamDark,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.hint),
+          const SizedBox(width: 8),
+          Expanded(child: Text(disclaimer, style: body(11, color: AppColors.hint, height: 1.4))),
+        ],
+      ),
     );
   }
 
@@ -84,7 +133,7 @@ class CompatibilityReportView extends StatelessWidget {
       icon: Icons.hourglass_top_rounded,
       title: 'Not yet available',
       message:
-          '${modules.join(', ')} compatibility isn\'t implemented yet — this report only '
+          '${modules.join(', ')} compatibility isn\'t implemented yet - this report only '
           'covers what could actually be calculated above.',
     );
   }
@@ -125,8 +174,8 @@ class CompatibilityReportView extends StatelessWidget {
               Expanded(
                 child: Text(
                   critical
-                      ? 'Review required — birth-time uncertainty'
-                      : 'Reduced confidence — birth-time uncertainty',
+                      ? 'Review required - birth-time uncertainty'
+                      : 'Reduced confidence - birth-time uncertainty',
                   style: body(13, weight: FontWeight.w700, color: fg),
                 ),
               ),
@@ -136,10 +185,10 @@ class CompatibilityReportView extends StatelessWidget {
           Text(
             critical
                 ? "One or both birth times aren't precise enough to rule out a "
-                    'different Nakshatra — every Porutham below is marked '
+                    'different Nakshatra - every Porutham below is marked '
                     '"Review required" rather than trusting a single estimate.'
                 : 'Birth-time uncertainty may affect some factors below (e.g. '
-                    'Lagna) — treat those as lower-confidence.',
+                    'Lagna) - treat those as lower-confidence.',
             style: body(12, color: AppColors.textMuted, height: 1.4),
           ),
           const SizedBox(height: 10),
@@ -170,7 +219,7 @@ class CompatibilityReportView extends StatelessWidget {
           child: Text(
             '${birthTimeAccuracyLabels[risk.birthTimeAccuracy]} '
             '(${(risk.confidence * 100).round()}% confidence)'
-            '${flags.isEmpty ? '' : ' — may affect: ${flags.join(', ')}'}',
+            '${flags.isEmpty ? '' : ' - may affect: ${flags.join(', ')}'}',
             style: body(11, color: AppColors.textMuted, height: 1.35),
           ),
         ),
@@ -290,6 +339,11 @@ class CompatibilityReportView extends StatelessWidget {
           const SizedBox(height: 4),
           Text('Rule version: ${jataka.ruleVersion}',
               style: body(11, color: AppColors.textMuted)),
+          if (jataka.normalizedPercentage != null) ...[
+            const SizedBox(height: 2),
+            Text('Normalized score: ${jataka.normalizedPercentage}%',
+                style: body(11, color: AppColors.textMuted)),
+          ],
           const SizedBox(height: 10),
           for (final p in jataka.poruthams) _poruthamRow(p),
           if (pending) ...[
@@ -300,7 +354,7 @@ class CompatibilityReportView extends StatelessWidget {
                   color: const Color(0xFFFFF8E8), borderRadius: BorderRadius.circular(10)),
               child: Text(
                 'Some Poruthams show "Unavailable" because their Karnataka rule '
-                'tables are still awaiting astrologer approval — not an error.',
+                'tables are still awaiting astrologer approval - not an error.',
                 style: body(12, color: AppColors.gold700, height: 1.4),
               ),
             ),
@@ -403,7 +457,7 @@ class CompatibilityReportView extends StatelessWidget {
     if (p.status == PoruthamStatus.notCalculable && p.ruleId.isNotEmpty) {
       parts.add(_humanizeReasonCode(p.ruleId));
     }
-    return parts.join(' — ');
+    return parts.join(' - ');
   }
 
   String _humanizeKey(String key) {

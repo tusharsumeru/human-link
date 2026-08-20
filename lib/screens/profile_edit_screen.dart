@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
+import '../data/gotras.dart';
+import '../data/kuladevatas.dart';
+import '../data/models/parampara.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -31,7 +34,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _name;
-  late final TextEditingController _gotra;
   late final TextEditingController _native;
   late final TextEditingController _occupation;
   late final TextEditingController _bio;
@@ -51,6 +53,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late final List<TextEditingController> _addressFields;
 
   String _gender = '';
+  // Nullable so an incomplete profile shows an unselected dropdown rather
+  // than a fabricated default. A legacy/custom value that isn't one of
+  // [kDaivajnaGotras] is still kept selectable (see [_gotraOptions]) — never
+  // silently dropped just because it predates this fixed list.
+  String? _gotra;
+  late List<String> _gotraOptions;
+
+  // Kuladevata lives on a separate backend resource (Parampara profile, see
+  // ../data/models/parampara.dart) fetched asynchronously — unlike the rest
+  // of this screen's fields, it isn't available synchronously from
+  // AuthService at initState time, so it starts unloaded and fills in once
+  // [_loadKuladevata] resolves. [_kuladevataLoaded] gates saving it: if the
+  // fetch never completed (or failed), _save() skips it entirely rather
+  // than risk overwriting an existing declaration with a blank one.
+  String? _kuladevata;
+  List<String> _kuladevataOptions = kKuladevatas;
+  bool _kuladevataLoaded = false;
+
   DateTime? _dob;
   String _photoUrl = '';
   bool _saving = false;
@@ -70,7 +90,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.initState();
     final u = context.read<AuthService>().user;
     _name = TextEditingController(text: u?.name ?? '');
-    _gotra = TextEditingController(text: u?.gotra ?? '');
+    final existingGotra = (u?.gotra ?? '').trim();
+    _gotra = existingGotra.isEmpty ? null : existingGotra;
+    _gotraOptions = existingGotra.isEmpty || kDaivajnaGotras.contains(existingGotra)
+        ? kDaivajnaGotras
+        : [existingGotra, ...kDaivajnaGotras];
     _native = TextEditingController(text: u?.native ?? '');
     _occupation = TextEditingController(text: u?.occupation ?? '');
     _bio = TextEditingController(text: u?.bio ?? '');
@@ -98,12 +122,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _photoUrl = u?.photoUrl ?? '';
     final dob = u?.dob ?? '';
     if (dob.isNotEmpty) _dob = DateTime.tryParse(dob);
+
+    _loadKuladevata();
+  }
+
+  Future<void> _loadKuladevata() async {
+    try {
+      final profile = await Repository.instance.myParampara();
+      if (!mounted) return;
+      final existing = profile.kuladevata.status == ParamparaValueStatus.provided
+          ? (profile.kuladevata.customValue ?? '').trim()
+          : '';
+      setState(() {
+        _kuladevata = existing.isEmpty ? null : existing;
+        _kuladevataOptions =
+            existing.isEmpty || kKuladevatas.contains(existing) ? kKuladevatas : [existing, ...kKuladevatas];
+        _kuladevataLoaded = true;
+      });
+    } catch (_) {
+      // Best-effort — the field just starts unselected if this fails, and
+      // _save() skips saving it in that case too (see _kuladevataLoaded).
+    }
   }
 
   @override
   void dispose() {
     for (final c in [
-      _name, _gotra, _native, _occupation, _bio, _address,
+      _name, _native, _occupation, _bio, _address,
       ..._addressFields,
     ]) {
       c.dispose();
@@ -161,7 +206,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _fixIsCurrent = addr.hasLocation;
       });
       _snack(addr.isEmpty
-          ? 'Got your position — fill in the address parts'
+          ? 'Got your position - fill in the address parts'
           : 'Address filled in from your location');
     } on LocationFailure catch (e) {
       _snack(e.message);
@@ -247,7 +292,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     try {
       final updated = await Repository.instance.saveProfile(
         name: _name.text.trim(),
-        gotra: _gotra.text.trim(),
+        gotra: _gotra ?? '',
         native: _native.text.trim(),
         occupation: _occupation.text.trim(),
         bio: _bio.text.trim(),
@@ -263,6 +308,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       // Rebuild the session user from the server's response rather than from
       // the form, so what the app holds is exactly what was stored.
       await context.read<AuthService>().updateUser(AppUser.fromMap(updated));
+      if (!mounted) return;
+      // Also declared on the separate Parampara resource the Daivagna
+      // Parampara compatibility comparison actually reads — `_gotra` comes
+      // from the synchronous basic-profile value (see initState), so unlike
+      // Kuladevata below there's no async-load race to guard against here.
+      await Repository.instance.saveParamparaGotra(_gotra);
+      if (!mounted) return;
+      // Only if the existing declaration actually loaded — otherwise a slow
+      // or failed fetch could send a blank value and clobber whatever was
+      // already saved.
+      if (_kuladevataLoaded) {
+        await Repository.instance.saveKuladevata(_kuladevata);
+      }
       if (!mounted) return;
       _snack('Profile saved');
       if (context.canPop()) context.pop();
@@ -308,7 +366,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     : null),
             _genderField(),
             _dobField(),
-            _text(_gotra, 'Gotra'),
+            _gotraField(),
+            _kuladevataField(),
             _text(_native, 'Native place', hint: 'e.g. Kumta, Karnataka'),
             _text(_occupation, 'Occupation', hint: 'e.g. Software Engineer'),
 
@@ -356,7 +415,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Aadhaar verification is optional. Every detail here can be entered by hand — verifying only fills some of them in for you.',
+              'Aadhaar verification is optional. Every detail here can be entered by hand - verifying only fills some of them in for you.',
               textAlign: TextAlign.center,
               style: body(12, color: AppColors.textMuted, height: 1.4),
             ),
@@ -406,7 +465,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         const SizedBox(height: 10),
         Text(
           _photoUrl.isEmpty
-              ? 'Add a profile photo — required for the matrimonial section'
+              ? 'Add a profile photo - required for the matrimonial section'
               : 'Tap the camera to change your photo',
           textAlign: TextAlign.center,
           style: body(12,
@@ -501,6 +560,73 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             borderSide: const BorderSide(color: AppColors.border),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _gotraField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        initialValue: _gotra,
+        isExpanded: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
+        style: body(14, color: AppColors.ink),
+        decoration: InputDecoration(
+          labelText: 'Gotra',
+          hintText: 'Select your gotra',
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+        ),
+        items: _gotraOptions
+            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+            .toList(),
+        onChanged: (v) => setState(() => _gotra = v),
+      ),
+    );
+  }
+
+  static const _kuladevataNotSet = '';
+
+  Widget _kuladevataField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        initialValue: _kuladevata ?? _kuladevataNotSet,
+        isExpanded: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
+        style: body(14, color: AppColors.ink),
+        decoration: InputDecoration(
+          labelText: 'Kuladevata',
+          hintText: 'Select your Kuladevata',
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: _kuladevataNotSet,
+            child: Text('Not set', style: body(14, color: AppColors.hint)),
+          ),
+          for (final k in _kuladevataOptions) DropdownMenuItem(value: k, child: Text(k)),
+        ],
+        onChanged: (v) =>
+            setState(() => _kuladevata = (v == null || v == _kuladevataNotSet) ? null : v),
       ),
     );
   }

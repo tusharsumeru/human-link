@@ -110,7 +110,7 @@ class _Hero extends StatelessWidget {
                       color: AppColors.forest800, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 8),
-                Text('Daivajna Samaja Bangalore — Est. 2024',
+                Text('Daivajna Samaja Bangalore - Est. 2024',
                     style: body(11,
                         weight: FontWeight.w700, color: AppColors.forest800)),
               ],
@@ -125,7 +125,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            'The official digital sanctuary for the Daivajna Samaja — connecting '
+            'The official digital sanctuary for the Daivajna Samaja - connecting '
             'generations, preserving heritage, and building community welfare '
             'through a living family tree.',
             style: body(15, color: AppColors.textMuted, height: 1.55),
@@ -314,7 +314,7 @@ class _Pillars extends StatelessWidget {
       Icons.favorite_rounded,
       'Community Welfare',
       'Transparent crowdfunding for Samaj development. Every rupee accounted '
-          'for — community center, scholarships, emergency support.',
+          'for - community center, scholarships, emergency support.',
       '/welfare',
     ),
     (
@@ -443,7 +443,7 @@ class _TrustSection extends StatelessWidget {
         children: [
           const SectionHeader(
             eyebrow: 'A circle of absolute trust',
-            title: 'Every member, every connection — verified.',
+            title: 'Every member, every connection - verified.',
             titleSize: 26,
           ),
           const SizedBox(height: 24),
@@ -503,7 +503,7 @@ class _TrustSection extends StatelessWidget {
                       weight: FontWeight.w500),
                 ),
                 const SizedBox(height: 12),
-                Text('— Samaj Heritage Council',
+                Text('- Samaj Heritage Council',
                     style: body(13, color: AppColors.forest500)),
               ],
             ),
@@ -556,7 +556,7 @@ class _Footer extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            '© 2024 Daivajna Samaja — Preserving Legacies for Generations.',
+            '© 2024 Daivajna Samaja - Preserving Legacies for Generations.',
             textAlign: TextAlign.center,
             style: body(11, color: AppColors.forest700),
           ),
