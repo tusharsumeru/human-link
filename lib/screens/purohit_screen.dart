@@ -21,32 +21,125 @@ class _PurohitScreenState extends State<PurohitScreen> {
   bool _loading = true;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final list = await Repository.instance.purohitDirectory();
-      if (!mounted) return;
-      setState(() {
-        _purohits = list;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Could not load purohits.';
-        _loading = false;
-      });
-    }
+final ScrollController _scrollController = ScrollController();
+
+bool _loadingMore = false;
+int _page = 1;
+bool _hasMore = true;
+
+
+  
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _load();
+  // }
+
+  @override
+void initState() {
+  super.initState();
+
+  _scrollController.addListener(_onScroll);
+
+  _load();
+}
+
+@override
+void dispose() {
+  _scrollController.removeListener(_onScroll);
+  _scrollController.dispose();
+  super.dispose();
+}
+
+void _onScroll() {
+  if (!_scrollController.hasClients) return;
+
+  final position = _scrollController.position;
+
+  if (position.pixels >= position.maxScrollExtent - 200) {
+    _loadNextPage();
   }
+}
+
+Future<void> _loadNextPage() async {
+  if (_loadingMore || !_hasMore || _loading) return;
+
+  setState(() {
+    _loadingMore = true;
+  });
+
+  try {
+    final nextPage = _page + 1;
+
+    final list = await Repository.instance.purohitDirectory(
+      limit: 30,
+      page: nextPage,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _purohits = [
+        ..._purohits,
+        ...list,
+      ];
+
+      _page = nextPage;
+
+      // If backend returned less than 30,
+      // there are no more records.
+      _hasMore = list.length == 30;
+
+      _loadingMore = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _loadingMore = false;
+    });
+
+    debugPrint('Error loading next Purohit page: $e');
+  }
+}
+
+Future<void> _load() async {
+  setState(() {
+    _loading = true;
+    _error = null;
+
+    // Reset pagination
+    _page = 1;
+    _hasMore = true;
+    _loadingMore = false;
+  });
+
+  try {
+    final list = await Repository.instance.purohitDirectory(
+      limit: 30,
+      page: 1,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _purohits = list;
+      _loading = false;
+
+      // If less than 30 came back, there is no next page.
+      _hasMore = list.length == 30;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _error = 'Could not load purohits.';
+      _loading = false;
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +170,14 @@ class _PurohitScreenState extends State<PurohitScreen> {
                       onRefresh: _load,
                       color: AppColors.forest700,
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                        itemCount: _purohits.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _PurohitCard(member: _purohits[i]),
-                      ),
+  controller: _scrollController,
+  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+  itemCount: _purohits.length,
+  separatorBuilder: (_, __) => const SizedBox(height: 10),
+  itemBuilder: (_, i) => _PurohitCard(
+    member: _purohits[i],
+  ),
+),
                     ),
     );
   }
@@ -135,6 +231,7 @@ class _PurohitCard extends StatelessWidget {
     final name = _str('name');
     final gotra = _str('gotra');
     final native = _str('native');
+    final km = _str('km');
     final sub = [
       if (gotra.isNotEmpty) '$gotra Gotra',
       if (native.isNotEmpty) native,
@@ -179,6 +276,17 @@ class _PurohitCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: body(12, color: AppColors.textMuted)),
                 ],
+                if (km.isNotEmpty) ...[
+  const SizedBox(height: 3),
+  Text(
+    '${double.tryParse(km)?.toStringAsFixed(1) ?? km} km away',
+    style: body(
+      11,
+      color: AppColors.forest700,
+      weight: FontWeight.w600,
+    ),
+  ),
+],
               ],
             ),
           ),

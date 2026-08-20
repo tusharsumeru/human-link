@@ -10,13 +10,21 @@ import '../data/repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/ui_kit.dart';
+import 'family_tree_layout.dart';
 
-/// Family Tree — mobile client for the normalized `/api/family-tree` backend.
+/// Family Tree — mobile client for the `/api/family` backend.
 ///
 /// Each node is a *person* reached by traversing accepted relationships out from
 /// the signed-in member's own node, so grandparents, in-laws and cousins appear
 /// automatically as relatives join — the member only ever adds their own
 /// immediate family (father/mother/spouse/sibling/child).
+///
+/// Where each of those people is *drawn* is decided by [FamilyTreeLayout], not by
+/// the order of `nodes` or by the `generation` field: spouses sit side by side,
+/// children hang under their parents, and a sibling appears beside the person
+/// they are a sibling of — including when that person is your spouse. The view
+/// opens compact (your immediate family only) and each person with relatives
+/// behind them carries a "+n" badge that expands their branch.
 ///
 /// Adding a living person who has an account sends a **request** they must
 /// accept; adding a living person who has not joined creates a placeholder and
@@ -30,39 +38,21 @@ class FamilyTreeScreen extends StatefulWidget {
   State<FamilyTreeScreen> createState() => _FamilyTreeScreenState();
 }
 
-// Layout constants. Generations are normalized (see _layout): the oldest
-// generation present (most-negative number, i.e. ancestors) renders at the top.
 const double _r = 40;
 const double _nodeDiameter = _r * 2;
-const double _spouseGap = 30;
-const double _horizontalGap = 34;
 const double _canvasMinWidth = 900;
-const double _pad = 80;
-const double _top = 100;
-const double _rowH = 140;
 const List<String> _genRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
-class _TreeLayout {
-  const _TreeLayout(this.positions, this.width);
-
-  final Map<String, Offset> positions;
-  final double width;
-}
-
-class _FamilyUnit {
-  _FamilyUnit({required this.ids, required this.generation});
-
-  final List<String> ids;
-  final int generation;
-  final Set<_FamilyUnit> parents = {};
-  final Set<_FamilyUnit> children = {};
-  double x = 0;
-
-  bool contains(String id) => ids.contains(id);
-  double get baseWidth => ids.length == 2
-      ? (_nodeDiameter * 2 + _spouseGap)
-      : _nodeDiameter;
-}
+const FamilyTreeMetrics _metrics = FamilyTreeMetrics(
+  nodeDiameter: _nodeDiameter,
+  nodeSlot: 112,
+  spouseGap: 34,
+  branchGap: 28,
+  rowHeight: 150,
+  padding: 60,
+  top: 96,
+  minWidth: _canvasMinWidth,
+);
 
 // The seven immediate relations the backend accepts, in display order.
 const List<(String, String)> _relations = [
@@ -77,11 +67,20 @@ const List<(String, String)> _relations = [
 
 class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   List<Map<String, dynamic>> _nodes = const [];
-  List<Map<String, dynamic>> _edges = const [];
   List<Map<String, dynamic>> _requests = const [];
   List<Map<String, dynamic>> _invites = const [];
+  int _unread = 0;
+  bool _truncated = false;
   bool _loading = true;
   String _error = '';
+
+  /// The kinship structure behind the current tree, rebuilt on every load.
+  FamilyGraph? _graph;
+
+  /// People whose branch the member has opened. Everything reached *through*
+  /// someone stays hidden until they are in here, which is what keeps the
+  /// default view to your own immediate family.
+  final Set<String> _expanded = {};
 
   // Pan/zoom. The tree opens zoomed-out to fit the whole canvas on screen.
   final TransformationController _tc = TransformationController();
@@ -106,23 +105,39 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       _error = '';
     });
     try {
-      final graph = await Repository.instance.familyTreeGraph();
-      // Requests + invites are best-effort — a failure there must not blank the
-      // tree, which is the primary content of the screen.
+      final graph = await Repository.instance.familyTree();
+      // Requests, invites and the badge count are best-effort — a failure there
+      // must not blank the tree, which is the primary content of the screen.
       List<Map<String, dynamic>> requests = const [];
       List<Map<String, dynamic>> invites = const [];
+      int unread = 0;
       try {
-        requests = await Repository.instance.familyTreeRequests();
+        requests = await Repository.instance.familyRequests();
       } catch (_) {/* best-effort */}
       try {
-        invites = await Repository.instance.familyTreeInvites();
+        invites = await Repository.instance.familyInvites();
+      } catch (_) {/* best-effort */}
+      try {
+        unread = await Repository.instance.familyUnreadCount();
       } catch (_) {/* best-effort */}
       if (!mounted) return;
+      final nodes = _asList(graph['nodes']);
+      final edges = _asList(graph['edges']);
+      final built = FamilyGraph.fromTree(
+        nodes: nodes,
+        edges: edges,
+        rootId: graph['rootId']?.toString(),
+      );
       setState(() {
-        _nodes = _asList(graph['nodes']);
-        _edges = _asList(graph['edges']);
+        _nodes = nodes;
+        _graph = built;
+        // Keep whatever the member had opened, minus anyone who is no longer in
+        // the tree (a decline or a merge can remove people).
+        _expanded.removeWhere((id) => !built.byId.containsKey(id));
+        _truncated = graph['truncated'] == true;
         _requests = requests;
         _invites = invites;
+        _unread = unread;
         _loading = false;
         _didFit = false; // refit to the new tree size
       });
@@ -151,230 +166,66 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     return const [];
   }
 
-  int _gen(Map<String, dynamic> m) => ((m['generation'] ?? 0) as num).toInt();
+  /// Which row this person sits on, phrased relative to the viewer. Taken from
+  /// the structural generation the layout derived, not from the payload field.
+  String _generationLabel(String id) {
+    final gen = _graph?.generationOf[id] ?? 0;
+    if (gen == 0) return 'Your generation';
+    final steps = gen.abs();
+    final word = gen < 0
+        ? (steps == 1 ? 'One generation above' : '$steps generations above')
+        : (steps == 1 ? 'One generation below' : '$steps generations below');
+    return word;
+  }
 
-  static bool _isDeceased(Map<String, dynamic> m) => m['deceased'] == true;
+  static bool _isDeceased(Map<String, dynamic> m) =>
+      m['deceased'] == true || m['status'] == 'deceased';
   static bool _isPlaceholder(Map<String, dynamic> m) => m['isPlaceholder'] == true;
   static bool _isSelf(Map<String, dynamic> m) => m['isSelf'] == true;
 
-  /// Computes a fixed hierarchical genealogy layout for the tree.
-  /// This is not a force-directed layout; nodes are placed in generation rows,
-  /// spouses share a row, and parent-child connections preserve a top-down
-  /// family tree structure.
-  _TreeLayout _layout() {
-    if (_nodes.isEmpty) return const _TreeLayout({}, _canvasMinWidth);
-
-    final generations = <String, int>{};
-    final names = <String, String>{};
-    for (final node in _nodes) {
-      final id = node['id']?.toString() ?? '';
-      if (id.isEmpty) continue;
-      generations[id] = ((node['generation'] ?? 0) as num).toInt();
-      names[id] = (node['name'] ?? '').toString();
-    }
-
-    final spouseOf = <String, String>{};
-    final parentMap = <String, Set<String>>{};
-    final childMap = <String, Set<String>>{};
-
-    for (final edge in _edges) {
-      final rel = (edge['relation'] ?? '').toString();
-      final from = edge['from']?.toString() ?? '';
-      final to = edge['to']?.toString() ?? '';
-      if (from.isEmpty || to.isEmpty) continue;
-
-      if (rel == 'spouse') {
-        spouseOf[from] = to;
-        spouseOf[to] = from;
-      } else if (rel == 'father' || rel == 'mother') {
-        parentMap[from] ??= {};
-        parentMap[from]!.add(to);
-        childMap[to] ??= {};
-        childMap[to]!.add(from);
-      } else if (rel == 'son' || rel == 'daughter') {
-        parentMap[to] ??= {};
-        parentMap[to]!.add(from);
-        childMap[from] ??= {};
-        childMap[from]!.add(to);
-      }
-    }
-
-    for (final id in generations.keys) {
-      parentMap[id] ??= {};
-      childMap[id] ??= {};
-    }
-
-    final units = <_FamilyUnit>[];
-    final unitByNode = <String, _FamilyUnit>{};
-    final visited = <String>{};
-
-    for (final node in _nodes) {
-      final id = node['id']?.toString() ?? '';
-      if (id.isEmpty || visited.contains(id)) continue;
-      final mate = spouseOf[id];
-      if (mate != null && generations.containsKey(mate) && !visited.contains(mate)) {
-        final gen = math.min(generations[id]!, generations[mate]!);
-        final unit = _FamilyUnit(ids: [id, mate], generation: gen);
-        units.add(unit);
-        unitByNode[id] = unit;
-        unitByNode[mate] = unit;
-        visited.addAll([id, mate]);
-      } else {
-        final unit = _FamilyUnit(ids: [id], generation: generations[id]!);
-        units.add(unit);
-        unitByNode[id] = unit;
-        visited.add(id);
-      }
-    }
-
-    for (final unit in units) {
-      for (final id in unit.ids) {
-        for (final parentId in parentMap[id]!) {
-          final parentUnit = unitByNode[parentId];
-          if (parentUnit == null || parentUnit == unit) continue;
-          unit.parents.add(parentUnit);
-          parentUnit.children.add(unit);
-        }
-        for (final childId in childMap[id]!) {
-          final childUnit = unitByNode[childId];
-          if (childUnit == null || childUnit == unit) continue;
-          unit.children.add(childUnit);
-          childUnit.parents.add(unit);
-        }
-      }
-    }
-
-    final selfId = _nodes.firstWhere(_isSelf, orElse: () => {}).cast<String, dynamic>()['id']?.toString();
-    final selfUnit = selfId != null ? unitByNode[selfId] : null;
-
-    double computeSpan(_FamilyUnit unit, Map<_FamilyUnit, double> cache) {
-      if (cache.containsKey(unit)) return cache[unit]!;
-      if (unit.children.isEmpty) {
-        cache[unit] = unit.baseWidth;
-        return cache[unit]!;
-      }
-      final childSpans = unit.children
-          .map((child) => computeSpan(child, cache))
-          .toList();
-      final totalChildWidth = childSpans.fold<double>(0, (sum, span) => sum + span) +
-          _horizontalGap * math.max(0, childSpans.length - 1);
-      cache[unit] = math.max(unit.baseWidth, totalChildWidth);
-      return cache[unit]!;
-    }
-
-    final spanCache = <_FamilyUnit, double>{};
-    for (final unit in units) {
-      computeSpan(unit, spanCache);
-    }
-
-    final groups = <int, List<_FamilyUnit>>{};
-    for (final unit in units) {
-      groups[unit.generation] ??= [];
-      groups[unit.generation]!.add(unit);
-    }
-
-    final sortedGens = groups.keys.toList()..sort();
-    for (final gen in sortedGens) {
-      final unitsInGen = groups[gen]!;
-      for (final unit in unitsInGen) {
-        unit.x = 0;
-      }
-
-      final targets = <_FamilyUnit, double>{};
-      for (final unit in unitsInGen) {
-        if (unit.parents.isNotEmpty) {
-          targets[unit] = unit.parents
-              .map((parent) => parent.x)
-              .fold<double>(0, (sum, x) => sum + x) /
-              unit.parents.length;
-        } else if (selfUnit == unit) {
-          targets[unit] = _canvasMinWidth / 2;
-        } else {
-          targets[unit] = 0;
-        }
-      }
-
-      unitsInGen.sort((a, b) {
-        final first = targets[a]!;
-        final second = targets[b]!;
-        if (first != second) return first.compareTo(second);
-        return a.ids.first.compareTo(b.ids.first);
-      });
-
-      if (selfUnit != null && selfUnit.generation == gen && unitsInGen.length > 1) {
-        final centerX = _canvasMinWidth / 2;
-        selfUnit.x = centerX;
-        final siblings = unitsInGen.where((unit) => unit != selfUnit).toList();
-        final left = siblings.where((unit) => targets[unit]! < centerX).toList()
-          ..sort((a, b) => targets[a]!.compareTo(targets[b]!));
-        final right = siblings.where((unit) => targets[unit]! >= centerX).toList()
-          ..sort((a, b) => targets[a]!.compareTo(targets[b]!));
-
-        double x = centerX - selfUnit.baseWidth / 2 - _horizontalGap;
-        for (final unit in left.reversed) {
-          x -= unit.baseWidth;
-          unit.x = x + unit.baseWidth / 2;
-          x -= _horizontalGap;
-        }
-
-        x = centerX + selfUnit.baseWidth / 2 + _horizontalGap;
-        for (final unit in right) {
-          unit.x = x + unit.baseWidth / 2;
-          x += unit.baseWidth + _horizontalGap;
-        }
-      } else {
-        double x = _pad;
-        for (final unit in unitsInGen) {
-          final target = targets[unit]!;
-          final left = math.max(x, target - unit.baseWidth / 2);
-          unit.x = left + unit.baseWidth / 2;
-          x = left + unit.baseWidth + _horizontalGap;
-        }
-      }
-    }
-
-    final allXs = units.expand((unit) {
-      if (unit.ids.length == 2) {
-        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
-        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
-        return [leftCenter, rightCenter];
-      }
-      return [unit.x];
-    }).toList();
-
-    final minX = allXs.reduce(math.min) - _nodeDiameter / 2;
-    if (minX < _pad) {
-      final shift = _pad - minX;
-      for (final unit in units) {
-        unit.x += shift;
-      }
-    }
-
-    final maxX = units.expand((unit) {
-      if (unit.ids.length == 2) {
-        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
-        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
-        return [leftCenter, rightCenter];
-      }
-      return [unit.x];
-    }).reduce(math.max) + _nodeDiameter / 2;
-
-    final result = <String, Offset>{};
-    final minGen = sortedGens.isEmpty ? 0 : sortedGens.first;
-    for (final unit in units) {
-      final y = _top + (unit.generation - minGen) * _rowH;
-      if (unit.ids.length == 2) {
-        final leftCenter = unit.x - (_nodeDiameter / 2 + _spouseGap / 2);
-        final rightCenter = unit.x + (_nodeDiameter / 2 + _spouseGap / 2);
-        result[unit.ids[0]] = Offset(leftCenter, y);
-        result[unit.ids[1]] = Offset(rightCenter, y);
-      } else {
-        result[unit.ids[0]] = Offset(unit.x, y);
-      }
-    }
-
-    return _TreeLayout(result, math.max(_canvasMinWidth, maxX + _pad));
+  /// The server-derived, viewer-relative label ("Grandfather", "Sister-in-law",
+  /// or "Relative" when the path runs past what kinship words cover). Never
+  /// cached beyond this render — it is only valid for this tree's `rootId`.
+  static String _relationOf(Map<String, dynamic> m) {
+    final r = (m['relation'] ?? '').toString().trim();
+    return r.isEmpty ? 'Relative' : r;
   }
+
+  static String _photoOf(Map<String, dynamic> m) =>
+      (m['profileUrl'] ?? '').toString();
+
+  // ── Progressive expansion ──────────────────────────────────────────────────
+
+  /// Opens or closes one person's branch. Collapsing is implicitly recursive:
+  /// anyone reached through this person disappears with them, because visibility
+  /// is evaluated along the whole chain.
+  void _toggleBranch(String id) {
+    setState(() {
+      if (!_expanded.remove(id)) _expanded.add(id);
+      _didFit = false; // the canvas just changed size
+    });
+  }
+
+  bool get _allExpanded {
+    final g = _graph;
+    if (g == null) return false;
+    final owners = g.branchOwners;
+    return owners.isNotEmpty && owners.every(_expanded.contains);
+  }
+
+  void _toggleAllBranches() {
+    final g = _graph;
+    if (g == null) return;
+    setState(() {
+      if (_allExpanded) {
+        _expanded.clear();
+      } else {
+        _expanded.addAll(g.branchOwners);
+      }
+      _didFit = false;
+    });
+  }
+
   /// Scale the canvas down so the whole tree is visible, centred horizontally.
   void _fitToViewport(double canvasW, double canvasH) {
     final vp = _viewport;
@@ -463,6 +314,9 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       ),
       builder: (_) => const _NotificationsSheet(),
     );
+    // A request can be answered straight from the inbox, and one new edge can
+    // relabel a large part of the tree — so always refetch.
+    await _load();
   }
 
   void _showInviteDialog(String name, String link) {
@@ -524,7 +378,13 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     final deceased = _isDeceased(m);
     final placeholder = _isPlaceholder(m);
     final self = _isSelf(m);
-    final linkedUserId = (m['linkedUserId'] ?? '').toString();
+    final memberId = (m['id'] ?? '').toString();
+    // How the label was derived — the stored relations walked out from me. Shown
+    // for anything the server had to infer (grandfather, cousin, in-law…).
+    final path = (m['path'] is List)
+        ? (m['path'] as List).map((e) => e.toString()).toList()
+        : const <String>[];
+    final hiddenBehind = _graph?.hiddenCount(memberId, _expanded) ?? 0;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -566,7 +426,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                       Text(
                         self
                             ? 'You'
-                            : '${(m['relationToRoot'] ?? 'Relative')} · Gen ${_gen(m)}',
+                            : '${_relationOf(m)} · ${_generationLabel(memberId)}',
                         style: body(13,
                             weight: FontWeight.w600,
                             color: AppColors.forest700),
@@ -580,15 +440,34 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             ),
             const SizedBox(height: 18),
             _statusCard(deceased, placeholder),
+            if (!self && path.length > 1) ...[
+              const SizedBox(height: 10),
+              Text('Derived from: your ${path.join(" → ")}',
+                  style: body(11, color: AppColors.hint, height: 1.4)),
+            ],
             const SizedBox(height: 14),
-            if (linkedUserId.isNotEmpty)
+            if (memberId.isNotEmpty &&
+                (_graph?.hasBranch(memberId) ?? false)) ...[
+              OutlineButtonX(
+                label: hiddenBehind > 0
+                    ? 'Show their family ($hiddenBehind)'
+                    : 'Hide their family',
+                expand: true,
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _toggleBranch(memberId);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (memberId.isNotEmpty)
               ForestButton(
                 label: 'View Profile',
                 icon: Icons.arrow_forward_rounded,
                 expand: true,
                 onPressed: () {
                   Navigator.pop(ctx);
-                  context.push('/profile/$linkedUserId');
+                  context.push(self ? '/profile/me' : '/profile/$memberId');
                 },
               ),
           ],
@@ -648,6 +527,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         children: [
           _controlRow(),
           if (_invites.isNotEmpty) _inviteBanner(),
+          if (_truncated) _truncatedBanner(),
           Expanded(child: _body()),
         ],
       ),
@@ -663,7 +543,9 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       return _message(Icons.cloud_off_rounded, 'Unable to load', _error,
           action: OutlineButtonX(label: 'Retry', onPressed: _load));
     }
-    if (_nodes.isEmpty) {
+    // The first call to the tree lazily creates my own member node, so "empty"
+    // means me and nobody else — not zero nodes.
+    if (_nodes.isEmpty || (_nodes.length == 1 && _isSelf(_nodes.first))) {
       return _message(
         Icons.account_tree_outlined,
         'Your family tree is empty',
@@ -677,15 +559,16 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       );
     }
 
-    final layout = _layout();
+    // Positions come from the relationship structure, not from the node order or
+    // the `generation` field. See family_tree_layout.dart.
+    final layout = FamilyTreeLayout.build(
+      graph: _graph!,
+      expanded: _expanded,
+      metrics: _metrics,
+    );
     final pos = layout.positions;
-    final gens = _nodes.map(_gen);
-    final minGen = gens.reduce((a, b) => a < b ? a : b);
-    final maxGen = gens.reduce((a, b) => a > b ? a : b);
-    final rowCount = maxGen - minGen + 1;
-    double rowY(int row) => _top + row * _rowH;
-    final canvasH = rowY(rowCount - 1) + 130;
     final canvasW = math.max(layout.width, _canvasMinWidth);
+    final canvasH = layout.height;
 
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.cream),
@@ -712,12 +595,18 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                     children: [
                       Positioned.fill(
                         child: CustomPaint(
-                            painter: _TreePainter(edges: _edges, pos: pos)),
+                          painter: _TreePainter(
+                            links: layout.links,
+                            rowYs: [
+                              for (final g in layout.generations) layout.rowY(g),
+                            ],
+                          ),
+                        ),
                       ),
-                      for (var row = 0; row < rowCount; row++)
+                      for (var row = 0; row < layout.generations.length; row++)
                         Positioned(
                           left: 8,
-                          top: rowY(row) - 9,
+                          top: layout.rowY(layout.generations[row]) - 9,
                           child: Text(
                               'GEN ${row < _genRoman.length ? _genRoman[row] : (row + 1)}',
                               style: body(11,
@@ -725,13 +614,20 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                                   color: AppColors.gold700,
                                   letterSpacing: 1.5)),
                         ),
-                      for (final m in _nodes)
-                        if (pos[m['id'].toString()] != null)
+                      for (final id in layout.placed)
+                        if (pos[id] != null && _graph!.byId[id] != null)
                           Positioned(
-                            left: pos[m['id'].toString()]!.dx - _r,
-                            top: pos[m['id'].toString()]!.dy - _r,
+                            left: pos[id]!.dx - _r,
+                            top: pos[id]!.dy - _r,
                             child: _NodeWithLabel(
-                                member: m, onTap: () => _openMember(m)),
+                              member: _graph!.byId[id]!,
+                              hidden: layout.hiddenCount(id),
+                              expanded: layout.isExpanded(id),
+                              onTap: () => _openMember(_graph!.byId[id]!),
+                              onToggle: _graph!.hasBranch(id)
+                                  ? () => _toggleBranch(id)
+                                  : null,
+                            ),
                           ),
                     ],
                   ),
@@ -836,6 +732,27 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     );
   }
 
+  /// The server stops walking past its node cap and flags the render as partial.
+  Widget _truncatedBanner() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      color: const Color(0xFFF3F4F6),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              size: 18, color: AppColors.textMuted),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Showing part of the tree — it has more relatives than one view can hold.',
+              style: body(11, color: AppColors.textMuted, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _controlRow() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -872,17 +789,31 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              _actionChip(Icons.inbox_rounded, 'Requests', _requests.length,
-                  _openRequests),
-              const SizedBox(width: 8),
-              _actionChip(Icons.mark_email_unread_rounded, 'Invites',
-                  _invites.length, _openInvites),
-              const SizedBox(width: 8),
-              _actionChip(Icons.notifications_none_rounded, 'Alerts', 0,
-                  _openNotifications),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _actionChip(Icons.inbox_rounded, 'Requests', _requests.length,
+                    _openRequests),
+                const SizedBox(width: 8),
+                _actionChip(Icons.mark_email_unread_rounded, 'Invites',
+                    _invites.length, _openInvites),
+                const SizedBox(width: 8),
+                _actionChip(Icons.notifications_none_rounded, 'Alerts', _unread,
+                    _openNotifications),
+                if (_graph?.branchOwners.isNotEmpty ?? false) ...[
+                  const SizedBox(width: 8),
+                  _actionChip(
+                    _allExpanded
+                        ? Icons.unfold_less_rounded
+                        : Icons.unfold_more_rounded,
+                    _allExpanded ? 'Compact view' : 'Expand all',
+                    0,
+                    _toggleAllBranches,
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -943,11 +874,11 @@ class _TreeNode extends StatelessWidget {
     final deceased = _FamilyTreeScreenState._isDeceased(member);
     final placeholder = _FamilyTreeScreenState._isPlaceholder(member);
     final self = _FamilyTreeScreenState._isSelf(member);
-    final photoUrl = (member['photoUrl'] ?? '').toString();
+    final photoUrl = _FamilyTreeScreenState._photoOf(member);
     final borderColor = self
         ? AppColors.gold700
         : deceased
-            ? const Color(0xFF9CA3AF)
+            ? const Color.fromARGB(255, 251, 2, 2)
             : placeholder
                 ? const Color(0xFFD97706)
                 : AppColors.forest700;
@@ -993,17 +924,33 @@ class _TreeNode extends StatelessWidget {
   }
 }
 
-/// A tappable node plus the name / relationship caption beneath it.
+/// A tappable node plus the name / relationship caption beneath it, and — when
+/// this person has relatives who are not on screen — the badge that opens their
+/// branch.
 class _NodeWithLabel extends StatelessWidget {
-  const _NodeWithLabel({required this.member, required this.onTap});
+  const _NodeWithLabel({
+    required this.member,
+    required this.onTap,
+    this.hidden = 0,
+    this.expanded = false,
+    this.onToggle,
+  });
 
   final Map<String, dynamic> member;
   final VoidCallback onTap;
 
+  /// How many relatives are folded away behind this person right now.
+  final int hidden;
+
+  final bool expanded;
+
+  /// Null when this person has no branch to open at all.
+  final VoidCallback? onToggle;
+
   @override
   Widget build(BuildContext context) {
     final self = _FamilyTreeScreenState._isSelf(member);
-    final rel = self ? 'You' : (member['relationToRoot'] ?? 'Relative').toString();
+    final rel = self ? 'You' : _FamilyTreeScreenState._relationOf(member);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -1012,7 +959,22 @@ class _NodeWithLabel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _TreeNode(member: member),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _TreeNode(member: member),
+                if (onToggle != null && (hidden > 0 || expanded))
+                  Positioned(
+                    right: -6,
+                    bottom: -4,
+                    child: _BranchBadge(
+                      label: hidden > 0 ? '+$hidden' : '−',
+                      open: hidden == 0,
+                      onTap: onToggle!,
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 6),
             SizedBox(
               width: 110,
@@ -1042,37 +1004,116 @@ class _NodeWithLabel extends StatelessWidget {
   }
 }
 
-/// Draws generation guide lines and the relationship connectors from the graph's
-/// `edges` list (each `{from, to, relation}` links two node positions).
-class _TreePainter extends CustomPainter {
-  _TreePainter({required this.edges, required this.pos});
+/// The "+n" / "−" control that opens and closes a person's branch.
+class _BranchBadge extends StatelessWidget {
+  const _BranchBadge({
+    required this.label,
+    required this.open,
+    required this.onTap,
+  });
 
-  final List<Map<String, dynamic>> edges;
-  final Map<String, Offset> pos;
+  final String label;
+
+  /// True when the branch is already showing, so the badge collapses it.
+  final bool open;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 22),
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: open ? Colors.white : AppColors.gold700,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: open ? AppColors.gold700 : Colors.white, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: body(10,
+              weight: FontWeight.w800,
+              color: open ? AppColors.gold700 : Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws the generation guide lines and the connectors the layout worked out:
+/// a horizontal line between spouses, a shared fork from a couple down to their
+/// children, and a bracket over a sibling group whose parents are not on screen.
+class _TreePainter extends CustomPainter {
+  _TreePainter({required this.links, required this.rowYs});
+
+  final List<FamilyLink> links;
+  final List<double> rowYs;
 
   @override
   void paint(Canvas canvas, Size size) {
     final guide = Paint()
       ..color = AppColors.forest800.withValues(alpha: 0.08)
       ..strokeWidth = 1;
-    final gens = pos.values.map((o) => o.dy).toSet();
-    for (final y in gens) {
+    for (final y in rowYs) {
       _dashedLine(canvas, Offset(40, y), Offset(size.width - 40, y), guide,
           dash: 4, gap: 10);
     }
 
-    final link = Paint()
-      ..color = AppColors.gold700.withValues(alpha: 0.6)
-      ..strokeWidth = 2
+    final spouse = Paint()
+      ..color = AppColors.gold700
+      ..strokeWidth = 2.4
+      ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final dot = Paint()..color = AppColors.gold700.withValues(alpha: 0.45);
-    for (final e in edges) {
-      final a = pos[(e['from'] ?? '').toString()];
-      final b = pos[(e['to'] ?? '').toString()];
-      if (a == null || b == null) continue;
-      canvas.drawLine(a, b, link);
-      canvas.drawCircle(a, 4, dot);
+    final descent = Paint()
+      ..color = AppColors.forest700.withValues(alpha: 0.55)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final sibling = Paint()
+      ..color = AppColors.gold700.withValues(alpha: 0.5)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    for (final link in links) {
+      if (link.points.length < 2) continue;
+      switch (link.kind) {
+        case FamilyLinkKind.spouse:
+          canvas.drawLine(link.points.first, link.points.last, spouse);
+          // A small tie in the middle, so a marriage reads differently from a
+          // descent line even in a dense part of the tree.
+          final mid = (link.points.first + link.points.last) / 2;
+          canvas.drawCircle(mid, 3.5, Paint()..color = AppColors.gold700);
+        case FamilyLinkKind.parentChild:
+          canvas.drawPath(_polyline(link.points), descent);
+        case FamilyLinkKind.sibling:
+          for (var i = 0; i < link.points.length - 1; i++) {
+            _dashedLine(canvas, link.points[i], link.points[i + 1], sibling,
+                dash: 6, gap: 4);
+          }
+      }
     }
+  }
+
+  Path _polyline(List<Offset> points) {
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final p in points.skip(1)) {
+      path.lineTo(p.dx, p.dy);
+    }
+    return path;
   }
 
   void _dashedLine(Canvas canvas, Offset a, Offset b, Paint paint,
@@ -1091,7 +1132,7 @@ class _TreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TreePainter oldDelegate) =>
-      oldDelegate.edges != edges || oldDelegate.pos != pos;
+      oldDelegate.links != links || oldDelegate.rowYs != rowYs;
 }
 
 // ── Add member ────────────────────────────────────────────────────────────────
@@ -1151,7 +1192,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       // A 10-digit query is treated as a phone; otherwise a name.
       final byPhone = RegExp(r'^\d{10}$').hasMatch(q);
       final samajId = q.toUpperCase().startsWith('DS-');
-      final results = await Repository.instance.familyTreeSearch(
+      final results = await Repository.instance.familyUserSearch(
         samajId: samajId ? q : null,
         phone: byPhone ? q : null,
         name: (!byPhone && !samajId) ? q : null,
@@ -1201,10 +1242,15 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       return;
     }
 
-    // Mode: create a new profile (placeholder / deceased).
+    // Mode: create a new profile (placeholder / deceased). The backend requires
+    // a date of birth in both cases.
     final name = _name.text.trim();
     if (name.isEmpty) {
       setState(() => _err = 'Name is required');
+      return;
+    }
+    if (_dob.isEmpty) {
+      setState(() => _err = 'Date of birth is required');
       return;
     }
     await _submit(name: name);
@@ -1216,7 +1262,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       _err = '';
     });
     try {
-      final res = await Repository.instance.addFamilyTreeMember(
+      final res = await Repository.instance.addFamilyMember(
         relation: _relation,
         targetUserId: targetUserId,
         name: name,
@@ -1230,9 +1276,15 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       );
       if (!mounted) return;
       final mode = (res['mode'] ?? '').toString();
-      final person = res['person'];
-      final personName =
-          person is Map ? (person['name'] ?? name ?? 'Member').toString() : (name ?? 'Member');
+      final member = res['member'];
+      final personName = member is Map
+          ? (member['name'] ?? name ?? 'Member').toString()
+          : (name ?? 'Member');
+      // Adding a relation that already exists is idempotent server-side — the
+      // existing edge comes back, so an accepted status means we did not just
+      // send a new request.
+      final rel = res['relationship'];
+      final already = rel is Map && rel['status'] == 'accepted';
       Navigator.pop(context, {
         'ok': true,
         'mode': mode,
@@ -1240,6 +1292,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         'inviteLink': res['inviteLink']?.toString() ?? '',
         'whatsappUrl': res['whatsappUrl']?.toString() ?? '',
         'message': switch (mode) {
+          'request' when already => 'You are already connected to $personName.',
           'request' =>
             'Request sent to $personName — they’ll appear once they accept.',
           'invitation' => '$personName invited — share the link so they can join.',
@@ -1547,12 +1600,13 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           Text('Used to link their account when they register.',
               style: body(11, color: AppColors.hint, height: 1.4)),
           const SizedBox(height: 14),
-          _dateField('Date of Birth', _dob, () => _pickDate(true)),
+          _dateField('Date of Birth *', _dob, () => _pickDate(true)),
         ] else ...[
           Row(
             children: [
               Expanded(
-                  child: _dateField('Date of Birth', _dob, () => _pickDate(true))),
+                  child:
+                      _dateField('Date of Birth *', _dob, () => _pickDate(true))),
               const SizedBox(width: 12),
               Expanded(
                   child:
@@ -1713,7 +1767,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
 // ── Requests / invites / notifications sheets ─────────────────────────────────
 
-/// Incoming relationship requests addressed to me — accept or decline each.
+/// Incoming relationship requests addressed to me — accept or decline each —
+/// plus the ones I sent that are still waiting, which are otherwise invisible
+/// because a pending edge is left out of the tree.
 class _RequestsSheet extends StatefulWidget {
   const _RequestsSheet({required this.requests});
   final List<Map<String, dynamic>> requests;
@@ -1724,7 +1780,40 @@ class _RequestsSheet extends StatefulWidget {
 
 class _RequestsSheetState extends State<_RequestsSheet> {
   late final List<Map<String, dynamic>> _items = List.of(widget.requests);
+  List<Map<String, dynamic>> _sent = const [];
   final _busy = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSent();
+  }
+
+  Future<void> _loadSent() async {
+    try {
+      final sent = await Repository.instance.familySentRequests();
+      if (!mounted) return;
+      setState(() => _sent = sent);
+    } catch (_) {/* best-effort */}
+  }
+
+  Future<void> _cancel(Map<String, dynamic> r) async {
+    final id = r['_id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    setState(() => _busy.add(id));
+    try {
+      await Repository.instance.cancelFamilyRequest(id);
+      if (!mounted) return;
+      setState(() => _sent.removeWhere((x) => x['_id']?.toString() == id));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not withdraw the request')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
 
   Future<void> _respond(Map<String, dynamic> r, bool accept) async {
     final id = r['_id']?.toString() ?? '';
@@ -1732,9 +1821,9 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     setState(() => _busy.add(id));
     try {
       if (accept) {
-        await Repository.instance.acceptFamilyTreeRequest(id);
+        await Repository.instance.acceptFamilyRequest(id);
       } else {
-        await Repository.instance.declineFamilyTreeRequest(id);
+        await Repository.instance.declineFamilyRequest(id);
       }
       if (!mounted) return;
       setState(() => _items.removeWhere((x) => x['_id']?.toString() == id));
@@ -1752,21 +1841,94 @@ class _RequestsSheetState extends State<_RequestsSheet> {
   Widget build(BuildContext context) {
     return _SheetScaffold(
       title: 'Relationship Requests',
-      child: _items.isEmpty
-          ? _emptyState('No pending requests',
-              'When a relative asks to connect with you, it shows up here.')
-          : Column(
-              children: [
-                for (final r in _items)
-                  _requestTile(
-                    name: _nameOf(r['requester']),
-                    message: (r['message'] ?? '').toString(),
-                    busy: _busy.contains(r['_id']?.toString()),
-                    onAccept: () => _respond(r, true),
-                    onDecline: () => _respond(r, false),
-                  ),
-              ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_items.isEmpty)
+            _emptyState('No pending requests',
+                'When a relative asks to connect with you, it shows up here.')
+          else
+            for (final r in _items)
+              _requestTile(
+                name: _nameOf(r['requester']),
+                message: (r['message'] ?? '').toString(),
+                busy: _busy.contains(r['_id']?.toString()),
+                onAccept: () => _respond(r, true),
+                onDecline: () => _respond(r, false),
+              ),
+          if (_sent.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Text('Waiting on them',
+                style: body(12,
+                    weight: FontWeight.w700, color: AppColors.forest800)),
+            const SizedBox(height: 4),
+            Text(
+              'These stay out of the tree until the other person accepts.',
+              style: body(11, color: AppColors.hint, height: 1.4),
             ),
+            const SizedBox(height: 10),
+            for (final r in _sent) _sentTile(r),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sentTile(Map<String, dynamic> r) {
+    final id = r['_id']?.toString() ?? '';
+    final busy = _busy.contains(id);
+    final inviteLink = (r['inviteLink'] ?? '').toString();
+    final name = _nameOf(r['relative']);
+    final relation = (r['relation'] ?? '').toString();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF8F3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(name,
+              style: body(13,
+                  weight: FontWeight.w700, color: AppColors.forest900)),
+          if (relation.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text('Added as your $relation',
+                style: body(11, color: AppColors.textMuted)),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (inviteLink.isNotEmpty) ...[
+                Expanded(
+                  child: OutlineButtonX(
+                    label: 'Copy invite',
+                    expand: true,
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: inviteLink));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invite link copied')),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: OutlineButtonX(
+                  label: 'Withdraw',
+                  expand: true,
+                  color: const Color(0xFFB91C1C),
+                  onPressed: busy ? null : () => _cancel(r),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1789,13 +1951,13 @@ class _InvitesSheetState extends State<_InvitesSheet> {
     setState(() => _busy = true);
     try {
       if (accept) {
-        final res = await Repository.instance.acceptFamilyTreeInvites();
+        final res = await Repository.instance.acceptFamilyInvites();
         final merged = ((res['merged'] ?? 0) as num).toInt();
         if (!mounted) return;
         setState(() => _done =
             merged > 0 ? 'Connected — your trees are now merged.' : 'Done.');
       } else {
-        await Repository.instance.declineFamilyTreeInvites();
+        await Repository.instance.declineFamilyInvites();
         if (!mounted) return;
         setState(() => _done = 'Invitations declined.');
       }
@@ -1872,6 +2034,7 @@ class _NotificationsSheet extends StatefulWidget {
 class _NotificationsSheetState extends State<_NotificationsSheet> {
   List<Map<String, dynamic>> _items = const [];
   bool _loading = true;
+  final _busy = <String>{};
 
   @override
   void initState() {
@@ -1881,7 +2044,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
 
   Future<void> _load() async {
     try {
-      final items = await Repository.instance.familyTreeNotifications();
+      final items = await Repository.instance.familyNotifications();
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -1898,14 +2061,64 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     if (id.isEmpty || n['read'] == true) return;
     setState(() => n['read'] = true);
     try {
-      await Repository.instance.markFamilyTreeNotificationRead(id);
+      await Repository.instance.markFamilyNotificationRead(id);
     } catch (_) {/* best-effort */}
+  }
+
+  Future<void> _markAllRead() async {
+    final unread = _items.where((n) => n['read'] != true).toList();
+    if (unread.isEmpty) return;
+    setState(() {
+      for (final n in unread) {
+        n['read'] = true;
+      }
+    });
+    try {
+      await Repository.instance.markAllFamilyNotificationsRead();
+    } catch (_) {/* best-effort */}
+  }
+
+  /// Answer a `relationship_request` straight from its notification — the
+  /// `relationshipId` it carries is exactly what the accept/decline endpoints
+  /// take in their body, so there is no request list to go through first.
+  Future<void> _respond(Map<String, dynamic> n, bool accept) async {
+    final rid = (n['relationshipId'] ?? '').toString();
+    if (rid.isEmpty) return;
+    setState(() => _busy.add(rid));
+    try {
+      if (accept) {
+        await Repository.instance.acceptFamilyRequest(rid);
+      } else {
+        await Repository.instance.declineFamilyRequest(rid);
+      }
+      if (!mounted) return;
+      setState(() {
+        n['read'] = true;
+        n['answered'] = accept ? 'accepted' : 'declined';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update the request')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy.remove(rid));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasUnread = _items.any((n) => n['read'] != true);
     return _SheetScaffold(
       title: 'Notifications',
+      action: hasUnread
+          ? TextButton(
+              onPressed: _markAllRead,
+              child: Text('Mark all read',
+                  style: body(12,
+                      weight: FontWeight.w700, color: AppColors.forest700)),
+            )
+          : null,
       child: _loading
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
@@ -1918,42 +2131,89 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                   'Relationship activity — requests, joins, merges — appears here.')
               : Column(
                   children: [
-                    for (final n in _items)
-                      InkWell(
-                        onTap: () => _markRead(n),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: n['read'] == true
-                                ? Colors.white
-                                : const Color(0xFFF0F6F1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              if (n['read'] != true)
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  margin: const EdgeInsets.only(right: 10),
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.gold700,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              Expanded(
-                                child: Text((n['message'] ?? '').toString(),
-                                    style: body(13, color: AppColors.forest900)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    for (final n in _items) _notificationTile(n),
                   ],
                 ),
+    );
+  }
+
+  Widget _notificationTile(Map<String, dynamic> n) {
+    final read = n['read'] == true;
+    final rid = (n['relationshipId'] ?? '').toString();
+    final answered = (n['answered'] ?? '').toString();
+    // Only a request is actionable; everything else is a record of something
+    // that already happened.
+    final actionable = n['type'] == 'relationship_request' &&
+        rid.isNotEmpty &&
+        answered.isEmpty;
+    return InkWell(
+      onTap: () => _markRead(n),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: read ? Colors.white : const Color(0xFFF0F6F1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (!read)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: const BoxDecoration(
+                      color: AppColors.gold700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                Expanded(
+                  child: Text((n['message'] ?? '').toString(),
+                      style: body(13, color: AppColors.forest900)),
+                ),
+              ],
+            ),
+            if (answered.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                answered == 'accepted' ? 'Accepted' : 'Declined',
+                style: body(11,
+                    weight: FontWeight.w700, color: AppColors.forest700),
+              ),
+            ],
+            if (actionable) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlineButtonX(
+                      label: 'Decline',
+                      expand: true,
+                      onPressed: _busy.contains(rid)
+                          ? null
+                          : () => _respond(n, false),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ForestButton(
+                      label: 'Accept',
+                      expand: true,
+                      loading: _busy.contains(rid),
+                      onPressed: () => _respond(n, true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1961,9 +2221,12 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
 // ── Shared sheet chrome + helpers (top-level so every sheet can use them) ──────
 
 class _SheetScaffold extends StatelessWidget {
-  const _SheetScaffold({required this.title, required this.child});
+  const _SheetScaffold({required this.title, required this.child, this.action});
   final String title;
   final Widget child;
+
+  /// Optional control shown to the left of the close button (e.g. "Mark all read").
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -1991,6 +2254,7 @@ class _SheetScaffold extends StatelessWidget {
                   child: Text(title,
                       style: display(20, color: AppColors.forest900)),
                 ),
+                ?action,
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded,

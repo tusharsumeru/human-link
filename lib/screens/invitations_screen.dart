@@ -90,6 +90,11 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     });
     try {
       final data = await Repository.instance.invitationMap();
+            
+    debugPrint('Invitation map response type: ${data.runtimeType}');
+    debugPrint('Invitation map response: $data');
+
+      
       if (!mounted) return;
       setState(() {
         _me = data.me;
@@ -103,6 +108,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       _schedulePlan();
     } catch (e) {
       if (!mounted) return;
+          debugPrint('Invitation map response type: ${e}');
       setState(() {
         _error = e is ApiException ? e.message : 'Could not load the map';
         _loading = false;
@@ -461,53 +467,103 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
 
   /// Where the round starts. The saved address is the default; the device's
   /// position is for planning while already out.
-  Widget _originPicker() {
-    final hasAddress = _me != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('START FROM',
-            style: body(10,
-                weight: FontWeight.w700,
-                color: AppColors.textMuted,
-                letterSpacing: 1.4)),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            ChoiceChip(
-              label: Text('My address', style: body(12)),
-              selected: !_useGps && hasAddress,
-              onSelected: hasAddress ? (_) => _setUseGps(false) : null,
-              selectedColor: AppColors.forest300,
-            ),
-            const SizedBox(width: 8),
-            ChoiceChip(
-              avatar: _locating
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location_rounded, size: 14),
-              label: Text(_locating ? 'Locating…' : 'Current location',
-                  style: body(12)),
-              selected: _useGps,
-              onSelected: _locating ? null : (_) => _setUseGps(true),
-              selectedColor: AppColors.forest300,
-            ),
-          ],
+ Widget _originPicker() {
+  final hasAddress = _me != null &&
+      !(_me!.latitude == 0 && _me!.longitude == 0);
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'START FROM',
+        style: body(
+          10,
+          weight: FontWeight.w700,
+          color: AppColors.textMuted,
+          letterSpacing: 1.4,
         ),
-        if (!hasAddress && !_useGps) ...[
-          const SizedBox(height: 6),
-          Text(
-            'Your profile has no mapped address yet — add one, or start from your '
-            'current location.',
-            style: body(11, color: AppColors.gold700, height: 1.4),
+      ),
+
+      const SizedBox(height: 6),
+
+      Row(
+        children: [
+          // MY ADDRESS
+          ChoiceChip(
+            label: Text(
+              'My addressggg',
+              style: body(
+                12,
+                color: (!_useGps && hasAddress)
+                    ? Colors.white
+                    : AppColors.ink,
+              ),
+            ),
+            selected: !_useGps && hasAddress,
+            onSelected: hasAddress
+                ? (_) => _setUseGps(false)
+                : null,
+            selectedColor: AppColors.forest300,
+            backgroundColor: Colors.white,
+          ),
+
+          const SizedBox(width: 8),
+
+          // CURRENT LOCATION
+          ChoiceChip(
+            avatar: _locating
+                ? const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Icon(
+                    Icons.my_location_rounded,
+                    size: 14,
+                    color: _useGps
+                        ? Colors.white
+                        : AppColors.ink,
+                  ),
+            label: Text(
+              _locating
+                  ? 'Locating…'
+                  : 'Current location',
+              style: body(
+                12,
+                color: _useGps
+                    ? Colors.white
+                    : AppColors.ink,
+              ),
+            ),
+            selected: _useGps,
+            onSelected: _locating
+                ? null
+                : (_) => _setUseGps(true),
+            selectedColor: AppColors.forest300,
+            backgroundColor: Colors.white,
           ),
         ],
+      ),
+
+      if (!hasAddress && !_useGps) ...[
+        const SizedBox(height: 6),
+        Text(
+          'Your profile has no mapped address yet — add one, '
+          'or start from your current location.',
+          style: body(
+            11,
+            color: AppColors.gold700,
+            height: 1.4,
+          ),
+        ),
       ],
-    );
-  }
+    ],
+  );
+}
+
+
 
   Widget _searchField() {
     return TextField(

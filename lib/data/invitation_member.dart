@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 /// A member as one pin on the invitation route planner — what `GET
@@ -50,37 +51,70 @@ class InvitationMember {
   /// Area, or the city when the member gave no area.
   String get locality => area.isNotEmpty ? area : city;
 
-  static InvitationMember? fromMap(dynamic raw) {
-    if (raw is! Map) return null;
-    final m = Map<String, dynamic>.from(raw);
+static InvitationMember? fromMap(dynamic raw) {
+  if (raw is! Map) return null;
 
-    double? coord(String key) {
-      final v = m[key];
-      if (v is num) return v.toDouble();
-      return double.tryParse((v ?? '').toString());
-    }
+  final m = Map<String, dynamic>.from(raw);
 
-    final lat = coord('latitude');
-    final lng = coord('longitude');
-    if (lat == null || lng == null) return null;
+  // API structure:
+  // currentAddress -> location -> latitude / longitude
+  final address = m['currentAddress'] is Map
+      ? Map<String, dynamic>.from(m['currentAddress'])
+      : <String, dynamic>{};
 
-    String s(String key) => (m[key] ?? '').toString();
+  final location = address['location'] is Map
+      ? Map<String, dynamic>.from(address['location'])
+      : <String, dynamic>{};
 
-    return InvitationMember(
-      id: s('id'),
-      samajId: s('samajId'),
-      name: s('name'),
-      gotra: s('gotra'),
-      native: s('native'),
-      profileUrl: s('profileUrl'),
-      phone: s('phone'),
-      addressLine: s('addressLine'),
-      area: s('area'),
-      city: s('city'),
-      latitude: lat,
-      longitude: lng,
+  double? coord(dynamic value) {
+    if (value is num) return value.toDouble();
+
+    return double.tryParse(
+      (value ?? '').toString(),
     );
   }
+
+  final lat = coord(location['latitude']);
+  final lng = coord(location['longitude']);
+
+  debugPrint(
+    'InvitationMember: ${m['name']} | '
+    'lat=$lat | lng=$lng',
+  );
+
+  // No valid coordinates -> don't put this user on the map
+  if (lat == null || lng == null) {
+    debugPrint('❌ No coordinates for ${m['name']}');
+    return null;
+  }
+
+  String s(String key) => (m[key] ?? '').toString();
+
+  return InvitationMember(
+    id: s('id'),
+    samajId: s('samajId'),
+    name: s('name'),
+    gotra: s('gotra'),
+    native: s('native'),
+    profileUrl: s('profileUrl'),
+    phone: s('phone'),
+
+    // These are also inside currentAddress
+    addressLine: [
+      address['street'],
+      address['landmark'],
+    ]
+        .where((v) => v != null && v.toString().trim().isNotEmpty)
+        .map((v) => v.toString().trim())
+        .join(', '),
+
+    area: (address['area'] ?? '').toString(),
+    city: (address['city'] ?? '').toString(),
+
+    latitude: lat,
+    longitude: lng,
+  );
+}
 }
 
 /// The planner's data: everyone who can be visited, plus your own pin.

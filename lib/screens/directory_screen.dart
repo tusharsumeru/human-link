@@ -13,9 +13,9 @@ import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 import 'chat_screen.dart';
 
-/// Member Directory — "Vamsha Vruksha" network. Real members from `/api/family`,
-/// grouped/searched by area, gotra, or occupation, with a nearby rail, gotra-
-/// based suggested connections, and a community map.
+/// Member Directory — "Vamsha Vruksha" network. Real accounts from
+/// `/api/user/directory`, grouped/searched by area, gotra, or occupation, with a
+/// nearby rail, gotra-based suggested connections, and a community map.
 class DirectoryScreen extends StatefulWidget {
   const DirectoryScreen({super.key});
 
