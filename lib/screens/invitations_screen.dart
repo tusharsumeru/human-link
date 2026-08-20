@@ -42,12 +42,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   String _error = '';
   bool _mapReady = false;
 
-  InvitationMember? _me;
   List<InvitationMember> _all = const [];
 
-  /// Members with an address the server hasn't geocoded yet — they show up on a
-  /// later refresh, so an empty map says "still mapping", not "nobody here".
-  int _unmapped = 0;
+  /// Mapped members in total. More than [_all] holds once the list is paged.
+  int _count = 0;
 
   /// Selected member ids, in the order they were picked.
   final List<String> _order = [];
@@ -63,12 +61,13 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   /// instead of overwriting a newer route.
   int _planSeq = 0;
 
-  /// Start the round from the device's position instead of the saved address.
-  bool _useGps = false;
+  /// Where the round starts. The device's position is the only origin now: the
+  /// server sorts the map around the position we send it, and returns no saved
+  /// address to fall back on.
   LatLng? _gpsOrigin;
   bool _locating = false;
 
-  LatLng? get _origin => _useGps ? _gpsOrigin : _me?.point;
+  LatLng? get _origin => _gpsOrigin;
 
   @override
   void initState() {
@@ -89,26 +88,34 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       _error = '';
     });
     try {
-      final data = await Repository.instance.invitationMap();
-            
-    debugPrint('Invitation map response type: ${data.runtimeType}');
-    debugPrint('Invitation map response: $data');
+      // The map is sorted around where we are, so the fix has to come first —
+      // there is no list to ask for without it.
+      final origin = _gpsOrigin ?? await currentLatLng();
+      if (!mounted) return;
+      setState(() => _gpsOrigin = origin);
 
-      
+      // No `search` sent: the server only matches Samaj ID, username and phone,
+      // while the search box here also matches name, area and gotra — so the
+      // filtering stays on the client, over the page we already hold.
+      final data = await Repository.instance.invitationMap(origin);
       if (!mounted) return;
       setState(() {
-        _me = data.me;
         _all = data.members;
-        _unmapped = data.unmapped;
+        _count = data.count;
         // Drop selections for anyone no longer on the map.
         _order.removeWhere((id) => !data.members.any((m) => m.id == id));
         _loading = false;
       });
       _fitRoute();
       _schedulePlan();
+    } on LocationFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
-          debugPrint('Invitation map response type: ${e}');
       setState(() {
         _error = e is ApiException ? e.message : 'Could not load the map';
         _loading = false;
@@ -185,7 +192,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       _fitRoute();
       return;
     }
-    if (_useGps && _gpsOrigin == null) return; // waiting on the fix
+    if (_gpsOrigin == null) return; // waiting on the fix
     setState(() => _planning = true);
     _debounce = Timer(const Duration(milliseconds: 350), _planRoute);
   }
@@ -196,8 +203,8 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     try {
       final plan = await Repository.instance.planRoute(
         ids,
-        // Omitted for the saved address — the server starts there by default.
-        origin: _useGps ? _gpsOrigin : null,
+        // Always sent: the round starts from where we are standing.
+        origin: _gpsOrigin,
       );
       if (!mounted || seq != _planSeq) return;
       setState(() {
@@ -215,17 +222,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     }
   }
 
-  /// Switches the starting point between the saved address and the device.
-  Future<void> _setUseGps(bool useGps) async {
-    if (!useGps) {
-      setState(() => _useGps = false);
-      _schedulePlan();
-      return;
-    }
-    setState(() {
-      _useGps = true;
-      _locating = true;
-    });
+  /// Takes a fresh fix and reloads the map around it — for when the member has
+  /// moved since the screen opened, which on a delivery round they will have.
+  Future<void> _refreshLocation() async {
+    setState(() => _locating = true);
     try {
       final here = await currentLatLng();
       if (!mounted) return;
@@ -233,20 +233,14 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         _gpsOrigin = here;
         _locating = false;
       });
-      _schedulePlan();
+      await _load();
     } on LocationFailure catch (e) {
       if (!mounted) return;
-      setState(() {
-        _useGps = false;
-        _locating = false;
-      });
+      setState(() => _locating = false);
       _snack(e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _useGps = false;
-        _locating = false;
-      });
+      setState(() => _locating = false);
       _snack('Could not read your location');
     }
   }
@@ -343,7 +337,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
           _MapPanel(
             controller: _mapController,
             origin: _origin,
-            originIsGps: _useGps,
+            originIsGps: true,
             stops: _orderedStops,
             routeLine: _routeLine,
             loading: _loading,
@@ -377,27 +371,19 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       );
     }
     if (_all.isEmpty) {
-      // An address only becomes a pin once it has been geocoded, and the server
-      // works through the backlog a few members at a time — so "none yet" and
-      // "none ever" are different answers, and the member deserves the right one.
-      return _unmapped > 0
-          ? _message(
-              icon: Icons.travel_explore_rounded,
-              title: 'Putting $_unmapped members on the map',
-              detail:
-                  'Their addresses are being looked up now - a few at a time, '
-                  'which is all the maps service allows. Refresh in a moment to '
-                  'see them.',
-              action: 'Refresh',
-            )
-          : _message(
-              icon: Icons.person_pin_circle_outlined,
-              title: 'No members on the map yet',
-              detail:
-                  'A member appears here once they save their current address - '
-                  'the address is what puts them on the map.',
-              action: 'Refresh',
-            );
+      // A member only becomes a pin once their saved address has been geocoded,
+      // so an empty list is about their addresses, not about this screen.
+      return _message(
+        icon: Icons.person_pin_circle_outlined,
+        title: _query.isEmpty
+            ? 'No members on the map yet'
+            : 'No members match "$_query"',
+        detail: _query.isEmpty
+            ? 'A member appears here once they save their current address - '
+                'the address is what puts them on the map.'
+            : 'Search matches Samaj ID, username or phone number.',
+        action: 'Refresh',
+      );
     }
 
     final visible = _visible;
@@ -421,11 +407,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
           const SizedBox(height: 4),
           Text('Select families · the route orders itself',
               style: body(12, color: AppColors.textMuted)),
-          if (_unmapped > 0) ...[
+          if (_count > _all.length) ...[
             const SizedBox(height: 6),
             Text(
-              '$_unmapped more ${_unmapped == 1 ? 'member is' : 'members are'} '
-              'still being mapped - refresh shortly to see them.',
+              'Showing the ${_all.length} nearest of $_count mapped members.',
               style: body(11, color: AppColors.gold700, height: 1.4),
             ),
           ],
@@ -465,11 +450,11 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     );
   }
 
-  /// Where the round starts. The saved address is the default; the device's
-  /// position is for planning while already out.
- Widget _originPicker() {
-  final hasAddress = _me != null &&
-      !(_me!.latitude == 0 && _me!.longitude == 0);
+  /// Where the round starts — always where the member is standing, since that
+  /// is also the position the map is sorted around. The only control here is
+  /// taking a fresh fix after moving.
+  Widget _originPicker() {
+  final origin = _gpsOrigin;
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,77 +473,45 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
 
       Row(
         children: [
-          // MY ADDRESS
-          ChoiceChip(
-            label: Text(
-              'My addressggg',
-              style: body(
-                12,
-                color: (!_useGps && hasAddress)
-                    ? Colors.white
-                    : AppColors.ink,
-              ),
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.my_location_rounded,
+                  size: 14,
+                  color: AppColors.forest700,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    _locating
+                        ? 'Locating…'
+                        : origin == null
+                            ? 'Waiting for your location'
+                            : 'Current location · '
+                                '${origin.latitude.toStringAsFixed(4)}, '
+                                '${origin.longitude.toStringAsFixed(4)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(12, color: AppColors.ink),
+                  ),
+                ),
+              ],
             ),
-            selected: !_useGps && hasAddress,
-            onSelected: hasAddress
-                ? (_) => _setUseGps(false)
-                : null,
-            selectedColor: AppColors.forest300,
-            backgroundColor: Colors.white,
           ),
-
-          const SizedBox(width: 8),
-
-          // CURRENT LOCATION
-          ChoiceChip(
-            avatar: _locating
+          TextButton.icon(
+            onPressed: _locating ? null : _refreshLocation,
+            icon: _locating
                 ? const SizedBox(
                     width: 12,
                     height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Icon(
-                    Icons.my_location_rounded,
-                    size: 14,
-                    color: _useGps
-                        ? Colors.white
-                        : AppColors.ink,
-                  ),
-            label: Text(
-              _locating
-                  ? 'Locating…'
-                  : 'Current location',
-              style: body(
-                12,
-                color: _useGps
-                    ? Colors.white
-                    : AppColors.ink,
-              ),
-            ),
-            selected: _useGps,
-            onSelected: _locating
-                ? null
-                : (_) => _setUseGps(true),
-            selectedColor: AppColors.forest300,
-            backgroundColor: Colors.white,
+                : const Icon(Icons.refresh_rounded, size: 16),
+            label: Text('Update', style: body(12)),
           ),
         ],
       ),
-
-      if (!hasAddress && !_useGps) ...[
-        const SizedBox(height: 6),
-        Text(
-          'Your profile has no mapped address yet — add one, '
-          'or start from your current location.',
-          style: body(
-            11,
-            color: AppColors.gold700,
-            height: 1.4,
-          ),
-        ),
-      ],
     ],
   );
 }

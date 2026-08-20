@@ -319,30 +319,44 @@ class Repository {
     return const [];
   }
 
-  /// GET /api/user/map — members to plot on the invitation route planner:
-  /// everyone whose current address has been geocoded, nearest to you first,
-  /// plus your own pin as the route's starting point.
+ 
+  /// GET /api/user/invitation-map — members with mapped coordinates, nearest
+  /// first from [origin].
   ///
-  /// Unlike the directory this carries the full address and coordinates — it is
-  /// the view the address parts were collected for, since delivering an
-  /// invitation by hand means finding the door.
-  Future<InvitationMap> invitationMap({String q = '', int limit = 100}) async {
-    final query = <String>['limit=$limit'];
-    if (q.isNotEmpty) query.add('q=${Uri.encodeQueryComponent(q)}');
-    final data = await _api.getJson('/api/user/directory?${query.join('&')}');
-    debugPrint('Invitation map response type: ${data.runtimeType}');
-    debugPrint('data $data');
+  /// [origin] is the device's position and the server requires it: it is what
+  /// the `$near` sort measures from, and it is the route's starting point too,
+  /// since this endpoint returns no saved-address `me`.
+  ///
+  /// `search` matches Samaj ID, username or phone — not name or area, so the
+  /// list is filtered on the client for anything else.
+  Future<InvitationMap> invitationMap(
+    LatLng origin, {
+    String q = '',
+    int page = 1,
+    int limit = 100,
+  }) async {
+    final query = <String>[
+      'latitude=${origin.latitude}',
+      'longitude=${origin.longitude}',
+      'page=$page',
+      'limit=$limit',
+    ];
+    if (q.isNotEmpty) query.add('search=${Uri.encodeQueryComponent(q)}');
+
+    final data =
+        await _api.getJson('/api/user/invitation-map?${query.join('&')}');
     if (data is! Map) return const InvitationMap();
 
     final members = <InvitationMember>[];
-    for (final raw in (data['users'] as List? ?? const [])) {
+    for (final raw in (data['members'] as List? ?? const [])) {
       final m = InvitationMember.fromMap(raw);
       if (m != null) members.add(m);
     }
     return InvitationMap(
-      me: InvitationMember.fromMap(data['me']),
       members: members,
-      unmapped: (data['unmapped'] as num?)?.toInt() ?? 0,
+      count: (data['count'] as num?)?.toInt() ?? members.length,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      totalPages: (data['totalPages'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -360,9 +374,10 @@ class Repository {
     final data = await _api.postJson('/api/user/route', {
       'memberIds': memberIds,
       if (origin != null)
+        // GeoPointDto on the server: a GeoJSON point, longitude first.
         'origin': {
-          'latitude': origin.latitude,
-          'longitude': origin.longitude,
+          'type': 'Point',
+          'coordinates': [origin.longitude, origin.latitude],
         },
     });
     final plan = RoutePlan.fromMap(data);

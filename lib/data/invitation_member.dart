@@ -51,88 +51,133 @@ class InvitationMember {
   /// Area, or the city when the member gave no area.
   String get locality => area.isNotEmpty ? area : city;
 
-static InvitationMember? fromMap(dynamic raw) {
-  if (raw is! Map) return null;
+  static InvitationMember? fromMap(dynamic raw) {
+    if (raw is! Map) return null;
 
-  final m = Map<String, dynamic>.from(raw);
+    final m = Map<String, dynamic>.from(raw);
 
-  // API structure:
-  // currentAddress -> location -> latitude / longitude
-  final address = m['currentAddress'] is Map
-      ? Map<String, dynamic>.from(m['currentAddress'])
-      : <String, dynamic>{};
+    // API structure:
+    // currentAddress -> location -> latitude / longitude
+    //
+    // The directory does not answer with that shape for every row: some carry
+    // `address`, some only the permanent one, and some put the fields flat on
+    // the user. Take the first block that has anything in it, so a member with
+    // coordinates but an unexpected key still shows their address instead of
+    // just "N km away".
+    Map<String, dynamic> asMap(dynamic v) =>
+        v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
 
-  final location = address['location'] is Map
-      ? Map<String, dynamic>.from(address['location'])
-      : <String, dynamic>{};
+    var address = <String, dynamic>{};
+    for (final key in const [
+      'currentAddress',
+      'address',
+      'presentAddress',
+      'permanentAddress',
+    ]) {
+      final candidate = asMap(m[key]);
+      if (candidate.isNotEmpty) {
+        address = candidate;
+        break;
+      }
+    }
+    if (address.isEmpty) address = m; // flat fields on the user itself
 
-  double? coord(dynamic value) {
-    if (value is num) return value.toDouble();
+    var location = asMap(address['location']);
+    if (location.isEmpty) location = asMap(m['location']);
+    if (location.isEmpty) location = address; // lat/lng beside the address text
 
-    return double.tryParse(
-      (value ?? '').toString(),
+    double? coord(dynamic value) {
+      if (value is num) return value.toDouble();
+
+      return double.tryParse((value ?? '').toString());
+    }
+
+    final lat = coord(location['latitude']);
+    final lng = coord(location['longitude']);
+
+    debugPrint(
+      'InvitationMember: ${m['name']} | '
+      'lat=$lat | lng=$lng | addressKeys=${address.keys.toList()}',
+    );
+
+    // No valid coordinates -> don't put this user on the map. 0/0 counts as
+    // none: it is Null Island, and a member who was never geocoded would
+    // otherwise show up ~8,600 km from anyone in India.
+    if (lat == null || lng == null || (lat == 0 && lng == 0)) {
+      debugPrint('❌ No coordinates for ${m['name']}');
+      return null;
+    }
+
+    String s(String key) => (m[key] ?? '').toString();
+
+    /// The first of [keys] that has a value, looked for in the address block and
+    /// then on the user — so a flat `city` still lands when the block has none.
+    String pick(List<String> keys) {
+      for (final key in keys) {
+        final v = (address[key] ?? m[key] ?? '').toString().trim();
+        if (v.isNotEmpty && v.toLowerCase() != 'null') return v;
+      }
+      return '';
+    }
+
+    return InvitationMember(
+      id: s('id'),
+      samajId: s('samajId'),
+      name: s('name'),
+      gotra: s('gotra'),
+      native: s('native'),
+      profileUrl: s('profileUrl'),
+      phone: s('phone'),
+
+      // The address text sits next to the coordinates, under whichever names
+      // this row happens to use.
+      // /api/user/map already joins the parts into one line; the directory and
+      // profile shapes leave them separate, so build it when it is missing.
+      addressLine: pick(const ['addressLine']).isNotEmpty
+          ? pick(const ['addressLine'])
+          : [
+              pick(const ['houseNo', 'houseNumber', 'flatNo', 'building']),
+              pick(const [
+                'street',
+                'streetAddress',
+                'addressLine1',
+                'line1',
+                'road',
+              ]),
+              pick(const ['landmark', 'addressLine2', 'line2']),
+              pick(const ['pincode', 'pinCode', 'postalCode', 'zip']),
+            ].where((v) => v.isNotEmpty).join(', '),
+
+      area: pick(const ['area', 'locality', 'taluk', 'village']),
+      city: pick(const ['city', 'town', 'district', 'state']),
+
+      latitude: lat,
+      longitude: lng,
     );
   }
-
-  final lat = coord(location['latitude']);
-  final lng = coord(location['longitude']);
-
-  debugPrint(
-    'InvitationMember: ${m['name']} | '
-    'lat=$lat | lng=$lng',
-  );
-
-  // No valid coordinates -> don't put this user on the map
-  if (lat == null || lng == null) {
-    debugPrint('❌ No coordinates for ${m['name']}');
-    return null;
-  }
-
-  String s(String key) => (m[key] ?? '').toString();
-
-  return InvitationMember(
-    id: s('id'),
-    samajId: s('samajId'),
-    name: s('name'),
-    gotra: s('gotra'),
-    native: s('native'),
-    profileUrl: s('profileUrl'),
-    phone: s('phone'),
-
-    // These are also inside currentAddress
-    addressLine: [
-      address['street'],
-      address['landmark'],
-    ]
-        .where((v) => v != null && v.toString().trim().isNotEmpty)
-        .map((v) => v.toString().trim())
-        .join(', '),
-
-    area: (address['area'] ?? '').toString(),
-    city: (address['city'] ?? '').toString(),
-
-    latitude: lat,
-    longitude: lng,
-  );
-}
 }
 
-/// The planner's data: everyone who can be visited, plus your own pin.
+/// One page of the planner's data: the members who can be visited, nearest
+/// first from the position the request was made with.
 ///
-/// [me] is separate because you are where the route starts, not a stop on it —
-/// and it is null when your own address has no coordinates yet, which is what
-/// the planner tells you to fix.
+/// There is no `me` here — the route starts from the device position the client
+/// sent to get this page, not from a saved address.
 class InvitationMap {
-  const InvitationMap({this.me, this.members = const [], this.unmapped = 0});
+  const InvitationMap({
+    this.members = const [],
+    this.count = 0,
+    this.page = 1,
+    this.totalPages = 1,
+  });
 
-  final InvitationMember? me;
   final List<InvitationMember> members;
 
-  /// Members who have an address but no coordinates yet. The server geocodes
-  /// them a few at a time in the background, so this is a "check back shortly"
-  /// number, not an error — it is why an otherwise busy community can open the
-  /// planner and see nothing on the first load.
-  final int unmapped;
+  /// Mapped members in total, not just on this page.
+  final int count;
+  final int page;
+  final int totalPages;
+
+  bool get hasMore => page < totalPages;
 }
 
 /// Straight-line kilometres between two points. Not road distance — the same
