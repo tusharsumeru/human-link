@@ -343,14 +343,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 16),
+            _moduleCard(context, 'Profile Compatibility', p.profileCompatibility),
+            const SizedBox(height: 10),
             _moduleCard(
               context,
               'South Indian Jataka',
               p.jataka,
               readyExtra: p.jataka.isReady ? _jatakaReadyAction() : null,
             ),
-            const SizedBox(height: 10),
-            _moduleCard(context, 'Profile Compatibility', p.profileCompatibility),
           ],
         ),
         Positioned(

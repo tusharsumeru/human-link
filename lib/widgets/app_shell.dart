@@ -130,13 +130,6 @@ class AppShell extends StatelessWidget {
         title: Text(title,
             style: display(20, color: AppColors.forest700)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.forum_outlined, color: AppColors.forest700),
-            tooltip: 'Messages',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ConversationsScreen()),
-            ),
-          ),
           if (user != null)
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
@@ -407,16 +400,13 @@ class _BottomBar extends StatelessWidget {
           ]
         : const [
             NavDest(Icons.grid_view_rounded, 'Home', '/dashboard'),
-            NavDest(Icons.park_rounded, 'Tree', '/family-tree'),
           ];
     final rightItems = isElder
         ? const [
             NavDest(Icons.groups_rounded, 'Members', '/elder/members'),
             NavDest(Icons.inventory_2_rounded, 'Archive', '/elder/archive'),
           ]
-        : const [
-            NavDest(Icons.navigation_rounded, 'Invitations', '/invitations'),
-          ];
+        : const [];
 
     return Container(
       decoration: const BoxDecoration(
@@ -433,7 +423,9 @@ class _BottomBar extends StatelessWidget {
               // Center create button — members only.
               if (!isElder) _createButton(context),
               for (final d in rightItems) _tab(context, d, path),
-              _moreTab(context),
+              // Members get a Messages tab at the right end (moved down from
+              // the app bar); elders keep the drawer-opening "More" tab.
+              if (isElder) _moreTab(context) else _messagesTab(context),
             ],
           ),
         ),
@@ -477,6 +469,25 @@ class _BottomBar extends StatelessWidget {
               Text('More', style: body(11, color: const Color(0xFF9CA3AF))),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _messagesTab(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ConversationsScreen()),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.forum_outlined,
+                size: 20, color: Color(0xFF9CA3AF)),
+            const SizedBox(height: 3),
+            Text('Messages', style: body(11, color: const Color(0xFF9CA3AF))),
+          ],
         ),
       ),
     );
