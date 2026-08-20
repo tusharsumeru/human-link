@@ -186,16 +186,20 @@ class _FamilySearchSheetState extends State<_FamilySearchSheet> {
                             final m = _results[i];
                             final id = (m['_id'] ?? '').toString();
                             final name = (m['name'] ?? '').toString();
-                            final gotra = (m['gotra'] ?? '').toString();
-                            final branch = (m['branch'] ?? '').toString();
-                            final sub = [gotra, branch]
-                                .where((s) => s.isNotEmpty)
-                                .join(' · ');
+                            // A member record carries no gotra/branch — what
+                            // distinguishes one here is whether they are a real
+                            // account, an unclaimed invitation, or an ancestor.
+                            final sub = [
+                              if (m['status'] == 'deceased') 'In memoriam',
+                              if (m['isPlaceholder'] == true) 'Not joined yet',
+                              if ((m['linkedUserId'] ?? '').toString().isNotEmpty)
+                                'Member',
+                            ].join(' · ');
                             final selected = _picked.containsKey(id) ||
                                 widget.selectedIds.contains(id);
                             return ListTile(
                               leading: PexelsImage(
-                                  url: (m['photoUrl'] ?? '').toString(),
+                                  url: (m['profileUrl'] ?? '').toString(),
                                   name: name,
                                   size: 42),
                               title: Text(name,

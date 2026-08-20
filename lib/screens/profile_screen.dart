@@ -17,10 +17,13 @@ import 'full_screen_reel.dart';
 
 /// Member profile — mirrors `src/app/profile/[id]/page.tsx`.
 ///
-/// When [id] is a MongoDB id (24 hex chars) the real member is loaded from
-/// `/api/family` and shown with their DB details + lineage (parent/children by
-/// `parentId`). Otherwise the currently authenticated user's own profile is
-/// rendered. No demo data is used.
+/// When [id] is a MongoDB id (24 hex chars) it is read as a family member record
+/// (`GET /api/family/:id`), shown with how they relate to me
+/// (`GET /api/family/relations/:id`) and their immediate relations (the direct
+/// nodes of `GET /api/family/tree?rootMemberId=:id`). A member linked to a real
+/// account also pulls that account in for its gotra / native / occupation.
+/// Otherwise the currently authenticated user's own profile is rendered. No demo
+/// data is used.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.id});
 
@@ -35,8 +38,16 @@ bool _isMongoId(String id) => RegExp(r'^[a-f0-9]{24}$').hasMatch(id);
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = false;
   Map<String, dynamic>? _member;
-  Map<String, dynamic>? _parent;
-  List<Map<String, dynamic>> _children = const [];
+
+  /// The account behind [_member], when it has one — the member record itself
+  /// carries no gotra / native / occupation.
+  Map<String, dynamic>? _account;
+
+  /// `{related, relation, generation, path, …}` for this member as seen from me.
+  Map<String, dynamic>? _relation;
+
+  /// This member's own immediate family (`distance == 1` in their tree).
+  List<Map<String, dynamic>> _immediate = const [];
 
   @override
   void initState() {
@@ -49,39 +60,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _load() async {
     try {
-      final all = await Repository.instance.familyTree();
-      final member = all
-          .cast<Map<String, dynamic>?>()
-          .firstWhere((m) => m!['_id'].toString() == widget.id,
-              orElse: () => null);
-      if (member != null) {
-        final parentId = (member['parentId'] ?? '').toString();
-        _parent = parentId.isEmpty
-            ? null
-            : all.cast<Map<String, dynamic>?>().firstWhere(
-                (m) => m!['_id'].toString() == parentId,
-                orElse: () => null);
-        _children = all
-            .where((m) => (m['parentId'] ?? '').toString() == widget.id)
-            .toList();
+      final member = await Repository.instance.familyMemberById(widget.id);
+      // Everything below only enriches the page — a failure must not cost us the
+      // member we already have.
+      Map<String, dynamic>? account;
+      Map<String, dynamic>? relation;
+      var immediate = const <Map<String, dynamic>>[];
+      final linkedUserId = (member['linkedUserId'] ?? '').toString();
+      if (linkedUserId.isNotEmpty) {
+        try {
+          account = await Repository.instance.userById(linkedUserId);
+        } catch (_) {/* best-effort */}
       }
+      try {
+        relation = await Repository.instance.familyRelation(widget.id);
+      } catch (_) {/* best-effort */}
+      try {
+        final tree = await Repository.instance.familyTree(
+            rootMemberId: widget.id, maxNodes: 200);
+        final nodes = tree['nodes'];
+        if (nodes is List) {
+          immediate = nodes
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              // distance 1 is exactly the seven stored relations — parents,
+              // siblings, spouse and children — and nothing derived.
+              .where((n) => ((n['distance'] ?? 0) as num).toInt() == 1)
+              .toList();
+        }
+      } catch (_) {/* best-effort */}
       if (!mounted) return;
       setState(() {
         _member = member;
+        _account = account;
+        _relation = relation;
+        _immediate = immediate;
         _loading = false;
       });
     } catch (_) {
+      // Not a family member record (or it is gone) — fall back to the self view.
       if (!mounted) return;
       setState(() => _loading = false);
     }
   }
 
   static bool _isLate(Map<String, dynamic> m) =>
+      m['status'] == 'deceased' ||
+      m['deceased'] == true ||
       (m['dod'] ?? '').toString().trim().isNotEmpty;
 
   static String _dash(Object? v) {
     final s = (v ?? '').toString().trim();
     return s.isEmpty ? '-' : s;
+  }
+
+  /// Member dates come back as ISO timestamps (`1938-02-11T00:00:00.000Z`); only
+  /// the day matters here.
+  static String _date(Object? v) {
+    final s = (v ?? '').toString().trim();
+    if (s.isEmpty) return '—';
+    final t = s.indexOf('T');
+    return t > 0 ? s.substring(0, t) : s;
   }
 
   @override
@@ -97,13 +136,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return _selfProfile();
   }
 
-  // ── DB member profile ──────────────────────────────────────────────────────
+  // ── Family member profile ──────────────────────────────────────────────────
   Widget _dbMemberProfile(Map<String, dynamic> m) {
     final isLate = _isLate(m);
-    final gen = ((m['generation'] ?? 1) as num).toInt();
-    final branch = _dash(m['branch']);
-    final relation = 'Gen $gen · $branch Branch';
-    final notes = (m['notes'] ?? '').toString().trim();
+    final account = _account ?? const {};
+    final rel = _relation ?? const {};
+    // The relation label is derived server-side and relative to me, so it is only
+    // shown for someone actually connected to my tree.
+    final relation = rel['related'] == true
+        ? (rel['relation'] ?? 'Relative').toString()
+        : (m['isPlaceholder'] == true ? 'Pending Invitation' : 'Family Member');
+    final biography = (m['biography'] ?? '').toString().trim();
+    final placeOfDeath = (m['placeOfDeath'] ?? '').toString().trim();
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -113,29 +157,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Header(
             name: _dash(m['name']),
             relation: relation,
-            gotra: _dash(m['gotra']),
-            native: _dash(m['native']),
+            gotra: _dash(account['gotra']),
+            native: _dash(account['native']),
             avatarUrl: '',
             photoPath: '',
-            photoUrl: (m['photoUrl'] ?? '').toString(),
+            photoUrl: (m['profileUrl'] ?? '').toString(),
             isLate: isLate,
-            verified: !isLate,
+            verified: (m['linkedUserId'] ?? '').toString().isNotEmpty,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _aboutCard(_dash(m['occupation']), _dash(m['dob']),
+                _aboutCard(_dash(account['occupation']), _date(m['dob']),
                     isLate ? 'Late' : 'Active'),
-                const SizedBox(height: 16),
-                _lineageCard(_parent, _children),
-                if (notes.isNotEmpty) ...[
+                if (isLate) ...[
                   const SizedBox(height: 16),
-                  _archiveCard(notes),
+                  _memoriamCard(_date(m['dod']), placeOfDeath),
                 ],
                 const SizedBox(height: 16),
-                _statsCard(_dash(m['gotra']), _dash(m['native']),
+                _lineageCard(_immediate),
+                if (biography.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _archiveCard(biography),
+                ],
+                const SizedBox(height: 16),
+                _statsCard(_dash(account['gotra']), _dash(account['native']),
                     isLate ? 'Late' : 'Active'),
                 const SizedBox(height: 24),
                 ForestButton(
@@ -328,11 +376,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _lineageCard(
-    Map<String, dynamic>? parent,
-    List<Map<String, dynamic>> children,
-  ) {
-    final hasAny = parent != null || children.isNotEmpty;
+  /// In memoriam details, which only a deceased member record carries.
+  Widget _memoriamCard(String dod, String placeOfDeath) {
+    return AppCard(
+      color: const Color(0xFFF3F4F6),
+      border: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_florist_rounded,
+                  size: 18, color: AppColors.textMuted),
+              const SizedBox(width: 8),
+              Text('In Memoriam', style: display(18, color: AppColors.forest900)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            [
+              if (dod != '—') 'Passed away $dod',
+              if (placeOfDeath.isNotEmpty) 'at $placeOfDeath',
+            ].join(' '),
+            style: body(13, color: AppColors.textMuted, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// This member's own immediate family — the seven stored relations, labelled as
+  /// the server derives them from *their* viewpoint.
+  Widget _lineageCard(List<Map<String, dynamic>> immediate) {
+    final hasAny = immediate.isNotEmpty;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,25 +440,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text('No connected relations yet',
                   style: body(13, color: AppColors.textMuted)),
             ),
-          if (parent != null) _relationTile(parent, 'Parent'),
-          for (final c in children) _relationTile(c, 'Child'),
+          for (final r in immediate) _relationTile(r),
         ],
       ),
     );
   }
 
-  Widget _relationTile(Map<String, dynamic> m, String label) {
-    final mid = m['_id'].toString();
+  /// One tree node from [_immediate]: `id` (not `_id`), the derived `relation`
+  /// and `profileUrl`.
+  Widget _relationTile(Map<String, dynamic> m) {
+    final mid = (m['id'] ?? '').toString();
     final late = _isLate(m);
+    final label = (m['relation'] ?? '').toString().trim();
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.push('/profile/$mid'),
+      onTap: mid.isEmpty ? null : () => context.push('/profile/$mid'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
             PexelsImage(
-              url: (m['photoUrl'] ?? '').toString(),
+              url: (m['profileUrl'] ?? '').toString(),
               name: (m['name'] ?? '').toString(),
               size: 44,
               borderColor: AppColors.border,
@@ -397,7 +475,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: body(14,
                           weight: FontWeight.w600, color: AppColors.ink)),
                   Text(
-                      '$label · Gen ${((m['generation'] ?? 1) as num).toInt()}',
+                      [
+                        label.isEmpty ? 'Relative' : label,
+                        if (m['isPlaceholder'] == true) 'not joined yet',
+                      ].join(' · '),
                       style: body(11, color: AppColors.textMuted)),
                 ],
               ),

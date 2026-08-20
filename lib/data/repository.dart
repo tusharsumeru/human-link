@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:latlong2/latlong.dart';
-
+import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'api_config.dart';
 import 'demo_data.dart';
@@ -319,17 +319,32 @@ class Repository {
     return const [];
   }
 
-  /// GET /api/user/map — members to plot on the invitation route planner:
-  /// everyone whose current address has been geocoded, nearest to you first,
-  /// plus your own pin as the route's starting point.
+ 
+  /// GET /api/user/invitation-map — members with mapped coordinates, nearest
+  /// first from [origin].
   ///
-  /// Unlike the directory this carries the full address and coordinates — it is
-  /// the view the address parts were collected for, since delivering an
-  /// invitation by hand means finding the door.
-  Future<InvitationMap> invitationMap({String q = '', int limit = 100}) async {
-    final query = <String>['limit=$limit'];
-    if (q.isNotEmpty) query.add('q=${Uri.encodeQueryComponent(q)}');
-    final data = await _api.getJson('/api/user/map?${query.join('&')}');
+  /// [origin] is the device's position and the server requires it: it is what
+  /// the `$near` sort measures from, and it is the route's starting point too,
+  /// since this endpoint returns no saved-address `me`.
+  ///
+  /// `search` matches Samaj ID, username or phone — not name or area, so the
+  /// list is filtered on the client for anything else.
+  Future<InvitationMap> invitationMap(
+    LatLng origin, {
+    String q = '',
+    int page = 1,
+    int limit = 100,
+  }) async {
+    final query = <String>[
+      'latitude=${origin.latitude}',
+      'longitude=${origin.longitude}',
+      'page=$page',
+      'limit=$limit',
+    ];
+    if (q.isNotEmpty) query.add('search=${Uri.encodeQueryComponent(q)}');
+
+    final data =
+        await _api.getJson('/api/user/invitation-map?${query.join('&')}');
     if (data is! Map) return const InvitationMap();
 
     final members = <InvitationMember>[];
@@ -338,9 +353,10 @@ class Repository {
       if (m != null) members.add(m);
     }
     return InvitationMap(
-      me: InvitationMember.fromMap(data['me']),
       members: members,
-      unmapped: (data['unmapped'] as num?)?.toInt() ?? 0,
+      count: (data['count'] as num?)?.toInt() ?? members.length,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      totalPages: (data['totalPages'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -358,9 +374,10 @@ class Repository {
     final data = await _api.postJson('/api/user/route', {
       'memberIds': memberIds,
       if (origin != null)
+        // GeoPointDto on the server: a GeoJSON point, longitude first.
         'origin': {
-          'latitude': origin.latitude,
-          'longitude': origin.longitude,
+          'type': 'Point',
+          'coordinates': [origin.longitude, origin.latitude],
         },
     });
     final plan = RoutePlan.fromMap(data);
@@ -372,18 +389,23 @@ class Repository {
   /// "Are you a purohit?" at registration. Also filters client-side on the
   /// same field, in case the backend returns it without honoring the query
   /// filter — so this never shows a non-purohit member.
-  Future<List<Map<String, dynamic>>> purohitDirectory({int limit = 100}) async {
-    final data =
-        await _api.getJson('/api/user/directory?limit=$limit&isPurohit=true');
-    if (data is Map && data['users'] is List) {
-      return (data['users'] as List)
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .where((m) => m['isPurohit'] == true)
-          .toList();
-    }
-    return const [];
+  Future<List<Map<String, dynamic>>> purohitDirectory({
+  int limit = 30,
+  int page = 1,
+}) async {
+  final data = await _api.getJson(
+    '/api/user/purohits?limit=$limit&page=$page',
+  );
+
+  if (data is Map && data['users'] is List) {
+    return (data['users'] as List)
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
+
+  return const [];
+}
 
   /// GET /api/user/me — the authenticated member's own full profile (same shape
   /// as login/register, including `samajId`). Used to refresh a restored session
@@ -402,8 +424,11 @@ class Repository {
     throw ApiException('Member not found');
   }
 
-  /// GET /api/family/search — members matching [q] (for tagging / tree link):
-  /// `[{ _id, name, gotra, native, photoUrl, generation, branch }]`.
+  /// GET /api/family/search — member records whose name contains [q] (powers
+  /// "Tag Family Members" and "Link to Tree Node"):
+  /// `[{ _id, name, gender, status, profileUrl, isPlaceholder, linkedUserId }]`.
+  /// Omitting [q] returns the first [limit] members. Requires the bearer token
+  /// like every other family route. [limit] is clamped to 1–50 server-side.
   Future<List<Map<String, dynamic>>> familySearch(String q,
       {int limit = 20}) async {
     final data = await _api.getJson(
@@ -843,79 +868,77 @@ class Repository {
     };
   }
 
-  /// GET /api/family — the real family-tree members from MongoDB (same source
-  /// the web family-tree/profile pages render). Each map follows the DB shape:
-  /// `_id`, `name`, `gender`, `dob`, `dod`, `gotra`, `native`, `occupation`,
-  /// `photoUrl`, `generation`, `branch`, `notes`, `parentId`. Throws
-  /// [ApiException] on a non-2xx response; returns [] when the collection is
-  /// empty.
-  Future<List<Map<String, dynamic>>> familyTree() async {
-    final data = await _api.getJson('/api/family');
-    if (data is List) {
-      return data
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    }
-    return const [];
-  }
-
-  /// POST /api/family — create a family-tree node (a "person", not an account).
-  /// Placement is derived from the relationship by the caller (parentId /
-  /// spouseId / generation). Returns the new `id` and `matchedExistingUser`
-  /// (true when the phone already belongs to a registered account, in which
-  /// case a pending link request was auto-created server-side).
-  Future<Map<String, dynamic>> addFamilyMember(Map<String, dynamic> body) async {
-    final data = await _api.postJson('/api/family', body);
-    if (data is Map) return Map<String, dynamic>.from(data);
-    throw ApiException('Could not add member');
-  }
-
-  /// PUT /api/family/:id — patch a node. Used to re-link an anchor to a newly
-  /// added ancestor (set the anchor's parentId) or spouse.
-  Future<void> updateFamilyMember(String id, Map<String, dynamic> patch) async {
-    await _api.putJson('/api/family/$id', patch);
-  }
-
-  /// POST /api/family/connect — request to link the current account to an
-  /// existing (accountless) node. Sits pending until an elder approves it.
-  Future<void> requestConnect({
-    required String memberId,
-    required String requesterPhone,
-    required String requesterName,
-    String relation = 'self',
-    String note = '',
-  }) async {
-    await _api.postJson('/api/family/connect', {
-      'memberId': memberId,
-      'requesterPhone': requesterPhone,
-      'requesterName': requesterName,
-      'relation': relation,
-      'note': note,
-    });
-  }
-
-  // ── Family Tree (new normalized backend, /api/family/*) ─────────────────────
+  // ── Family (/api/family/*) ──────────────────────────────────────────────────
   //
-  // The redesigned family tree: a Person + Relationship graph with an approval /
-  // invitation / placeholder-merge workflow. Served by FamilyController
-  // (@Controller('api/family')) — NOT a separate /api/family-tree base path.
+  // A Person + Relationship graph with an approval / invitation /
+  // placeholder-merge workflow. Only seven relations are ever stored — father,
+  // mother, brother, sister, spouse, son, daughter — and everything else
+  // (grandfather, uncle, sister-in-law…) is *derived at read time* by walking
+  // those edges out from whoever is looking. Labels are therefore
+  // viewer-relative: never cache a `relation` globally, only per `rootId`, and
+  // localise off the stable `relationCode`.
+  //
+  // Every route needs the bearer token, `/search` included. There is no "create
+  // my profile" call — `GET /tree`, `POST /members` and `GET /requests` each
+  // lazily create the caller's own member node on first touch.
 
-  /// GET /api/family/tree — my tree, built by traversing accepted relationships.
-  /// Returns the envelope `{rootId, nodes, edges, truncated}`, where each node is
-  /// `{id, name, gender, status, photoUrl, isPlaceholder, deceased, linkedUserId,
-  /// generation, relationToRoot, isSelf}` and each edge is `{from, to, relation}`.
-  Future<Map<String, dynamic>> familyTreeGraph() async {
-    final data = await _api.getJson('/api/family/tree');
+  /// GET /api/family/tree — the tree as seen from [rootMemberId] (me by default).
+  /// Returns `{rootId, nodes, edges, truncated}`. Nodes come sorted by
+  /// `generation` (`0` = root, negative = ancestors) and carry the derived
+  /// `relation` / `relationCode`, `side`, `lineage`, `inLaw`, `bloodRelation`,
+  /// `distance`, `isDirectRelation`, `path`, plus `profileUrl`, `deceased`,
+  /// `isPlaceholder`, `linkedUserId` and `isSelf`. Each edge is
+  /// `{relationshipId, from, to, relation, status}`. Pending edges are invisible
+  /// unless [includePending] is set; `truncated` is true when [maxNodes] cut the
+  /// walk short (the server caps it at 800).
+  Future<Map<String, dynamic>> familyTree({
+    String? rootMemberId,
+    bool includePending = false,
+    int maxNodes = 800,
+  }) async {
+    final q = <String>['maxNodes=$maxNodes'];
+    if (rootMemberId != null && rootMemberId.isNotEmpty) {
+      q.add('rootMemberId=${Uri.encodeQueryComponent(rootMemberId)}');
+    }
+    if (includePending) q.add('includePending=true');
+    final data = await _api.getJson('/api/family/tree?${q.join('&')}');
     if (data is Map) return Map<String, dynamic>.from(data);
-    return {'rootId': '', 'nodes': const [], 'edges': const []};
+    return {
+      'rootId': '',
+      'nodes': const [],
+      'edges': const [],
+      'truncated': false,
+    };
   }
 
-  /// GET /api/family/users/search — find an existing account to connect to. Any
-  /// combination of criteria narrows the match (all ANDed server-side). Returns
-  /// account previews `[{_id, userName, name, profileUrl, samajId, gotra, native,
-  /// gender, phone}]`.
-  Future<List<Map<String, dynamic>>> familyTreeSearch({
+  /// GET /api/family/relatives — the same nodes as [familyTree], flattened and
+  /// grouped by relation for a list screen: `{rootId, total, groups: [{relation,
+  /// count, members}]}`. The root itself is excluded.
+  Future<Map<String, dynamic>> familyRelatives({String? rootMemberId}) async {
+    final q = (rootMemberId != null && rootMemberId.isNotEmpty)
+        ? '?rootMemberId=${Uri.encodeQueryComponent(rootMemberId)}'
+        : '';
+    final data = await _api.getJson('/api/family/relatives$q');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'rootId': '', 'total': 0, 'groups': const []};
+  }
+
+  /// GET /api/family/relations/:memberId — "who is this person to me?". Returns
+  /// `{memberId, related, relation, relationCode, inLaw, bloodRelation, distance,
+  /// lineage, side, generation, path}`. An unconnected member is a **200** with
+  /// `related: false` and a `message`, not a 404 — only an unknown member id 404s.
+  Future<Map<String, dynamic>> familyRelation(String memberId) async {
+    final data = await _api.getJson('/api/family/relations/$memberId');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'memberId': memberId, 'related': false, 'relation': null};
+  }
+
+  /// GET /api/family/users/search — find the **account** to connect to; the `_id`
+  /// it returns is what [addFamilyMember] takes as `targetUserId`. Criteria are
+  /// ANDed and at least one is required (an empty query is a 400, so the endpoint
+  /// can never dump the directory). My own account is always excluded. Returns
+  /// `[{_id, userName, name, profileUrl, samajId, gotra, native, gender, phone}]`.
+  Future<List<Map<String, dynamic>>> familyUserSearch({
     String? samajId,
     String? phone,
     String? name,
@@ -949,48 +972,110 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family/members — add a family member. Set [relation] plus
-  /// either [targetUserId] (send a request to an existing account) or the
-  /// placeholder fields (name/gender/status/...). Deceased members are added
-  /// immediately; alive placeholders return an `inviteLink` + `whatsappUrl`.
-  /// Returns `{mode: 'request'|'invitation'|'deceased', relationship, person, ...}`.
-  Future<Map<String, dynamic>> addFamilyTreeMember({
-    required String relation,
-    String? targetUserId,
-    String? name,
-    String? gender,
-    String status = 'alive',
-    String? phone,
-    String? dob,
-    String? dod,
-    String? placeOfDeath,
-    String? biography,
-    String? photoUrl,
-  }) async {
-    final body = <String, dynamic>{'relation': relation};
-    if (targetUserId != null && targetUserId.isNotEmpty) {
-      body['targetUserId'] = targetUserId;
-    } else {
-      body['name'] = name;
-      if (gender != null && gender.isNotEmpty) body['gender'] = gender;
-      body['status'] = status;
-      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
-      if (dob != null && dob.isNotEmpty) body['dob'] = dob;
-      if (dod != null && dod.isNotEmpty) body['dod'] = dod;
-      if (placeOfDeath != null && placeOfDeath.isNotEmpty) {
-        body['placeOfDeath'] = placeOfDeath;
-      }
-      if (biography != null && biography.isNotEmpty) body['biography'] = biography;
-      if (photoUrl != null && photoUrl.isNotEmpty) body['photoUrl'] = photoUrl;
+  /// POST /api/family/members — add one of my seven immediate relations. One
+  /// endpoint, three modes picked from the fields sent:
+  ///
+  /// * **request** — [targetUserId] set: the person already has an account, so
+  ///   the edge stays `pending` (and out of the tree) until they accept.
+  /// * **invitation** — [name] + [gender] + [dob] for a living person with no
+  ///   account: creates a placeholder and returns `inviteLink` + `whatsappUrl`.
+  ///   [phone] is the merge key — without it the placeholder can never be
+  ///   auto-claimed when that person registers.
+  /// * **deceased** — `status: 'deceased'`: recorded immediately, edge already
+  ///   `accepted`, no approval and no invite.
+  ///
+  /// Returns `{mode, relationship, member, inviteLink?, whatsappUrl?}`. Adding a
+  /// relation that already exists (in either direction) is idempotent — the
+  /// existing edge comes back unchanged, so a 200 is not proof a *new* request
+  /// was sent.
+Future<Map<String, dynamic>> addFamilyMember({
+  required String relation,
+  String? targetUserId,
+  String? name,
+  String? gender,
+  String status = 'alive',
+  String? phone,
+  String? dob,
+  String? dod,
+  String? placeOfDeath,
+  String? biography,
+  String? profileUrl,
+}) async {
+  final body = <String, dynamic>{
+    'relation': relation,
+  };
+
+  if (targetUserId != null && targetUserId.isNotEmpty) {
+    body['targetUserId'] = targetUserId;
+  } else {
+    body['name'] = name;
+
+    if (gender != null && gender.isNotEmpty) {
+      body['gender'] = gender;
     }
-    final data = await _api.postJson('/api/family/members', body);
-    if (data is Map) return Map<String, dynamic>.from(data);
-    throw ApiException('Could not add member');
+
+    body['status'] = status;
+
+    if (phone != null && phone.isNotEmpty) {
+      body['phone'] = phone;
+    }
+
+    if (dob != null && dob.isNotEmpty) {
+      body['dob'] = dob;
+    }
+
+    if (dod != null && dod.isNotEmpty) {
+      body['dod'] = dod;
+    }
+
+    if (placeOfDeath != null && placeOfDeath.isNotEmpty) {
+      body['placeOfDeath'] = placeOfDeath;
+    }
+
+    if (biography != null && biography.isNotEmpty) {
+      body['biography'] = biography;
+    }
+
+    if (profileUrl != null && profileUrl.isNotEmpty) {
+      body['profileUrl'] = profileUrl;
+    }
   }
 
-  /// GET /api/family/requests — pending relationship requests addressed to
-  /// me, each with the requester's details.
-  Future<List<Map<String, dynamic>>> familyTreeRequests() async {
+  debugPrint('========== ADD FAMILY MEMBER ==========');
+  debugPrint('Relation: $relation');
+  debugPrint('Target User ID: $targetUserId');
+  debugPrint('Request Body: $body');
+
+  try {
+    debugPrint('Calling: POST /api/family/members');
+
+    final data = await _api.postJson(
+      '/api/family/members',
+      body,
+    );
+
+    debugPrint('API RESPONSE: $data');
+
+    if (data is Map) {
+      debugPrint('Family member added successfully');
+      return Map<String, dynamic>.from(data);
+    }
+
+    debugPrint('Unexpected response type: ${data.runtimeType}');
+    throw ApiException('Could not add member');
+  } catch (e, stackTrace) {
+    debugPrint('========== ADD FAMILY MEMBER ERROR ==========');
+    debugPrint('Error: $e');
+    debugPrint('Error type: ${e.runtimeType}');
+    debugPrint('Stack trace: $stackTrace');
+    debugPrint('=============================================');
+
+    rethrow;
+  }
+}
+  /// GET /api/family/requests — requests awaiting **my** approval, each with the
+  /// `requester` preview and a ready-made `message`.
+  Future<List<Map<String, dynamic>>> familyRequests() async {
     final data = await _api.getJson('/api/family/requests');
     if (data is List) {
       return data
@@ -1001,24 +1086,52 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family/requests/:id/accept — accept an incoming request.
-  Future<void> acceptFamilyTreeRequest(String id) async {
-    await _api.postJson('/api/family/requests/$id/accept', const {});
+  /// GET /api/family/requests/sent — requests **I** sent that are still pending.
+  /// Same shape as [familyRequests] but with `relative` instead of `requester`,
+  /// plus an `inviteLink` (non-null only for placeholder invitations). Use this
+  /// to show people who won't be in the tree yet.
+  Future<List<Map<String, dynamic>>> familySentRequests() async {
+    final data = await _api.getJson('/api/family/requests/sent');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
   }
 
-  /// POST /api/family/requests/:id/decline — decline an incoming request.
-  Future<void> declineFamilyTreeRequest(String id) async {
-    await _api.postJson('/api/family/requests/$id/decline', const {});
+  /// POST /api/family/requests/accept — accept a request by id, with an optional
+  /// [note] (max 280 chars) appended to the requester's notification. The id is
+  /// the `relationshipId` carried by the notification, so a notification tap can
+  /// be answered without rebuilding a URL. **Refetch the tree afterwards** — one
+  /// new edge can relabel dozens of nodes.
+  Future<void> acceptFamilyRequest(String id, {String? note}) async {
+    await _api.postJson('/api/family/requests/accept', {
+      'relationshipId': id,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
   }
 
-  /// POST /api/family/requests/:id/cancel — withdraw a request I sent.
-  Future<void> cancelFamilyTreeRequest(String id) async {
+  /// POST /api/family/requests/decline — decline a request by id.
+  Future<void> declineFamilyRequest(String id, {String? note}) async {
+    await _api.postJson('/api/family/requests/decline', {
+      'relationshipId': id,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+  }
+
+  /// POST /api/family/requests/:id/cancel — withdraw a request I sent. Only the
+  /// requester may call it; an already-answered request comes back unchanged.
+  Future<void> cancelFamilyRequest(String id) async {
     await _api.postJson('/api/family/requests/$id/cancel', const {});
   }
 
-  /// GET /api/family/invites — invitations matching my phone (placeholders
-  /// others created for me). Call after registering / verifying my number.
-  Future<List<Map<String, dynamic>>> familyTreeInvites() async {
+  /// GET /api/family/invites — placeholders carrying **my** phone number, i.e.
+  /// people who added me while I hadn't registered. Call this right after
+  /// login/registration: `[{relationshipId, placeholderId, relation, requester,
+  /// message}]`.
+  Future<List<Map<String, dynamic>>> familyInvites() async {
     final data = await _api.getJson('/api/family/invites');
     if (data is List) {
       return data
@@ -1029,21 +1142,29 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family/invites/accept — merge matching placeholders into my
-  /// account and connect the trees. Returns `{merged, tree}`.
-  Future<Map<String, dynamic>> acceptFamilyTreeInvites() async {
+  /// POST /api/family/invites/accept — accept **all** matching invitations at
+  /// once, merging every placeholder that stood in for me onto my account (three
+  /// siblings who each created a father placeholder collapse onto one person with
+  /// no relationship lost). Returns `{merged, tree}` — the freshly built tree is
+  /// included so no second round-trip is needed.
+  Future<Map<String, dynamic>> acceptFamilyInvites() async {
     final data = await _api.postJson('/api/family/invites/accept', const {});
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'merged': 0};
   }
 
-  /// POST /api/family/invites/decline — decline invitations matching my phone.
-  Future<void> declineFamilyTreeInvites() async {
+  /// POST /api/family/invites/decline — decline all of them: the pending edges
+  /// are marked declined, the placeholder records left as unclaimed profiles.
+  Future<void> declineFamilyInvites() async {
     await _api.postJson('/api/family/invites/decline', const {});
   }
 
-  /// GET /api/family/notifications — my family-tree inbox (newest first).
-  Future<List<Map<String, dynamic>>> familyTreeNotifications() async {
+  /// GET /api/family/notifications — my family inbox, newest first, capped at
+  /// 100. Types: `relationship_request`, `relationship_accepted`,
+  /// `relationship_declined`, `member_joined`, `placeholder_converted`. The
+  /// `relationshipId` is exactly what [acceptFamilyRequest] wants. You are never
+  /// notified about your own action.
+  Future<List<Map<String, dynamic>>> familyNotifications() async {
     final data = await _api.getJson('/api/family/notifications');
     if (data is List) {
       return data
@@ -1054,9 +1175,32 @@ class Repository {
     return const [];
   }
 
-  /// POST /api/family/notifications/:id/read — mark a notification read.
-  Future<void> markFamilyTreeNotificationRead(String id) async {
+  /// GET /api/family/notifications/unread-count — the badge count.
+  Future<int> familyUnreadCount() async {
+    final data = await _api.getJson('/api/family/notifications/unread-count');
+    if (data is Map && data['unread'] is num) {
+      return (data['unread'] as num).toInt();
+    }
+    return 0;
+  }
+
+  /// POST /api/family/notifications/:id/read — mark one read (403 if not mine).
+  Future<void> markFamilyNotificationRead(String id) async {
     await _api.postJson('/api/family/notifications/$id/read', const {});
+  }
+
+  /// POST /api/family/notifications/read-all — mark every one read.
+  Future<void> markAllFamilyNotificationsRead() async {
+    await _api.postJson('/api/family/notifications/read-all', const {});
+  }
+
+  /// GET /api/family/:id — one member record: `name gender status phone dob dod
+  /// placeOfDeath biography profileUrl isPlaceholder linkedUserId createdBy`.
+  /// 404 when missing, 400 when [id] isn't a valid ObjectId.
+  Future<Map<String, dynamic>> familyMemberById(String id) async {
+    final data = await _api.getJson('/api/family/$id');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Member not found');
   }
 
   // ── Matrimonial ─────────────────────────────────────────────────────────────
