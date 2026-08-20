@@ -161,7 +161,6 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.read<AuthService>().user;
     final current = GoRouterState.of(context).uri.path;
 
     return Drawer(
@@ -199,83 +198,6 @@ class _Sidebar extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(color: Colors.white24, height: 1),
-              // User card + role badge
-              if (user != null)
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: isElder
-                              ? AppColors.gold500.withValues(alpha: 0.25)
-                              : AppColors.forest500.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                                isElder
-                                    ? Icons.shield_rounded
-                                    : Icons.person_rounded,
-                                size: 12,
-                                color: isElder
-                                    ? AppColors.gold500
-                                    : AppColors.forest500),
-                            const SizedBox(width: 6),
-                            Text(
-                                isElder
-                                    ? 'Elder & Admin'
-                                    : 'Community Member',
-                                style: body(11,
-                                    weight: FontWeight.w700,
-                                    color: isElder
-                                        ? AppColors.gold500
-                                        : AppColors.forest500)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            userAvatar(user, size: 38),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(user.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: body(13,
-                                          weight: FontWeight.w600,
-                                          color: Colors.white)),
-                                  Text(
-                                      '${user.gotra} · ${user.native.split(",").first}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: body(11,
-                                          color: AppColors.forest300)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               const Divider(color: Colors.white24, height: 1),
               // Nav
               Expanded(

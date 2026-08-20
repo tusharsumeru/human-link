@@ -3,28 +3,34 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Central design system ported from the web app's globals.css.
 /// Forest greens + gold + cream, Playfair Display (display) + Inter (body).
+///
+/// Palette anchors (from the app's design tokens):
+///   Primary   #1B5E20 (forest scale — a darker, deeper green)
+///   Secondary #4A2E1F (gold700 — the strong/dark accent)
+///   Tertiary  #8D6E63 (gold500/goldSoft — the mid/soft accent)
+///   Neutral   #F5F1E8 (cream scale)
 class AppColors {
   AppColors._();
 
-  // Forest scale
-  static const Color forest950 = Color(0xFF061410);
-  static const Color forest900 = Color(0xFF0D2B1E);
-  static const Color forest800 = Color(0xFF1B4332);
-  static const Color forest700 = Color(0xFF2D6A4F);
-  static const Color forest600 = Color(0xFF40916C);
-  static const Color forest500 = Color(0xFF52B788);
-  static const Color forest300 = Color(0xFF95D5B2);
+  // Forest scale — Primary, anchored at #1B5E20
+  static const Color forest950 = Color(0xFF081F0A);
+  static const Color forest900 = Color(0xFF0F3D12);
+  static const Color forest800 = Color(0xFF1B5E20);
+  static const Color forest700 = Color(0xFF2E7D32);
+  static const Color forest600 = Color(0xFF388E3C);
+  static const Color forest500 = Color(0xFF43A047);
+  static const Color forest300 = Color(0xFF81C784);
 
-  // Gold / earth
-  static const Color gold700 = Color(0xFF8B5E3C);
-  static const Color gold500 = Color(0xFFC4823A);
-  static const Color goldSoft = Color(0xFFDFC5A0);
+  // Gold / earth — Secondary (#4A2E1F) + Tertiary (#8D6E63)
+  static const Color gold700 = Color(0xFF4A2E1F);
+  static const Color gold500 = Color(0xFF8D6E63);
+  static const Color goldSoft = Color(0xFFBCAAA4);
 
-  // Cream / surfaces
-  static const Color cream = Color(0xFFFAF7F2);
-  static const Color creamDark = Color(0xFFF0E6D3);
+  // Cream / surfaces — Neutral, anchored at #F5F1E8
+  static const Color cream = Color(0xFFF5F1E8);
+  static const Color creamDark = Color(0xFFEBE0C9);
   // Warm feed background — posts sit as white cards on this.
-  static const Color feedBg = Color(0xFFF4EFE4);
+  static const Color feedBg = Color(0xFFEFE9DA);
 
   // Convenient aliases (kept for backwards-compat with legacy screens)
   static const Color forestDark = forest900;

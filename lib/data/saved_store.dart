@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// A post or reel the user bookmarked. Carries just enough to render a saved
 /// thumbnail (and re-open a reel) without reaching back into the feed.
 class SavedItem {
@@ -11,7 +13,7 @@ class SavedItem {
     this.mediaUrl,
     this.isReel = false,
     this.emoji = '🎬',
-    this.gradient = const [Color(0xFF1B4332), Color(0xFF2D6A4F)],
+    this.gradient = const [AppColors.forest800, AppColors.forest700],
   });
 
   final String id; // matches the feed post id, so a save can be toggled off

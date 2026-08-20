@@ -13,7 +13,7 @@ class StorySlide {
     this.mediaUrl,
     this.isVideo = false,
     this.emoji,
-    this.gradient = const [Color(0xFF1B4332), Color(0xFF2D6A4F)],
+    this.gradient = const [AppColors.forest800, AppColors.forest700],
     this.caption = '',
     this.isMine = false,
     this.storyId,
