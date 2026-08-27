@@ -107,13 +107,6 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                   children: [
-                    Text(
-                      'Each purpose below is separate - turning one on never turns on '
-                      'another. You can revoke at any time; the compatibility engine '
-                      'checks this directly before every calculation.',
-                      style: body(12, color: AppColors.textMuted, height: 1.5),
-                    ),
-                    const SizedBox(height: 16),
                     _ConsentPurposeCard(
                       icon: Icons.cake_outlined,
                       title: 'Birth-Data Matching',

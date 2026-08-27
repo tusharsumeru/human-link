@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/api_client.dart';
 import '../data/chat_service.dart';
 import '../data/repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import 'full_screen_reel.dart';
 
 /// A 1:1 real-time chat with another member. Loads history over REST, then
 /// streams live messages from the socket. Both my sent messages and the other
@@ -32,11 +38,14 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final _picker = ImagePicker();
   final List<Map<String, dynamic>> _messages = [];
   final Set<String> _seenIds = {};
   StreamSubscription<Map<String, dynamic>>? _sub;
+  StreamSubscription<String>? _readSub;
   bool _loading = true;
   bool _sending = false;
+  bool _uploading = false;
   late final String _myId;
 
   @override
@@ -48,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
         (context.read<AuthService>().user?.id ?? '');
     ChatService.instance.ensureConnected();
     _sub = ChatService.instance.onMessage.listen(_onIncoming);
+    _readSub = ChatService.instance.onRead.listen(_onRead);
     _load();
   }
 
@@ -84,6 +94,22 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // The other party just read our conversation — stamp every message I sent
+  // them that wasn't already marked read, so those bubbles flip from a single
+  // to a double (read) tick without a reload.
+  void _onRead(String byUserId) {
+    if (byUserId != widget.otherUserId) return;
+    var changed = false;
+    final now = DateTime.now().toIso8601String();
+    for (final m in _messages) {
+      if ((m['senderId'] ?? '').toString() == _myId && m['readAt'] == null) {
+        m['readAt'] = now;
+        changed = true;
+      }
+    }
+    if (changed && mounted) setState(() {});
+  }
+
   // Insert deduped, keeping ascending createdAt order.
   void _insert(Map<String, dynamic> m, {bool notify = true}) {
     final id = (m['_id'] ?? '').toString();
@@ -117,6 +143,87 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _showAttachmentOptions() async {
+    if (_uploading) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_outlined, color: AppColors.forest800),
+              title: Text('Photos/Videos', style: body(14, color: AppColors.ink)),
+              onTap: () => Navigator.pop(ctx, 'gallery_media'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.forest800),
+              title: Text('Camera', style: body(14, color: AppColors.ink)),
+              onTap: () => Navigator.pop(ctx, 'camera_photo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file_outlined, color: AppColors.forest800),
+              title: Text('Documents', style: body(14, color: AppColors.ink)),
+              onTap: () => Navigator.pop(ctx, 'document'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) return;
+
+    if (choice == 'document') {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+        ],
+      );
+      final picked = result?.files.single;
+      if (picked?.path == null || !mounted) return;
+      await _sendAttachment(picked!.path!, fileName: picked.name);
+      return;
+    }
+
+    XFile? file;
+    switch (choice) {
+      case 'gallery_media':
+        // Unified image-or-video gallery picker — one entry for both, same
+        // as the option label ("Photos/Videos"). maxWidth/imageQuality only
+        // apply when the pick turns out to be an image; videos ignore them.
+        file = await _picker.pickMedia(maxWidth: 1600, imageQuality: 85);
+        break;
+      case 'camera_photo':
+        file = await _picker.pickImage(
+            source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+        break;
+    }
+    if (file == null || !mounted) return;
+    await _sendAttachment(file.path);
+  }
+
+  Future<void> _sendAttachment(String filePath, {String? fileName}) async {
+    setState(() => _uploading = true);
+    try {
+      final saved = await Repository.instance.sendAttachmentMessage(
+          widget.otherUserId, filePath,
+          fileName: fileName);
+      _insert(saved);
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException ? e.message : 'Could not send file'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
@@ -132,6 +239,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    _readSub?.cancel();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -181,7 +289,12 @@ class _ChatScreenState extends State<ChatScreen> {
                               (m['senderId'] ?? '').toString() == _myId;
                           return _Bubble(
                             text: (m['text'] ?? '').toString(),
+                            mediaUrl: (m['mediaUrl'] ?? '').toString(),
+                            mediaType: (m['mediaType'] ?? '').toString(),
+                            mediaName: (m['mediaName'] ?? '').toString(),
                             mine: mine,
+                            read: m['readAt'] != null,
+                            time: _formatMessageTime(m['createdAt']),
                           );
                         },
                       ),
@@ -204,6 +317,26 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _uploading ? null : _showAttachmentOptions,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: _uploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.forest800),
+                        )
+                      : const Icon(Icons.add_circle_outline,
+                          color: AppColors.forest800, size: 24),
+                ),
+              ),
+            ),
             Expanded(
               child: TextField(
                 controller: _input,
@@ -255,6 +388,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+/// "12:25 PM" in the device's local time, or '' if the message carries no
+/// (or an unparseable) timestamp — never shown as a fake time.
+String _formatMessageTime(Object? createdAt) {
+  final iso = (createdAt ?? '').toString();
+  if (iso.isEmpty) return '';
+  final t = DateTime.tryParse(iso);
+  if (t == null) return '';
+  return DateFormat('h:mm a').format(t.toLocal());
+}
+
 /// Reads the `sub` (user id) claim out of a JWT, or null if it can't.
 String? _jwtSub(String? token) {
   if (token == null || token.isEmpty) return null;
@@ -270,33 +413,220 @@ String? _jwtSub(String? token) {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.text, required this.mine});
+  const _Bubble({
+    required this.text,
+    required this.mine,
+    this.mediaUrl = '',
+    this.mediaType = '',
+    this.mediaName = '',
+    this.time = '',
+    this.read = false,
+  });
   final String text;
+  final bool mine;
+  final String mediaUrl;
+  final String mediaType;
+  final String mediaName;
+  final String time;
+  // Only meaningful when [mine] — whether the other party has read this
+  // message yet (single tick if not, double blue tick once they have).
+  final bool read;
+
+  Future<void> _openMedia(BuildContext context) async {
+    if (mediaType == 'video') {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => FullScreenReelPage(url: mediaUrl),
+      ));
+    } else if (mediaType == 'document') {
+      final uri = Uri.tryParse(mediaUrl);
+      final opened =
+          uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No app could open this file'),
+        ));
+      }
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => _FullScreenImage(url: mediaUrl),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMedia = mediaUrl.isNotEmpty;
+    final isDocument = mediaType == 'document';
+    final maxWidth = MediaQuery.of(context).size.width * 0.72;
+
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment:
+            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 3),
+            padding: hasMedia && !isDocument
+                ? const EdgeInsets.all(4)
+                : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            decoration: BoxDecoration(
+              color: mine ? AppColors.forest800 : Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(mine ? 16 : 4),
+                bottomRight: Radius.circular(mine ? 4 : 16),
+              ),
+              border: mine ? null : Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              // Only stretch to the bubble's max width for an image (which
+              // needs to fill it); a plain text or document bubble should
+              // shrink-wrap to its content instead of always going full width.
+              crossAxisAlignment: hasMedia && !isDocument
+                  ? CrossAxisAlignment.stretch
+                  : (mine ? CrossAxisAlignment.end : CrossAxisAlignment.start),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasMedia && isDocument)
+                  GestureDetector(
+                    onTap: () => _openMedia(context),
+                    child: _DocumentCard(name: mediaName, mine: mine),
+                  ),
+                if (hasMedia && !isDocument)
+                  GestureDetector(
+                    onTap: () => _openMedia(context),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: mediaType == 'video'
+                          ? _VideoThumb(maxWidth: maxWidth)
+                          : CachedNetworkImage(
+                              imageUrl: mediaUrl,
+                              width: maxWidth,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => SizedBox(
+                                width: maxWidth,
+                                height: maxWidth * 0.75,
+                                child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              ),
+                              errorWidget: (_, __, ___) => SizedBox(
+                                width: maxWidth,
+                                height: maxWidth * 0.75,
+                                child: const Center(
+                                    child: Icon(Icons.broken_image_outlined,
+                                        color: AppColors.hint)),
+                              ),
+                            ),
+                    ),
+                  ),
+                if (text.isNotEmpty)
+                  Padding(
+                    padding: hasMedia && !isDocument
+                        ? const EdgeInsets.fromLTRB(10, 6, 10, 4)
+                        : hasMedia
+                            ? const EdgeInsets.only(top: 8)
+                            : EdgeInsets.zero,
+                    child: Text(
+                      text,
+                      style:
+                          body(14, color: mine ? Colors.white : AppColors.ink),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (time.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 3, left: 4, right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(time, style: body(10, color: AppColors.hint)),
+                  if (mine) ...[
+                    const SizedBox(width: 3),
+                    Icon(
+                      read ? Icons.done_all_rounded : Icons.done_rounded,
+                      size: 13,
+                      color: read ? const Color(0xFF34B7F1) : AppColors.hint,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A compact file row — icon + filename — for a document attachment. Tapping
+/// the bubble opens it in an external app (PDF/Office viewer or browser).
+class _DocumentCard extends StatelessWidget {
+  const _DocumentCard({required this.name, required this.mine});
+  final String name;
   final bool mine;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.72,
-        ),
-        decoration: BoxDecoration(
-          color: mine ? AppColors.forest800 : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(mine ? 16 : 4),
-            bottomRight: Radius.circular(mine ? 4 : 16),
+    final fg = mine ? Colors.white : AppColors.forest900;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.insert_drive_file_rounded, color: fg, size: 28),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            name.isEmpty ? 'Document' : name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: body(13, weight: FontWeight.w600, color: fg),
           ),
-          border: mine ? null : Border.all(color: AppColors.border),
         ),
-        child: Text(
-          text,
-          style: body(14, color: mine ? Colors.white : AppColors.ink),
+      ],
+    );
+  }
+}
+
+/// A dark placeholder card with a play glyph — video thumbnails aren't
+/// fetched client-side, so this simply signals "tap to play".
+class _VideoThumb extends StatelessWidget {
+  const _VideoThumb({required this.maxWidth});
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: maxWidth,
+      height: maxWidth * 0.75,
+      color: Colors.black87,
+      alignment: Alignment.center,
+      child: const Icon(Icons.play_circle_fill_rounded,
+          color: Colors.white, size: 44),
+    );
+  }
+}
+
+/// Simple pinch-to-zoom full-screen viewer for a chat image attachment.
+class _FullScreenImage extends StatelessWidget {
+  const _FullScreenImage({required this.url});
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
         ),
       ),
     );

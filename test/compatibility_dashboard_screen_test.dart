@@ -258,7 +258,8 @@ void main() {
     expect(find.text('ASTROLOGY SUMMARY'), findsNothing);
   });
 
-  testWidgets('7. REVIEW_REQUIRED status is shown on the relevant card', (tester) async {
+  testWidgets('7. REVIEW_REQUIRED status still renders its percentage (the status badge itself was removed from the UI)',
+      (tester) async {
     final fake = _FakeApiClient((_) async => _reportJson(
           overallPercentage: 84,
           overallStatus: 'REVIEW_REQUIRED',
@@ -273,10 +274,13 @@ void main() {
     await tester.pumpWidget(_app(authService: authService));
     await tester.pumpAndSettle();
 
-    expect(find.text('Review required'), findsWidgets); // overall status row + profile card status
+    // The Profile/Astrology/Overall cards no longer show a status badge
+    // ("Calculated"/"Review required"/...) — only the percentage itself.
+    expect(find.text('84%'), findsWidgets); // overall ring + profile card
+    expect(find.text('Review required'), findsNothing);
   });
 
-  testWidgets('8. Discussion points are displayed', (tester) async {
+  testWidgets('8. Discussion Points card was removed from the dashboard, even when the report has points', (tester) async {
     final fake = _FakeApiClient((_) async => _reportJson(
           overallPercentage: 81,
           profilePercentage: 84,
@@ -297,8 +301,8 @@ void main() {
     await tester.pumpWidget(_app(authService: authService));
     await tester.pumpAndSettle();
 
-    expect(find.text('Discussion Points'), findsOneWidget);
-    expect(find.text('Nadi Koota did not match.'), findsOneWidget);
+    expect(find.text('Discussion Points'), findsNothing);
+    expect(find.text('Nadi Koota did not match.'), findsNothing);
   });
 
   testWidgets('9. Empty discussion points — no empty card shown', (tester) async {
@@ -448,7 +452,6 @@ void main() {
 
       expect(find.text('Not enough profile information'), findsNothing);
       expect(find.text('69%'), findsOneWidget);
-      expect(find.text('Calculated'), findsWidgets); // Profile card + Astrology card both read Calculated
 
       // (69 * 50 + 78 * 50) / 100 = 73.5 -> 74, using the report's own
       // profileWeight/astrologyWeight (50/50) — never a fabricated number.

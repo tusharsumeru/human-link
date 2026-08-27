@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
-import 'directory_screen.dart' show openMemberChat, showMemberProfile;
+import 'directory_screen.dart' show connectMember, openMemberChat;
 
 /// Purohit directory — members who answered "Yes" to "Are you a purohit?"
 /// at registration (GET /api/user/directory?isPurohit=true).
@@ -229,17 +229,12 @@ class _PurohitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = _str('name');
-    final gotra = _str('gotra');
     final native = _str('native');
     final km = _str('km');
-    final sub = [
-      if (gotra.isNotEmpty) '$gotra Gotra',
-      if (native.isNotEmpty) native,
-    ].join(' · ');
+    final sub = native;
 
     return AppCard(
       padding: const EdgeInsets.all(12),
-      onTap: () => showMemberProfile(context, member),
       child: Row(
         children: [
           PexelsImage(
@@ -288,6 +283,20 @@ class _PurohitCard extends StatelessWidget {
   ),
 ],
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => connectMember(context, member),
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FBF4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.call_rounded,
+                  size: 16, color: AppColors.forest700),
             ),
           ),
           const SizedBox(width: 8),
