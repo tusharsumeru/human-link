@@ -486,6 +486,27 @@ class Repository {
     await _api.postJson('/api/conversations/$userId/read', const {});
   }
 
+  /// POST /api/messages/attachment — multipart upload of an image/video/
+  /// document (field "media"), sent as a message with an optional [text]
+  /// caption. [fileName] preserves the original name for documents (picker
+  /// temp paths aren't always the original filename, e.g. on iOS).
+  Future<Map<String, dynamic>> sendAttachmentMessage(
+    String toUserId,
+    String filePath, {
+    String text = '',
+    String? fileName,
+  }) async {
+    final data = await _api.postMultipart(
+      '/api/messages/attachment',
+      fileField: 'media',
+      filePath: filePath,
+      fileName: fileName,
+      fields: {'toUserId': toUserId, if (text.isNotEmpty) 'text': text},
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not send attachment');
+  }
+
   /// POST /api/connections — send a connection request (directory "Connect").
   Future<Map<String, dynamic>> connect(String toUserId) async {
     final data = await _api.postJson('/api/connections', {'toUserId': toUserId});

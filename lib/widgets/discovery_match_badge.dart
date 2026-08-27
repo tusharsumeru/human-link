@@ -50,13 +50,13 @@ class DiscoveryMatchBadge extends StatelessWidget {
     return Row(
       children: [
         Text('$percentage%',
-            style: body(14, weight: FontWeight.w800, color: levelColor)),
-        const SizedBox(width: 6),
-        Text('Match', style: body(12, weight: FontWeight.w600, color: AppColors.textMuted)),
+            style: body(20, weight: FontWeight.w800, color: levelColor)),
+        const SizedBox(width: 7),
+        Text('Match', style: body(15, weight: FontWeight.w600, color: AppColors.textMuted)),
         if (levelLabel.isNotEmpty) ...[
           const SizedBox(width: 8),
           Text('· $levelLabel',
-              style: body(12, weight: FontWeight.w700, color: levelColor)),
+              style: body(15, weight: FontWeight.w700, color: levelColor)),
         ],
       ],
     );

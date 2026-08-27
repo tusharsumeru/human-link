@@ -251,8 +251,13 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       children: [
         _header(myName, otherName),
         const SizedBox(height: 20),
-        _overallCard(percentage: overallPercentage, status: overallStatus),
-        const SizedBox(height: 14),
+        // Astrology Summary leads (enlarged) with Overall Compatibility
+        // (shrunk) moved below the percentage pair — swapped position and
+        // size from the original layout.
+        if (astro != null) ...[
+          _astrologySummaryCard(astro),
+          const SizedBox(height: 14),
+        ],
         // Two summary cards side by side — both narrow enough on a phone
         // screen that Row+Expanded never overflows; each card wraps its own
         // text rather than forcing a fixed width. Deliberately NOT
@@ -281,14 +286,8 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
             )),
           ],
         ),
-        if (astro != null) ...[
-          const SizedBox(height: 14),
-          _astrologySummaryCard(astro),
-        ],
-        if (report.discussionPoints.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _discussionPointsCard(report.discussionPoints),
-        ],
+        const SizedBox(height: 14),
+        _overallCard(percentage: overallPercentage, status: overallStatus),
         const SizedBox(height: 14),
         _detailedReportButton(otherName),
         const SizedBox(height: 10),
@@ -327,21 +326,13 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   Widget _overallCard({required int? percentage, required AstrologyModuleStatus status}) {
     final visual = _statusVisual(status);
     return AppCard(
+      padding: const EdgeInsets.all(14),
       child: Column(
         children: [
           Text('OVERALL COMPATIBILITY',
-              style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.4)),
-          const SizedBox(height: 14),
-          PercentageRing(percentage: percentage, color: visual.color),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(visual.icon, size: 16, color: visual.color),
-              const SizedBox(width: 6),
-              Text(visual.label, style: body(13, weight: FontWeight.w700, color: visual.color)),
-            ],
-          ),
+              style: body(10, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          PercentageRing(percentage: percentage, color: visual.color, size: 92, strokeWidth: 9),
         ],
       ),
     );
@@ -353,7 +344,6 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     required AstrologyModuleStatus status,
     required String unavailableText,
   }) {
-    final visual = _statusVisual(status);
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -365,18 +355,6 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
             Text('$percentage%', style: display(26, color: AppColors.forest900))
           else
             Text(unavailableText, style: body(12, color: AppColors.textMuted, height: 1.35)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(visual.icon, size: 13, color: visual.color),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(visual.label,
-                    style: body(11, weight: FontWeight.w700, color: visual.color),
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
         ],
 ),
     );
@@ -389,13 +367,13 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     final karnataka = astro.karnatakaPorutham;
     final ashtakoota = astro.ashtakoota;
     return AppCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('ASTROLOGY SUMMARY',
-              style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.2)),
-          const SizedBox(height: 12),
+              style: body(13, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.4)),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -430,46 +408,13 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: body(11, color: AppColors.textMuted, height: 1.3)),
-        const SizedBox(height: 4),
-        Text(value, style: display(16, color: AppColors.forest900)),
+        Text(label, style: body(13, color: AppColors.textMuted, height: 1.3)),
+        const SizedBox(height: 6),
+        Text(value, style: display(24, color: AppColors.forest900)),
         if (sublabel != null) ...[
-          const SizedBox(height: 2),
-          Text(sublabel, style: body(11, weight: FontWeight.w700, color: AppColors.forest700)),
+          const SizedBox(height: 3),
+          Text(sublabel, style: body(18, weight: FontWeight.w700, color: AppColors.forest700)),
         ],
-      ],
-    );
-  }
-
-  /// Read-only, deterministic points the backend already derived (STEP 69
-  /// §11) — this app never generates or reorders them.
-  Widget _discussionPointsCard(List<DiscussionPoint> points) {
-    return AppCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Discussion Points', style: display(15, color: AppColors.forest900)),
-          const SizedBox(height: 10),
-          for (var i = 0; i < points.length; i++) ...[
-            if (i > 0) const Divider(height: 18),
-            _discussionPointRow(points[i]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _discussionPointRow(DiscussionPoint point) {
-    final review = point.severity == 'REVIEW';
-    final color = review ? AppColors.gold700 : AppColors.forest700;
-    final icon = review ? Icons.rate_review_outlined : Icons.info_outline_rounded;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 10),
-        Expanded(child: Text(point.message, style: body(13, color: AppColors.ink, height: 1.4))),
       ],
     );
   }

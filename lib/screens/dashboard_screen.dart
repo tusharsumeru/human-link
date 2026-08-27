@@ -1277,14 +1277,14 @@ class _PostCardState extends State<_PostCard> {
                 ListenableBuilder(
                   listenable: CommentStore.instance,
                   builder: (context, _) => _ActionIcon(
-                    icon: Icons.mode_comment_outlined,
+                    icon: Icons.chat_bubble_outline_rounded,
                     onTap: () => showCommentsSheet(context, postId: p.id),
                     count: CommentStore.instance
                         .countFor(p.id, fallback: p.comments),
                   ),
                 ),
                 _ActionIcon(
-                  icon: Icons.send_outlined,
+                  icon: Icons.share_rounded,
                   onTap: () => showShareSheet(
                     context,
                     author: p.author,

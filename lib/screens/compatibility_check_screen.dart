@@ -439,7 +439,10 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
               ),
             CompatibilityErrorReason.missingConsent => (
                 'Manage Consent',
-                () => context.push('/matrimonial/compatibility-consent'),
+                () async {
+                  await context.push('/matrimonial/compatibility-consent');
+                  if (mounted) _load();
+                },
               ),
             CompatibilityErrorReason.apiError => (null, null),
           };
@@ -508,10 +511,16 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
                 child: Text(title,
                     style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
               ),
-              Icon(visual.icon, size: 16, color: visual.color),
-              const SizedBox(width: 4),
-              Text(visual.label,
-                  style: body(12, weight: FontWeight.w700, color: visual.color)),
+              // The "action required" case already explains itself below (a
+              // description + an action button), so the badge is skipped
+              // there rather than showing a redundant "More information
+              // needed" label alongside it.
+              if (readiness.status != ReadinessStatus.actionRequired) ...[
+                Icon(visual.icon, size: 16, color: visual.color),
+                const SizedBox(width: 4),
+                Text(visual.label,
+                    style: body(12, weight: FontWeight.w700, color: visual.color)),
+              ],
             ],
           ),
           if (action != null) ...[
@@ -610,7 +619,13 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         return (
           description: 'Compatibility permission required.',
           actionLabel: 'Manage Consent',
-          onTap: () => context.push('/matrimonial/compatibility-consent'),
+          // Re-fetch readiness on return: a module's Ready/Action Required
+          // status depends on this consent, so a toggle flipped on that
+          // screen must be reflected here immediately, not left stale.
+          onTap: () async {
+            await context.push('/matrimonial/compatibility-consent');
+            if (mounted) _load();
+          },
         );
       case PrerequisiteReason.insufficientProfileData:
         return (

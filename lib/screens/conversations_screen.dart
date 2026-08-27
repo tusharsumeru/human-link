@@ -111,7 +111,15 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Widget _row(Map<String, dynamic> convo) {
     final other = convo['otherUser'] as Map<String, dynamic>?;
     final name = _name(other);
-    final last = (convo['lastText'] ?? '').toString();
+    var last = (convo['lastText'] ?? '').toString();
+    final lastMediaType = (convo['lastMediaType'] ?? '').toString();
+    if (last.isEmpty && lastMediaType.isNotEmpty) {
+      last = switch (lastMediaType) {
+        'video' => '🎥 Video',
+        'document' => '📄 Document',
+        _ => '📷 Photo',
+      };
+    }
     final unread = (convo['unread'] as num?)?.toInt() ?? 0;
 
     return ListTile(

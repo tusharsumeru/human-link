@@ -23,9 +23,15 @@ class ChatService {
   // rejects as "you cannot message yourself" when you open that user's chat.
   String? _socketToken;
   final _incoming = StreamController<Map<String, dynamic>>.broadcast();
+  final _reads = StreamController<String>.broadcast();
 
   /// Every `message:new` pushed by the server (both mine and the other party's).
   Stream<Map<String, dynamic>> get onMessage => _incoming.stream;
+
+  /// The id of whoever just read a conversation with me — pushed by
+  /// `messages:read` so my own sent bubbles can flip to a read (double) tick
+  /// live, without polling or reloading history.
+  Stream<String> get onRead => _reads.stream;
 
   bool get connected => _socket?.connected ?? false;
 
@@ -56,6 +62,10 @@ class ChatService {
       if (data is Map) {
         _incoming.add(Map<String, dynamic>.from(data));
       }
+    });
+    socket.on('messages:read', (data) {
+      final by = data is Map ? (data['by'] ?? '').toString() : '';
+      if (by.isNotEmpty) _reads.add(by);
     });
     socket.connect();
     _socket = socket;

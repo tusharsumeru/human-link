@@ -23,21 +23,11 @@ class MatrimonialListScreen extends StatefulWidget {
 }
 
 class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
-  static const _gotras = [
-    'All',
-    'Kashyap',
-    'Bharadwaja',
-    'Vasishtha',
-    'Atreya',
-  ];
-
   // Fixed by the viewer's own gender, not a user-adjustable filter — a
   // member registered as 'M' only ever sees 'F' profiles here, and vice
   // versa. Falls back to showing everyone only if the viewer's own gender
   // isn't on file, which shouldn't happen once past MatrimonialGateScreen.
   late final String _gender;
-  String _gotra = 'All';
-  String _location = 'All';
 
   // Approved profiles from GET /api/matrimonial, already narrowed to the
   // opposite gender server-side. Reaching this screen means
@@ -77,27 +67,8 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     }
   }
 
-  List<String> get _locations {
-    final set = <String>{};
-    for (final c in _candidates) {
-      final loc = c['location'] as String?;
-      if (loc != null && loc.isNotEmpty) set.add(loc);
-    }
-    return ['All', ...set];
-  }
-
-  List<Map<String, dynamic>> get _filtered {
-    return _candidates.where((c) {
-      final matchGotra = _gotra == 'All' || c['gotra'] == _gotra;
-      final matchLocation = _location == 'All' || c['location'] == _location;
-      return matchGotra && matchLocation;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
-
     return AppShell(
       title: 'Matrimonial',
       currentRoute: '/matrimonial',
@@ -107,28 +78,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           _discoverMatchesButton(context),
           const SizedBox(height: 14),
           _genderLabel(),
-          const SizedBox(height: 14),
-          _label('GOTRA'),
-          const SizedBox(height: 6),
-          _gotraChips(),
-          const SizedBox(height: 12),
-          _label('LOCATION'),
-          const SizedBox(height: 6),
-          _locationChips(),
           const SizedBox(height: 16),
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                text: '${filtered.length}',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800),
-              ),
-              TextSpan(
-                text: ' of ${_candidates.length} profiles',
-                style: body(13, color: AppColors.textMuted),
-              ),
-            ]),
-          ),
+          Text('${_candidates.length} profiles',
+              style: body(13, color: AppColors.textMuted)),
           const SizedBox(height: 12),
           if (_loading)
             const Padding(
@@ -137,10 +89,10 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
             )
           else if (_error != null)
             _errorState(_error!)
-          else if (filtered.isEmpty)
+          else if (_candidates.isEmpty)
             _emptyState()
           else
-            ...filtered.map((c) => Padding(
+            ..._candidates.map((c) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _CandidateCard(candidate: c),
                 )),
@@ -167,12 +119,6 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: body(11,
-          weight: FontWeight.w700,
-          color: AppColors.gold700,
-          letterSpacing: 1.6));
-
   Widget _genderLabel() {
     final label = switch (_gender) {
       'F' => 'Showing Brides',
@@ -189,36 +135,6 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     );
   }
 
-  Widget _gotraChips() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final g in _gotras)
-          _ChipButton(
-            label: g,
-            active: _gotra == g,
-            onTap: () => setState(() => _gotra = g),
-          ),
-      ],
-    );
-  }
-
-  Widget _locationChips() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final l in _locations)
-          _ChipButton(
-            label: l,
-            active: _location == l,
-            onTap: () => setState(() => _location = l),
-          ),
-      ],
-    );
-  }
-
   Widget _emptyState() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
@@ -227,19 +143,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const Icon(Icons.favorite_border_rounded,
               size: 30, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text('No profiles match your filter',
+          Text('No profiles yet',
               style:
                   body(15, weight: FontWeight.w600, color: AppColors.hint)),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: () => setState(() {
-              _gotra = 'All';
-              _location = 'All';
-            }),
-            child: Text('Clear filters',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
-          ),
         ],
       ),
     );
@@ -445,34 +351,6 @@ class _PremiumChip extends StatelessWidget {
               style:
                   body(10, weight: FontWeight.w700, color: Colors.white)),
         ],
-      ),
-    );
-  }
-}
-
-class _ChipButton extends StatelessWidget {
-  const _ChipButton(
-      {required this.label, required this.active, required this.onTap});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? AppColors.forest800 : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-              color: active ? AppColors.forest800 : AppColors.border),
-        ),
-        child: Text(label,
-            style: body(12,
-                weight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.label)),
       ),
     );
   }

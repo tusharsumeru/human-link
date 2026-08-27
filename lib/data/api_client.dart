@@ -90,6 +90,7 @@ class ApiClient {
     String path, {
     required String fileField,
     required String filePath,
+    String? fileName,
     Map<String, String> fields = const {},
     Duration timeout = const Duration(seconds: 60),
   }) async {
@@ -107,6 +108,7 @@ class ApiClient {
     req.files.add(await http.MultipartFile.fromPath(
       fileField,
       filePath,
+      filename: fileName, // preserves the original name (e.g. picker temp paths on iOS are UUIDs)
       contentType: MediaType.parse(mimeType),
     ));
     final streamed = await _client.send(req).timeout(timeout);
