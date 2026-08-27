@@ -575,44 +575,73 @@ class Repository {
   /// The user is identified by the bearer token, so `phone` is not sent — the
   /// server strips it anyway, and sending it implied an identity the request
   /// does not actually carry.
-  Future<Map<String, dynamic>> saveProfile({
-    String? name,
-    String? gotra,
-    String? native,
-    String? bio,
-    String? occupation,
-    bool? matrimonialOptIn,
-    bool? showPhoneToMembers,
-    String? dob,
-    String? gender,
-    String? address,
-    Map<String, dynamic>? currentAddress,
-    String? profileUrl,
-    String? maskedAadhaar,
-    bool? verified,
-  }) async {
-    final data = await _api.patchJson('/api/user/profile', {
-      'name': ?name,
-      'gotra': ?gotra,
-      'native': ?native,
-      'bio': ?bio,
-      'occupation': ?occupation,
-      'matrimonialOptIn': ?matrimonialOptIn,
-      'showPhoneToMembers': ?showPhoneToMembers,
-      'dob': ?dob,
-      'gender': ?gender,
-      'address': ?address,
-      // Replaces the stored address wholesale, so it carries every part the
-      // member still wants kept — see [CurrentAddress.toRequest].
-      'currentAddress': ?currentAddress,
-      'profileUrl': ?profileUrl,
-      'masked_aadhaar': ?maskedAadhaar,
-      'verified': ?verified,
-    });
-    if (data is Map) return Map<String, dynamic>.from(data);
-    throw ApiException('Could not save your profile');
-  }
+Future<Map<String, dynamic>> saveProfile({
+  String? name,
+  String? gotra,
+  String? native,
+  String? bio,
+  String? occupation,
+  bool? matrimonialOptIn,
+  bool? showPhoneToMembers,
+  String? dob,
+  String? gender,
+  String? address,
+  Map<String, dynamic>? currentAddress,
+  String? profileUrl,
+  String? maskedAadhaar,
+  bool? verified,
+}) async {
+  debugPrint('========== SAVE PROFILE START ==========');
 
+  final payload = {
+    'name': name,
+    'gotra': gotra,
+    'native': native,
+    'bio': bio,
+    'occupation': occupation,
+    'matrimonialOptIn': matrimonialOptIn,
+    'showPhoneToMembers': showPhoneToMembers,
+    'dob': dob,
+    'gender': gender,
+    'address': address,
+    'currentAddress': currentAddress,
+    'profileUrl': profileUrl,
+    'masked_aadhaar': maskedAadhaar,
+    'verified': verified,
+  };
+
+  debugPrint('URL: /api/user/profile');
+  debugPrint('METHOD: PATCH');
+  debugPrint('PAYLOAD: $payload');
+
+  try {
+    debugPrint('Calling patchJson...');
+
+    final data = await _api.patchJson(
+      '/api/user/profile',
+      payload,
+    );
+
+    debugPrint('PATCH API SUCCESS');
+    debugPrint('RESPONSE: $data');
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw ApiException(
+      'Could not save your profile',
+    );
+  } catch (e, stackTrace) {
+    debugPrint('========== SAVE PROFILE ERROR ==========');
+    debugPrint('ERROR TYPE: ${e.runtimeType}');
+    debugPrint('ERROR: $e');
+    debugPrint('STACK TRACE: $stackTrace');
+    debugPrint('========================================');
+
+    rethrow;
+  }
+}
   /// Best-effort [saveProfile]: true on success, false if the backend rejected
   /// the change or is unreachable. Used by the onboarding/registration flows,
   /// which must not stall on a profile write.

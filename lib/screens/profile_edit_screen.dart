@@ -110,6 +110,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _street = TextEditingController(text: addr.street);
     _landmark = TextEditingController(text: addr.landmark);
     _pincode = TextEditingController(text: addr.pincode);
+    _lat = addr.latitude;
+    _lng = addr.longitude;
+    _fixIsCurrent = false;
+    // _fixIsCurrent = addr.hasLocation;
     _addressFields = [
       _country, _state, _district, _taluk, _city,
       _area, _street, _landmark, _pincode,
@@ -157,7 +161,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   void _onAddressEdited() {
-    if (_fixIsCurrent) setState(() => _fixIsCurrent = false);
+    // if (_fixIsCurrent) setState(() => _fixIsCurrent = false);
   }
 
   CurrentAddress get _currentAddress => CurrentAddress(
@@ -299,8 +303,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         address: _address.text.trim(),
         // Sent whole — the server replaces the stored address with this, and
         // geocodes it unless the device fix below travels with it.
-        currentAddress:
-            _currentAddress.toRequest(includeLocation: _fixIsCurrent),
+       currentAddress:
+    _currentAddress.toRequest(
+      includeLocation: _lat != null && _lng != null,
+    ),
         gender: _gender.isEmpty ? null : _gender,
         dob: _dobIso.isEmpty ? null : _dobIso,
       );

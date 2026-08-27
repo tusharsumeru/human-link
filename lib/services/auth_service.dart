@@ -114,29 +114,55 @@ class CurrentAddress {
   /// "use my current location" path). Otherwise it is omitted so the server
   /// geocodes the parts below itself, rather than us echoing back coordinates
   /// that belong to whatever address was there before.
-  Map<String, dynamic>? toRequest({bool includeLocation = false}) {
-    if (isEmpty) return null;
-    final m = <String, dynamic>{};
-    void put(String key, String value) {
-      final v = value.trim();
-      if (v.isNotEmpty) m[key] = v;
-    }
+  // Map<String, dynamic>? toRequest({bool includeLocation = false}) {
+  //   if (isEmpty) return null;
+  //   final m = <String, dynamic>{};
+  //   void put(String key, String value) {
+  //     final v = value.trim();
+  //     if (v.isNotEmpty) m[key] = v;
+  //   }
 
-    put('country', country);
-    put('state', state);
-    put('district', district);
-    put('taluk', taluk);
-    put('city', city);
-    put('area', area);
-    put('street', street);
-    put('landmark', landmark);
-    put('pincode', pincode);
-    if (includeLocation && hasLocation) {
-      m['location'] = {'latitude': latitude, 'longitude': longitude};
-    }
-    return m;
+  //   put('country', country);
+  //   put('state', state);
+  //   put('district', district);
+  //   put('taluk', taluk);
+  //   put('city', city);
+  //   put('area', area);
+  //   put('street', street);
+  //   put('landmark', landmark);
+  //   put('pincode', pincode);
+  //   if (includeLocation && hasLocation) {
+  //     m['location'] = {'latitude': latitude, 'longitude': longitude};
+  //   }
+  //   return m;
+  // }
+
+
+Map<String, dynamic> toRequest({bool includeLocation = false}) {
+  final data = <String, dynamic>{
+    if (country.isNotEmpty) 'country': country,
+    if (state.isNotEmpty) 'state': state,
+    if (district.isNotEmpty) 'district': district,
+    if (taluk.isNotEmpty) 'taluk': taluk,
+    if (city.isNotEmpty) 'city': city,
+    if (area.isNotEmpty) 'area': area,
+    if (street.isNotEmpty) 'street': street,
+    if (landmark.isNotEmpty) 'landmark': landmark,
+    if (pincode.isNotEmpty) 'pincode': pincode,
+  };
+
+  if (includeLocation && latitude != null && longitude != null) {
+    data['location'] = {
+      'type': 'Point',
+      'coordinates': [
+        longitude,
+        latitude,
+      ],
+    };
   }
 
+  return data;
+}
   CurrentAddress copyWith({
     String? country,
     String? state,
