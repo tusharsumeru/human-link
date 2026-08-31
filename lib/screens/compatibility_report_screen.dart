@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/compatibility_report_view.dart';
 import '../widgets/ui_kit.dart';
+import '../services/translation_service.dart';
 
 /// STEP 25D — reads a compatibility report purely by its `reportId` (what
 /// `POST /api/v1/compatibility/calculate` hands back on success from
@@ -46,27 +47,51 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final report = await Repository.instance.compatibilityReport(widget.reportId);
-      if (!mounted) return;
-      setState(() {
-        _report = report;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e is ApiException
-            ? e.message
-            : AppLocalizations.of(context).compReportLoadError;
-        _loading = false;
-      });
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  try {
+    final report =
+        await Repository.instance.compatibilityReport(widget.reportId);
+
+    final languageCode =
+        Localizations.localeOf(context).languageCode;
+
+    String translatedDisclaimer = report.disclaimer;
+
+    if (languageCode == 'kn' || languageCode == 'hi') {
+      translatedDisclaimer =
+          await TranslationService.instance.translate(
+        text: report.disclaimer,
+        targetLanguage: languageCode,
+      );
     }
+
+    debugPrint('Original: ${report.disclaimer}');
+    debugPrint('Translated: $translatedDisclaimer');
+
+    if (!mounted) return;
+
+    setState(() {
+      _report = report;
+      _loading = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _error = e is ApiException
+          ? e.message
+          : AppLocalizations.of(context).compReportLoadError;
+      _loading = false;
+    });
   }
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {

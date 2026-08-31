@@ -361,15 +361,23 @@ class _StoriesShelfState extends State<_StoriesShelf> {
   }
 
   /// Small sheet: capture with the Camera, or select an image/video from files.
-  Future<_CaptureSource?> _chooseStorySource() {
-    final t = AppLocalizations.of(context);
-    return showModalBottomSheet<_CaptureSource>(
-      context: context,
-      backgroundColor: AppColors.cream,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+Future<_CaptureSource?> _chooseStorySource() {
+  final t = AppLocalizations.of(context);
+
+  return showModalBottomSheet<_CaptureSource>(
+    context: context,
+    backgroundColor: AppColors.cream,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(22),
       ),
-      builder: (ctx) => SafeArea(
+    ),
+    builder: (ctx) {
+      final pageController = PageController(
+        viewportFraction: 1,
+      );
+
+      return SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
           child: Column(
@@ -379,26 +387,90 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(999)),
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
+
               const SizedBox(height: 16),
+
+             SizedBox(
+  height: 130,
+  child: PageView(
+    controller: pageController,
+    children: [
+      GestureDetector(
+        onTap: () {
+          Navigator.of(ctx).pop(_CaptureSource.camera);
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.photo_camera_rounded,
+              size: 80,
+              color: AppColors.forest700,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              t.dashCamera,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      GestureDetector(
+        onTap: () {
+          Navigator.of(ctx).pop(_CaptureSource.file);
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.perm_media_rounded,
+              size: 56,
+              color: AppColors.forest700,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              t.dashSelectFile,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+
+              const SizedBox(height: 12),
+
+              // Carousel indicator
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _SourceBox(
-                      icon: Icons.photo_camera_rounded,
-                      label: t.dashCamera,
-                      onTap: () =>
-                          Navigator.of(ctx).pop(_CaptureSource.camera),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.forest700,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SourceBox(
-                      icon: Icons.perm_media_rounded,
-                      label: t.dashSelectFile,
-                      onTap: () => Navigator.of(ctx).pop(_CaptureSource.file),
+                  const SizedBox(width: 6),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.border,
                     ),
                   ),
                 ],
@@ -406,9 +478,14 @@ class _StoriesShelfState extends State<_StoriesShelf> {
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
+
+
+
+
 
   void _openMyStories() {
     final mine = StoryStore.instance.mine;

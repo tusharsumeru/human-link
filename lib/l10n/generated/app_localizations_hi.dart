@@ -1636,6 +1636,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dirAllMembers => 'सभी सदस्य';
 
   @override
+  String get dirNearbyMe => 'मेरे पास के सदस्य';
+
+  @override
   String get dirByArea => 'क्षेत्र के अनुसार';
 
   @override

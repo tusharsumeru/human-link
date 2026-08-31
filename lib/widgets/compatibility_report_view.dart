@@ -10,6 +10,7 @@ import 'compatibility_kundli_chart_section.dart';
 import 'compatibility_parampara_section.dart';
 import 'compatibility_vivaha_kala_bala_section.dart';
 import 'ui_kit.dart';
+import '../widgets/translated_text.dart';
 
 /// Renders a [CompatibilityReport]'s Jataka section — extracted from
 /// CompatibilityScreen (STEP 25D) so both the "calculate now" flow and
@@ -90,7 +91,12 @@ class CompatibilityReportView extends StatelessWidget {
         children: [
           const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.hint),
           const SizedBox(width: 8),
-          Expanded(child: Text(disclaimer, style: body(11, color: AppColors.hint, height: 1.4))),
+          Expanded(
+  child: TranslatedText(
+    text: disclaimer,
+    style: body(11, color: AppColors.hint, height: 1.4),
+  ),
+),
         ],
       ),
     );
@@ -263,8 +269,10 @@ class CompatibilityReportView extends StatelessWidget {
                 Text('${jataka.matched}/10 matched',
                     style: display(20, color: AppColors.forest900)),
                 const SizedBox(height: 4),
-                Text(jataka.verdictLabel,
-                    style: body(13, weight: FontWeight.w600, color: fg)),
+                TranslatedText(
+  text: jataka.verdictLabel,
+  style: body(13, weight: FontWeight.w600, color: fg),
+),
               ],
             ),
           ),
@@ -412,7 +420,10 @@ class CompatibilityReportView extends StatelessWidget {
               // only when the API actually sent something.
               if (explanation.isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(explanation, style: body(11, color: AppColors.textMuted, height: 1.3)),
+                TranslatedText(
+  text: explanation,
+  style: body(11, color: AppColors.textMuted, height: 1.3),
+),
               ],
             ],
           ),

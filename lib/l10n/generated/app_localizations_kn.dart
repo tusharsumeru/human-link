@@ -1642,6 +1642,9 @@ class AppLocalizationsKn extends AppLocalizations {
   String get dirAllMembers => 'ಎಲ್ಲಾ ಸದಸ್ಯರು';
 
   @override
+  String get dirNearbyMe => 'ನನ್ನ ಹತ್ತಿರದ ಸದಸ್ಯರು';
+
+  @override
   String get dirByArea => 'ಪ್ರದೇಶದ ಮೂಲಕ';
 
   @override

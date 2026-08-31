@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import 'compatibility_status_ui.dart';
 import 'south_indian_kundli_chart.dart';
 import 'ui_kit.dart';
+import 'translated_text.dart';
 
 class KundliChartSection extends StatelessWidget {
   const KundliChartSection({super.key, required this.kundliChart});
@@ -65,7 +66,10 @@ class _PartnerKundliCard extends StatelessWidget {
         children: [
           Text(who, style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
           const SizedBox(height: 2),
-          Text('Lagna: ${chart.lagnaRashiName}', style: body(12, color: AppColors.textMuted)),
+          TranslatedText(
+  text: 'Lagna: ${chart.lagnaRashiName}',
+  style: body(12, color: AppColors.textMuted),
+),
           const SizedBox(height: 14),
           Center(
             child: SouthIndianKundliChart(

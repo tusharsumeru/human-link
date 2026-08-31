@@ -13,6 +13,7 @@ import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 import 'chat_screen.dart';
+import '../widgets/location_picker_sheet.dart';
 
 /// Member Directory — "Vamsha Vruksha" network. Real accounts from
 /// `/api/user/directory`, grouped/searched by area, gotra, or occupation, with a
@@ -41,6 +42,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   String _search = '';
   _Mode _mode = _Mode.all;
   bool _mapView = false;
+
+  bool _nearbyLoading = false;
+bool _nearbyMode = false;
 
   List<Map<String, dynamic>> _members = const [];
   bool _loading = true;
@@ -71,6 +75,74 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       setState(() => _loading = false);
     }
   }
+
+  
+  
+
+Future<void> _loadNearbyMembers() async {
+  setState(() {
+    _nearbyMode = true;
+    _nearbyLoading = true;
+  });
+
+  try {
+    // Get current device GPS location.
+    final origin = await currentLatLng();
+
+    if (!mounted) return;
+
+    // Same API used by InvitationsScreen.
+    final data = await Repository.instance.invitationMap(
+      origin,
+      q: _search,
+      page: 1,
+      limit: 100,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _members = data.members.map((m) {
+        return {
+          'id': m.id,
+          'name': m.name,
+          'profileUrl': m.profileUrl,
+          'gotra': m.gotra,
+          'native': m.native,
+          'phone': m.phone,
+
+          // Not available in InvitationMember.
+          'userName': '',
+          'occupation': '',
+          'branch': '',
+        };
+      }).toList();
+
+      _nearbyMode = true;
+      _nearbyLoading = false;
+    });
+  } on LocationFailure catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _nearbyLoading = false;
+    });
+
+    _toast(context, e.message);
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _nearbyLoading = false;
+    });
+
+    _toast(context, 'Unable to load nearby members');
+  }
+}
+
+
+
+
 
   String _str(Map m, String k) => (m[k] ?? '').toString().trim();
 
@@ -158,14 +230,20 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.forest700, strokeWidth: 2))
-                : _mapView
-                    ? _MapView(filtered: filtered, branchCoords: _branchCoords)
-                    : _content(filtered, myGotra),
+  child: _loading || _nearbyLoading
+      ? const Center(
+          child: CircularProgressIndicator(
+            color: AppColors.forest700,
+            strokeWidth: 2,
           ),
+        )
+      : _mapView
+          ? _MapView(
+              filtered: filtered,
+              branchCoords: _branchCoords,
+            )
+          : _content(filtered),
+),
         ],
       ),
     );
@@ -224,25 +302,38 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         _mapView = false;
       });
 
-  Widget _filterRow() {
-    final t = AppLocalizations.of(context);
-    // Wrap so the chips flow onto a second line instead of overflowing.
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _chip(t.dirAllMembers, _mode == _Mode.all && !_mapView,
-            () => _setMode(_Mode.all)),
-        _chip(t.dirByArea, _mode == _Mode.area && !_mapView,
-            () => _setMode(_Mode.area)),
-        _chip(t.dirByGotra, _mode == _Mode.gotra && !_mapView,
-            () => _setMode(_Mode.gotra)),
-        _chip(t.dirByOccupation, _mode == _Mode.occupation && !_mapView,
-            () => _setMode(_Mode.occupation)),
-        _mapChip(t),
-      ],
-    );
-  }
+Widget _filterRow() {
+  final t = AppLocalizations.of(context);
+
+  return Row(
+    children: [
+      Expanded(
+        child: _chip(
+          t.dirAllMembers,
+          !_nearbyMode,
+          () async {
+            if (_nearbyMode) {
+              setState(() {
+                _nearbyMode = false;
+                _loading = true;
+              });
+
+              await _load();
+            }
+          },
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _chip(
+  t.dirNearbyMe,
+  _nearbyMode,
+  _loadNearbyMembers,
+),
+      ),
+    ],
+  );
+}
 
   Widget _mapChip(AppLocalizations t) {
     return GestureDetector(
@@ -291,68 +382,31 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   }
 
   // ── Content ─────────────────────────────────────────────────────────────────
-  Widget _content(List<Map<String, dynamic>> filtered, String? myGotra) {
-    final t = AppLocalizations.of(context);
-    if (filtered.isEmpty) {
-      return _empty();
-    }
-    if (_mode != _Mode.all) {
-      return _GroupedList(
-          members: filtered,
-          mode: _mode,
-          onConnect: _connect,
-          onView: _openMember);
-    }
-
-    final suggested = _suggested(myGotra);
-    final nearby = _nearby(filtered);
-    final myPlace = _placeKey(context.read<AuthService>().user?.native);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-      children: [
-        _sectionHeader(t.dirNearbyMembers, trailing: t.dirViewAll),
-        if (myPlace.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(t.dirFromNativePlaceFirst,
-                style: body(11, color: AppColors.textMuted)),
-          ),
-        const SizedBox(height: 10),
-        if (nearby.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text(t.dirNoOtherMembersYet,
-                style: body(13, color: AppColors.textMuted)),
-          )
-        else
-          SizedBox(
-            height: 208,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: nearby.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) => _NearbyCard(
-                  member: nearby[i], onConnect: _connect, onView: _openMember),
-            ),
-        ),
-        const SizedBox(height: 22),
-        if (suggested.isNotEmpty) ...[
-          _sectionHeader(t.dirSuggestedConnections),
-          const SizedBox(height: 10),
-          for (final m in suggested) ...[
-            _SuggestedCard(
-                member: m, onConnect: _connect, onView: _openMember),
-            const SizedBox(height: 10),
-          ],
-          const SizedBox(height: 10),
-        ],
-        _CommunityMapCard(
-          count: filtered.length,
-          onTap: () => setState(() => _mapView = true),
-        ),
-      ],
-    );
+Widget _content(List<Map<String, dynamic>> filtered) {
+  if (filtered.isEmpty) {
+    return _empty();
   }
+
+  return ListView(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+    children: [
+      _sectionHeader(
+        AppLocalizations.of(context).dirAllMembers,
+      ),
+      const SizedBox(height: 10),
+
+      for (final member in filtered) ...[
+        _RowCard(
+          member: member,
+          onConnect: _connect,
+          onView: _openMember,
+        ),
+        const SizedBox(height: 8),
+      ],
+    ],
+  );
+}
+
 
   Widget _sectionHeader(String title, {String? trailing}) {
     return Row(

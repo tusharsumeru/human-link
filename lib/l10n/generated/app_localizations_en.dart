@@ -1626,6 +1626,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dirAllMembers => 'All Members';
 
   @override
+  String get dirNearbyMe => 'Nearby Me';
+
+  @override
   String get dirByArea => 'By Area';
 
   @override

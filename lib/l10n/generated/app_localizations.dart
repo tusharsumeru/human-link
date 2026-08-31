@@ -3016,6 +3016,12 @@ abstract class AppLocalizations {
   /// **'All Members'**
   String get dirAllMembers;
 
+  /// No description provided for @dirNearbyMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Me'**
+  String get dirNearbyMe;
+
   /// No description provided for @dirByArea.
   ///
   /// In en, this message translates to:
