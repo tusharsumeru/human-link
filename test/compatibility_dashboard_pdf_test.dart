@@ -28,7 +28,9 @@ import 'support/fake_platform_channels.dart';
 /// reliably covered by plain (non-widget) tests in compatibility_pdf_test.dart
 /// instead. share_plus needs its own platform channel faked the same way
 /// (see support/fake_platform_channels.dart) since flutter_test has no real
-/// platform to answer either.
+/// platform to answer either. `downloadCompatibilityPdfImpl` — the native
+/// save-picker "Download PDF" now goes through — is faked for the same
+/// reason: flutter_test has no OS picker to answer it with.
 class _FakeApiClient extends ApiClient {
   _FakeApiClient(this.handler);
   final dynamic Function(String path) handler;
@@ -52,6 +54,19 @@ class _FakeSavedPdf {
     calls.add((bytes: bytes, person1Name: person1Name, person2Name: person2Name));
     final fileName = pdf_export.compatibilityPdfFileName(person1Name, person2Name);
     return File('/fake/compatibility_reports/$fileName');
+  }
+}
+
+/// Fakes the native save picker "Download PDF" now goes through — stands in
+/// for the member's choice in the OS's own Storage Access Framework/document
+/// picker dialog, which flutter_test has no real answer for.
+class _FakeDeviceDownload {
+  final List<({Uint8List bytes, String fileName})> calls = [];
+  bool userCancels = false;
+
+  Future<bool> download({required Uint8List bytes, required String fileName}) async {
+    calls.add((bytes: bytes, fileName: fileName));
+    return !userCancels;
   }
 }
 
@@ -124,9 +139,14 @@ void main() {
   late Repository originalRepository;
   late SharePlatform originalSharePlatform;
   late pdf_export.SavePdfFn originalSaveImpl;
+<<<<<<< HEAD
+  late pdf_export.DownloadPdfFn originalDownloadImpl;
+=======
   late pdf_export.SavePublicPdfFn originalSavePublicImpl;
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   late AuthService authService;
   late _FakeSavedPdf fakeSave;
+  late _FakeDeviceDownload fakeDownload;
 
   setUpAll(() {
     SharedPreferences.setMockInitialValues({});
@@ -136,6 +156,13 @@ void main() {
     originalRepository = Repository.instance;
     originalSharePlatform = SharePlatform.instance;
     originalSaveImpl = pdf_export.saveCompatibilityPdfImpl;
+<<<<<<< HEAD
+    originalDownloadImpl = pdf_export.downloadCompatibilityPdfImpl;
+    fakeSave = _FakeSavedPdf();
+    pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
+    fakeDownload = _FakeDeviceDownload();
+    pdf_export.downloadCompatibilityPdfImpl = fakeDownload.download;
+=======
     originalSavePublicImpl = pdf_export.savePublicCompatibilityPdfImpl;
     fakeSave = _FakeSavedPdf();
     pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
@@ -144,6 +171,7 @@ void main() {
     // saveCompatibilityPdfImpl above, just returning a plausible path.
     pdf_export.savePublicCompatibilityPdfImpl =
         ({required bytes, required fileName}) async => '/fake/downloads/$fileName';
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
 
     final fake = _FakeApiClient((_) async => _reportJson());
     Repository.instance = Repository(api: fake);
@@ -157,7 +185,11 @@ void main() {
     Repository.instance = originalRepository;
     SharePlatform.instance = originalSharePlatform;
     pdf_export.saveCompatibilityPdfImpl = originalSaveImpl;
+<<<<<<< HEAD
+    pdf_export.downloadCompatibilityPdfImpl = originalDownloadImpl;
+=======
     pdf_export.savePublicCompatibilityPdfImpl = originalSavePublicImpl;
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   });
 
   testWidgets('dashboard still renders correctly alongside the new PDF/Share actions', (tester) async {
@@ -185,6 +217,28 @@ void main() {
     expect(fakeSave.calls.single.person1Name, 'Priya');
     expect(fakeSave.calls.single.person2Name, 'Asha');
     expect(fakeSave.calls.single.bytes, isNotEmpty);
+
+    // The actual fix under test: "Download PDF" now hands the generated
+    // bytes to the device's own native save picker (file_picker), rather
+    // than stopping at the app's private, invisible-to-the-member storage.
+    expect(fakeDownload.calls, hasLength(1));
+    expect(fakeDownload.calls.single.fileName, 'Marriage_Compatibility_Priya_Asha.pdf');
+    expect(fakeDownload.calls.single.bytes, isNotEmpty);
+  });
+
+  testWidgets('cancelling the native save picker shows no success snackbar', (tester) async {
+    fakeDownload.userCancels = true;
+
+    await _useTallSurface(tester);
+    await tester.pumpWidget(_app(authService));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Download PDF'));
+    // The busy state still clears even though the picker was cancelled.
+    await _pumpUntil(tester, () => find.text('Download PDF').evaluate().isNotEmpty);
+
+    expect(fakeDownload.calls, hasLength(1));
+    expect(find.textContaining('PDF saved:'), findsNothing);
   });
 
   testWidgets('tapping Share Report invokes the native share sheet with the generated PDF', (tester) async {
