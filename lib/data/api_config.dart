@@ -15,13 +15,14 @@ class ApiConfig {
   // For a physical device or a tunnel, override with
   // --dart-define=API_BASE_URL=https://<host> (see below).
   static const String _localDevPort = '4000';
-  static const String _override = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: '',
-  );
+  // static const String _override = String.fromEnvironment(
+  //   'API_BASE_URL',
+  //   defaultValue: '',
+  // );
+    static const String _override = '';
 
 
-  /// Local NestJS server (port 4000) as seen from each dev target: 10.0.2.2 is
+  /// Local NestJS server (por t 4000) as seen from each dev target: 10.0.2.2 is
   /// the Android emulator's alias for the host machine — inside the emulator
   /// `localhost` is the emulator itself, so a local server is unreachable
   /// under that name. iOS Simulator, web and macOS desktop all share the

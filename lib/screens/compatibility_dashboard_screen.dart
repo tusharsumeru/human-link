@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -61,11 +62,16 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   // STEP 77-78 — PDF download/share. `_pdfAction` tracks which of the two
   // buttons is currently generating (null when idle) so both can be disabled
   // together (never two PDF generations in flight at once) while only the
-  // tapped button shows its own loading state. `_pdfFile` caches the last
-  // generated file for this report so a second tap (e.g. Share right after
-  // Download) reuses it instead of regenerating the same PDF.
+  // tapped button shows its own loading state. `_pdfFile`/`_pdfBytes` cache
+  // the last generated PDF for this report so a second tap (e.g. Share right
+  // after Download) reuses it instead of regenerating. `_pdfBytes` is kept
+  // alongside the file rather than re-read from it — "Download PDF" needs the
+  // raw bytes for the device's native save picker, and re-reading from disk
+  // for that is both an unnecessary extra I/O and, for a file mid-write on a
+  // slow device, a race the in-memory copy simply doesn't have.
   String? _pdfAction;
   File? _pdfFile;
+  Uint8List? _pdfBytes;
 
   @override
   void initState() {
@@ -132,6 +138,7 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     if (cached != null) return cached;
     final bytes = await buildCompatibilityPdfBytes(report: report, person1Name: myName, person2Name: otherName);
     final file = await saveCompatibilityPdf(bytes: bytes, person1Name: myName, person2Name: otherName);
+    _pdfBytes = bytes;
     _pdfFile = file;
     return file;
   }
@@ -140,9 +147,18 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     if (_pdfAction != null) return; // guards against a double tap firing twice
     setState(() => _pdfAction = 'download');
     try {
+      // _ensurePdf's file lives in the app's own private storage (also what
+      // "Share Report" reads from) — never what gets shown as "downloaded"
+      // here. downloadCompatibilityPdfToDevice hands the same in-memory
+      // bytes _ensurePdf just cached to the OS's native save picker, so the
+      // file actually lands somewhere the member's device can find it.
       final file = await _ensurePdf(report, myName, otherName);
+      final bytes = _pdfBytes!; // always set by _ensurePdf just above
+      final fileName = file.uri.pathSegments.last;
+      final saved = await downloadCompatibilityPdfToDevice(bytes: bytes, fileName: fileName);
       if (!mounted) return;
-      _showSnack('PDF saved: ${file.uri.pathSegments.last}');
+      if (saved) _showSnack('PDF saved: $fileName');
+      // saved == false means the member cancelled the picker — not an error.
     } catch (_) {
       if (!mounted) return;
       _showSnack(

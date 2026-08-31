@@ -7,6 +7,7 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -49,15 +50,18 @@ typedef SavePdfFn = Future<File> Function({
 /// coupling every dashboard button test to.
 SavePdfFn saveCompatibilityPdfImpl = _saveCompatibilityPdfToDisk;
 
-/// Saves the PDF into the app's own persistent documents directory (not the
-/// OS Downloads folder — writing there on Android 10+ needs scoped-storage/
-/// MediaStore APIs this project has no plugin for) under a
-/// `compatibility_reports/` subfolder. Writing under a deterministic,
-/// sanitized filename means re-downloading the same pair's report overwrites
-/// its own previous copy rather than accumulating duplicates, and never
-/// touches any other file. Uses the synchronous `dart:io` File/Directory
-/// APIs — no reason to pay for the async variants' extra round trip for a
-/// write this small.
+/// Saves the PDF into the app's own private documents directory under a
+/// `compatibility_reports/` subfolder — an internal cache the "Share Report"
+/// button reads from (share_plus reads the file directly, so the OS share
+/// sheet is all that ever needs to see it) and that "Download PDF" also reads
+/// from before handing the bytes to [downloadCompatibilityPdfToDevice] below.
+/// This directory is sandboxed to the app, invisible in the device's own file
+/// manager/Downloads — never what "Download PDF" itself writes to; see that
+/// function's own doc comment. Writing under a deterministic, sanitized
+/// filename means regenerating the same pair's report overwrites its own
+/// previous copy rather than accumulating duplicates. Uses the synchronous
+/// `dart:io` File/Directory APIs — no reason to pay for the async variants'
+/// extra round trip for a write this small.
 Future<File> _saveCompatibilityPdfToDisk({
   required Uint8List bytes,
   required String person1Name,
@@ -86,3 +90,44 @@ Future<File> saveCompatibilityPdf({
 Future<void> shareCompatibilityPdf(File file, {String? subject}) async {
   await Share.shareXFiles([XFile(file.path)], subject: subject);
 }
+
+typedef DownloadPdfFn = Future<bool> Function({
+  required Uint8List bytes,
+  required String fileName,
+});
+
+/// Overridable in tests, same reason and pattern as [saveCompatibilityPdfImpl]
+/// — the real implementation opens a native platform picker, which has no
+/// answer inside a `testWidgets` sandbox.
+DownloadPdfFn downloadCompatibilityPdfImpl = _downloadCompatibilityPdfToDevice;
+
+/// What "Download PDF" actually calls. [saveCompatibilityPdf] above writes
+/// into the app's own sandboxed storage — real, but invisible to the member
+/// in their device's file manager or Downloads app, which is what "the PDF
+/// isn't downloading" reports on a real device turned out to mean: the write
+/// was silently succeeding somewhere the member could never find it. This
+/// instead opens the OS's own save picker (Android's Storage Access
+/// Framework / iOS's document picker) via `file_picker` — already a project
+/// dependency — with the bytes handed directly to it, since on mobile a
+/// picker-returned path isn't a normal filesystem path this app can write to
+/// itself; passing [bytes] is what makes the plugin do that write for us.
+/// Returns false, not an error, when the member cancels the picker.
+Future<bool> _downloadCompatibilityPdfToDevice({
+  required Uint8List bytes,
+  required String fileName,
+}) async {
+  final savedPath = await FilePicker.platform.saveFile(
+    dialogTitle: 'Save Compatibility Report',
+    fileName: fileName,
+    bytes: bytes,
+  );
+  return savedPath != null;
+}
+
+/// Lets the member choose where the PDF actually lands on their device.
+/// Returns true once saved, false if they cancelled the picker.
+Future<bool> downloadCompatibilityPdfToDevice({
+  required Uint8List bytes,
+  required String fileName,
+}) =>
+    downloadCompatibilityPdfImpl(bytes: bytes, fileName: fileName);
