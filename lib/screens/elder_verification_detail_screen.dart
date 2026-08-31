@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
@@ -35,14 +36,14 @@ class _ElderVerificationDetailScreenState
     }
   }
 
-  String _riskLabel(String level) {
+  String _riskLabel(String level, AppLocalizations t) {
     switch (level) {
       case 'high':
-        return 'High Risk';
+        return t.elderHighRisk;
       case 'medium':
-        return 'Medium Risk';
+        return t.elderMediumRisk;
       default:
-        return 'Low Risk';
+        return t.elderLowRisk;
     }
   }
 
@@ -66,6 +67,7 @@ class _ElderVerificationDetailScreenState
   }
 
   void _confirm(String title, String message, IconData icon, Color color) {
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -95,12 +97,12 @@ class _ElderVerificationDetailScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Close',
+            child: Text(t.ftClose,
                 style: body(13,
                     weight: FontWeight.w600, color: AppColors.forest700)),
           ),
           ForestButton(
-            label: 'Back to Queue',
+            label: t.elderBackToQueue,
             onPressed: () {
               Navigator.of(ctx).pop();
               context.go('/elder/verifications');
@@ -113,6 +115,7 @@ class _ElderVerificationDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final req = Repository.instance.verificationById(widget.id);
 
     return Scaffold(
@@ -126,26 +129,26 @@ class _ElderVerificationDetailScreenState
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text('Verification Detail',
+        title: Text(t.elderVerificationDetail,
             style: display(18, color: Colors.white)),
       ),
-      body: req == null ? _notFound() : _detail(req),
-      bottomNavigationBar: req == null ? null : _footer(req),
+      body: req == null ? _notFound(t) : _detail(req, t),
+      bottomNavigationBar: req == null ? null : _footer(req, t),
     );
   }
 
-  Widget _notFound() {
+  Widget _notFound(AppLocalizations t) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
           const SizedBox(height: 12),
-          Text('Verification request not found',
+          Text(t.elderVerificationNotFound,
               style: body(14, color: AppColors.hint)),
           const SizedBox(height: 16),
           OutlineButtonX(
-            label: 'Back to Queue',
+            label: t.elderBackToQueue,
             onPressed: () => context.go('/elder/verifications'),
           ),
         ],
@@ -153,14 +156,14 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _detail(Map<String, dynamic> req) {
+  Widget _detail(Map<String, dynamic> req, AppLocalizations t) {
     final risk = req['riskLevel'] as String;
     final riskColor = _riskColor(risk);
     final aadhaar = req['aadhaarStatus'] as String;
     final aadhaarColor = _aadhaarColor(aadhaar);
     final vouches = (req['vouches'] as int?) ?? 0;
     final required = (req['vouchesRequired'] as int?) ?? 1;
-    final genderLabel = req['gender'] == 'M' ? 'Male' : 'Female';
+    final genderLabel = req['gender'] == 'M' ? t.elderMale : t.elderFemale;
     final documents = (req['documents'] as List).cast<String>();
     final vouchDetails = (req['vouchDetails'] as List).cast<Map>();
     final notes = req['lineageNotes'] as String;
@@ -169,21 +172,21 @@ class _ElderVerificationDetailScreenState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _header(req, riskColor, aadhaarColor, genderLabel),
+        _header(req, riskColor, aadhaarColor, genderLabel, t),
         const SizedBox(height: 16),
-        _riskBanner(risk, riskColor),
+        _riskBanner(risk, riskColor, t),
         const SizedBox(height: 16),
         // Claim
         _section(
           icon: Icons.shield_rounded,
-          title: 'Lineage Claim',
+          title: t.elderLineageClaim,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _row('Claiming From', req['claimingFrom'] as String),
-              _row('Claiming Ancestor', req['claimingAncestor'] as String),
-              _row('Stated Relation', req['relation'] as String),
-              _row('Submitted On', req['submittedOn'] as String, last: true),
+              _row(t.elderClaimingFrom, req['claimingFrom'] as String),
+              _row(t.elderClaimingAncestor, req['claimingAncestor'] as String),
+              _row(t.elderStatedRelation, req['relation'] as String),
+              _row(t.elderSubmittedOnLabel, req['submittedOn'] as String, last: true),
             ],
           ),
         ),
@@ -191,13 +194,13 @@ class _ElderVerificationDetailScreenState
         // Identity
         _section(
           icon: Icons.badge_rounded,
-          title: 'Identity',
+          title: t.elderIdentity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Text('Aadhaar Status',
+                  Text(t.elderAadhaarStatusLabel,
                       style: body(12,
                           weight: FontWeight.w600,
                           color: AppColors.textMuted)),
@@ -208,10 +211,10 @@ class _ElderVerificationDetailScreenState
                 ],
               ),
               const SizedBox(height: 4),
-              Text('Phone: ${req['phone']}',
+              Text(t.elderPhoneColon('${req['phone']}'),
                   style: body(12, color: AppColors.hint)),
               const SizedBox(height: 14),
-              Text('SUBMITTED DOCUMENTS',
+              Text(t.elderSubmittedDocuments,
                   style: body(10,
                       weight: FontWeight.w700,
                       color: AppColors.hint,
@@ -237,7 +240,7 @@ class _ElderVerificationDetailScreenState
                                   weight: FontWeight.w500,
                                   color: AppColors.label)),
                         ),
-                        Pill('Received',
+                        Pill(t.elderReceived,
                             bg: _low.withValues(alpha: 0.14), fg: _low),
                       ],
                     ),
@@ -250,7 +253,7 @@ class _ElderVerificationDetailScreenState
         // Peer Vouches
         _section(
           icon: Icons.verified_user_rounded,
-          title: 'Peer Vouches ($vouches/$required confirmed)',
+          title: t.elderPeerVouchesConfirmed(vouches, required),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -262,14 +265,14 @@ class _ElderVerificationDetailScreenState
         ),
         const SizedBox(height: 16),
         // Lineage Notes
-        _notesCard(notes, caution),
+        _notesCard(notes, caution, t),
         const SizedBox(height: 24),
       ],
     );
   }
 
   Widget _header(Map<String, dynamic> req, Color riskColor, Color aadhaarColor,
-      String genderLabel) {
+      String genderLabel, AppLocalizations t) {
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -307,9 +310,9 @@ class _ElderVerificationDetailScreenState
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    Pill(_riskLabel(req['riskLevel'] as String),
+                    Pill(_riskLabel(req['riskLevel'] as String, t),
                         bg: riskColor, fg: Colors.white),
-                    Pill('Aadhaar: ${req['aadhaarStatus']}',
+                    Pill(t.elderAadhaarPrefix('${req['aadhaarStatus']}'),
                         bg: aadhaarColor, fg: Colors.white),
                   ],
                 ),
@@ -325,7 +328,8 @@ class _ElderVerificationDetailScreenState
                         style: display(20, color: Colors.white)),
                     const SizedBox(height: 2),
                     Text(
-                        '${req['age']} yrs · $genderLabel · ${req['gotra']} Gotra',
+                        t.elderYrsGenderGotra(
+                            '${req['age']}', genderLabel, req['gotra'] as String),
                         style: body(12, color: AppColors.forest300)),
                   ],
                 ),
@@ -336,11 +340,11 @@ class _ElderVerificationDetailScreenState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _factRow(Icons.work_outline_rounded, 'Occupation',
+                _factRow(Icons.work_outline_rounded, t.elderOccupation,
                     req['occupation'] as String),
-                _factRow(Icons.location_on_outlined, 'Location',
+                _factRow(Icons.location_on_outlined, t.elderLocation,
                     req['location'] as String),
-                _factRow(Icons.phone_outlined, 'Phone (masked)',
+                _factRow(Icons.phone_outlined, t.elderPhoneMasked,
                     req['phone'] as String, last: true),
               ],
             ),
@@ -385,7 +389,7 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _riskBanner(String risk, Color riskColor) {
+  Widget _riskBanner(String risk, Color riskColor, AppLocalizations t) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -398,7 +402,7 @@ class _ElderVerificationDetailScreenState
           Icon(Icons.shield_rounded, size: 20, color: riskColor),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('Risk Assessment: ${_riskLabel(risk)}',
+            child: Text(t.elderRiskAssessment(_riskLabel(risk, t)),
                 style: body(13, weight: FontWeight.w700, color: riskColor)),
           ),
         ],
@@ -499,7 +503,7 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _notesCard(String notes, bool caution) {
+  Widget _notesCard(String notes, bool caution, AppLocalizations t) {
     final color = caution ? _high : AppColors.forest700;
     return Container(
       padding: const EdgeInsets.all(18),
@@ -524,7 +528,7 @@ class _ElderVerificationDetailScreenState
                   size: 18,
                   color: color),
               const SizedBox(width: 8),
-              Text('Elder Committee Notes',
+              Text(t.elderCommitteeNotes,
                   style: display(15, color: caution ? _high : AppColors.forest900)),
             ],
           ),
@@ -546,7 +550,7 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _footer(Map<String, dynamic> req) {
+  Widget _footer(Map<String, dynamic> req, AppLocalizations t) {
     final name = req['name'] as String;
     return Container(
       decoration: const BoxDecoration(
@@ -561,7 +565,7 @@ class _ElderVerificationDetailScreenState
             children: [
               Expanded(
                 child: ForestButton(
-                  label: 'Approve',
+                  label: t.elderApprove,
                   icon: Icons.check_circle_outline_rounded,
                   expand: true,
                   gradient: const LinearGradient(
@@ -570,9 +574,8 @@ class _ElderVerificationDetailScreenState
                     colors: [Color(0xFF15803D), _low],
                   ),
                   onPressed: () => _confirm(
-                    'Verification Approved',
-                    '$name will be officially added to the Samaj registry. '
-                        'A notification will be sent to the applicant.',
+                    t.elderVerificationApproved,
+                    t.elderVerificationApprovedBody(name),
                     Icons.check_circle_rounded,
                     _low,
                   ),
@@ -580,11 +583,10 @@ class _ElderVerificationDetailScreenState
               ),
               const SizedBox(width: 8),
               IconButton(
-                tooltip: 'Request More Info',
+                tooltip: t.elderRequestMoreInfo,
                 onPressed: () => _confirm(
-                  'Information Requested',
-                  'A query has been sent to $name requesting additional '
-                      'documents or clarification. Case paused pending response.',
+                  t.elderInfoRequested,
+                  t.elderInfoRequestedBody(name),
                   Icons.help_outline_rounded,
                   _medium,
                 ),
@@ -593,12 +595,11 @@ class _ElderVerificationDetailScreenState
               ),
               const SizedBox(width: 4),
               OutlineButtonX(
-                label: 'Reject',
+                label: t.elderReject,
                 color: _high,
                 onPressed: () => _confirm(
-                  'Request Rejected',
-                  'The verification request for $name has been rejected. '
-                      'The applicant will be notified with a reason.',
+                  t.elderRequestRejected,
+                  t.elderRequestRejectedBody(name),
                   Icons.cancel_outlined,
                   _high,
                 ),

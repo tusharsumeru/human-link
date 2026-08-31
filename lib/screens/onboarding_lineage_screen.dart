@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/demo_data.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 import 'onboarding_identity_screen.dart';
@@ -65,6 +66,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final results = _filtered;
     final hasQuery = _search.text.trim().isNotEmpty;
 
@@ -76,20 +78,16 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
           children: [
             const OnboardingStepHeader(current: 2),
             const SizedBox(height: 22),
-            Text('STEP 2 OF 3',
+            Text(t.lineageStepLabel,
                 style: body(12,
                     weight: FontWeight.w700,
                     color: AppColors.gold700,
                     letterSpacing: 1.4)),
             const SizedBox(height: 6),
-            Text('Find Your Roots',
-                style: display(28, color: AppColors.forest900)),
+            Text(t.lineageTitle, style: display(28, color: AppColors.forest900)),
             const SizedBox(height: 8),
-            Text(
-              'Search for your parents, gotra, or ancestor village to find an '
-              'existing branch in the Daivajna Samaja tree.',
-              style: body(13, color: AppColors.textMuted, height: 1.5),
-            ),
+            Text(t.lineageSubtitle,
+                style: body(13, color: AppColors.textMuted, height: 1.5)),
             const SizedBox(height: 16),
 
             // Search
@@ -97,7 +95,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
               controller: _search,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Enter a parent name, Gotra, or ancestor village…',
+                hintText: t.lineageSearchHint,
                 hintStyle: body(13, color: AppColors.hint),
                 prefixIcon:
                     const Icon(Icons.search, size: 18, color: AppColors.hint),
@@ -118,7 +116,11 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${hasQuery ? 'Results for "${_search.text.trim()}"' : 'Potential Connections'} (${results.length})',
+              t.lineageResultsCount(
+                  hasQuery
+                      ? t.lineageResultsForQuery(_search.text.trim())
+                      : t.lineagePotentialConnections,
+                  results.length),
               style:
                   body(13, weight: FontWeight.w600, color: AppColors.forest800),
             ),
@@ -128,30 +130,30 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Center(
-                  child: Text('No matches found for "${_search.text.trim()}"',
+                  child: Text(t.lineageNoMatches(_search.text.trim()),
                       style: body(13, color: AppColors.textMuted)),
                 ),
               )
             else
               for (final a in results) ...[
-                _ancestorCard(a),
+                _ancestorCard(t, a),
                 const SizedBox(height: 10),
               ],
 
             const SizedBox(height: 4),
-            _newRootCard(),
+            _newRootCard(t),
             const SizedBox(height: 18),
 
             Row(
               children: [
                 OutlineButtonX(
-                  label: 'Back',
+                  label: t.lineageBack,
                   onPressed: () => context.go('/onboarding/identity'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ForestButton(
-                    label: 'Continue to Heritage',
+                    label: t.lineageContinueToHeritage,
                     icon: Icons.arrow_forward,
                     expand: true,
                     onPressed: () => context.go('/onboarding/heritage'),
@@ -165,7 +167,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
     );
   }
 
-  Widget _ancestorCard(_Ancestor a) {
+  Widget _ancestorCard(AppLocalizations t, _Ancestor a) {
     final requested = _connected.contains(a.id);
     return Container(
       padding: const EdgeInsets.all(12),
@@ -206,7 +208,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text('✓ ${a.nominator}',
+                Text(t.lineageNominatedBy(a.nominator),
                     style: body(11, color: AppColors.forest700)),
               ],
             ),
@@ -228,7 +230,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
                         ? AppColors.forest600
                         : AppColors.forest800),
               ),
-              child: Text(requested ? '✓ Requested' : 'Connect',
+              child: Text(requested ? t.lineageRequested : t.lineageConnect,
                   style: body(11,
                       weight: FontWeight.w700,
                       color: requested
@@ -241,7 +243,7 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
     );
   }
 
-  Widget _newRootCard() {
+  Widget _newRootCard(AppLocalizations t) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -256,20 +258,17 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
                 const Icon(Icons.check_circle,
                     size: 22, color: AppColors.forest700),
                 const SizedBox(height: 8),
-                Text('New Root Node Established',
+                Text(t.lineageNewRootEstablished,
                     style: body(13,
                         weight: FontWeight.w700, color: AppColors.forest700)),
                 const SizedBox(height: 4),
-                Text(
-                  'Your family will be added as a new branch. An elder will '
-                  'verify and link it during review.',
-                  textAlign: TextAlign.center,
-                  style: body(11, color: AppColors.textMuted, height: 1.4),
-                ),
+                Text(t.lineageNewRootEstablishedDesc,
+                    textAlign: TextAlign.center,
+                    style: body(11, color: AppColors.textMuted, height: 1.4)),
                 const SizedBox(height: 6),
                 GestureDetector(
                   onTap: () => setState(() => _newRoot = false),
-                  child: Text('Undo',
+                  child: Text(t.lineageUndo,
                       style: body(11, color: AppColors.textMuted)
                           .copyWith(decoration: TextDecoration.underline)),
                 ),
@@ -277,19 +276,16 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
             )
           : Column(
               children: [
-                Text("Can't find your branch?",
+                Text(t.lineageCantFindBranch,
                     style: body(13,
                         weight: FontWeight.w600, color: AppColors.forest800)),
                 const SizedBox(height: 4),
-                Text(
-                  'You can start a new root node if your family hasn\'t '
-                  'registered yet.',
-                  textAlign: TextAlign.center,
-                  style: body(11, color: AppColors.textMuted, height: 1.4),
-                ),
+                Text(t.lineageStartNewRootDesc,
+                    textAlign: TextAlign.center,
+                    style: body(11, color: AppColors.textMuted, height: 1.4)),
                 const SizedBox(height: 12),
                 OutlineButtonX(
-                  label: 'Establish New Root Node →',
+                  label: t.lineageEstablishNewRoot,
                   onPressed: () => setState(() => _newRoot = true),
                 ),
               ],

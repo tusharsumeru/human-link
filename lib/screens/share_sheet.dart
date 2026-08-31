@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/demo_data.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 
@@ -39,7 +40,10 @@ class _ShareSheet extends StatefulWidget {
 class _ShareSheetState extends State<_ShareSheet> {
   final Set<String> _sentTo = {};
 
+  // Stable wire value for the deep-link slug — never localized.
   String get _kind => widget.isReel ? 'reel' : 'post';
+
+  String _kindLabel(AppLocalizations t) => widget.isReel ? t.shareReel : t.sharePost;
 
   // A shareable deep link for this item (placeholder domain).
   String get _link {
@@ -47,9 +51,8 @@ class _ShareSheetState extends State<_ShareSheet> {
     return 'https://samaj.app/$_kind/$slug';
   }
 
-  String get _shareText =>
-      '${widget.author} shared a $_kind on Samaj\n'
-      '"${widget.caption}"\n\n$_link';
+  String _shareText(AppLocalizations t) => t.shareTextTemplate(
+      widget.author, _kindLabel(t), widget.caption, _link);
 
   void _toggleSend(Map<String, dynamic> member) {
     final id = member['id'] as String;
@@ -62,21 +65,22 @@ class _ShareSheetState extends State<_ShareSheet> {
     });
   }
 
-  Future<void> _copyLink() async {
+  Future<void> _copyLink(AppLocalizations t) async {
     await Clipboard.setData(ClipboardData(text: _link));
     if (!mounted) return;
     Navigator.of(context).pop();
-    _toast(context, 'Link copied to clipboard');
+    _toast(context, t.shareLinkCopied);
   }
 
-  Future<void> _shareExternal() async {
+  Future<void> _shareExternal(AppLocalizations t) async {
     // Native OS share sheet (WhatsApp, Gmail, etc.).
-    await Share.share(_shareText, subject: 'A $_kind from the Samaj');
+    await Share.share(_shareText(t), subject: t.shareSubjectTemplate(_kindLabel(t)));
     if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final mq = MediaQuery.of(context);
     final members = kCommunityMembers;
 
@@ -98,7 +102,7 @@ class _ShareSheetState extends State<_ShareSheet> {
                   borderRadius: BorderRadius.circular(999)),
             ),
             const SizedBox(height: 10),
-            Text('Share', style: display(17, color: AppColors.forest900)),
+            Text(t.shareTitle, style: display(17, color: AppColors.forest900)),
             const SizedBox(height: 8),
             const Divider(height: 1, color: AppColors.border),
 
@@ -107,7 +111,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Send to',
+                child: Text(t.shareSendTo,
                     style: body(12,
                         weight: FontWeight.w700,
                         color: AppColors.gold700,
@@ -154,10 +158,9 @@ class _ShareSheetState extends State<_ShareSheet> {
                     onPressed: () {
                       final n = _sentTo.length;
                       Navigator.of(context).pop();
-                      _toast(context,
-                          'Sent to $n member${n == 1 ? '' : 's'} 📩');
+                      _toast(context, t.shareSentToMembers(n));
                     },
-                    child: Text('Send',
+                    child: Text(t.shareSendButton,
                         style: body(15,
                             weight: FontWeight.w700, color: Colors.white)),
                   ),
@@ -174,21 +177,21 @@ class _ShareSheetState extends State<_ShareSheet> {
                 children: [
                   _Action(
                     icon: Icons.link_rounded,
-                    label: 'Copy link',
-                    onTap: _copyLink,
+                    label: t.shareCopyLink,
+                    onTap: () => _copyLink(t),
                   ),
                   _Action(
                     icon: Icons.auto_stories_outlined,
-                    label: 'Add to story',
+                    label: t.shareAddToStory,
                     onTap: () {
                       Navigator.of(context).pop();
-                      _toast(context, 'Added to your story');
+                      _toast(context, t.shareAddedToStory);
                     },
                   ),
                   _Action(
                     icon: Icons.ios_share_rounded,
-                    label: 'Share via…',
-                    onTap: _shareExternal,
+                    label: t.shareViaEllipsis,
+                    onTap: () => _shareExternal(t),
                   ),
                 ],
               ),

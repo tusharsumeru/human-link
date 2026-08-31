@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/digilocker_card.dart';
@@ -42,7 +43,9 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not capture image: $e')),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context).identityErrorCapture('$e'))),
       );
     }
   }
@@ -71,6 +74,7 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: SafeArea(
@@ -79,49 +83,39 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
           children: [
             const OnboardingStepHeader(current: 1),
             const SizedBox(height: 22),
-            Text('STEP 1 OF 3',
+            Text(t.identityStepLabel,
                 style: body(12,
                     weight: FontWeight.w700,
                     color: AppColors.gold700,
                     letterSpacing: 1.4)),
             const SizedBox(height: 6),
-            Text('Verify Your Identity',
-                style: display(28, color: AppColors.forest900)),
+            Text(t.identityTitle, style: display(28, color: AppColors.forest900)),
             const SizedBox(height: 8),
-            Text(
-              'Verify your Aadhaar to maintain the sanctity of our ancestral '
-              'records. An OTP will be sent to your Aadhaar-linked mobile. Your '
-              'data is encrypted and never shared with other members.',
-              style: body(13, color: AppColors.textMuted, height: 1.5),
-            ),
+            Text(t.identitySubtitle,
+                style: body(13, color: AppColors.textMuted, height: 1.5)),
             const SizedBox(height: 18),
-            const AppCard(
-              child: DigilockerCard(
-                description:
-                    'Verify your Aadhaar securely through the government '
-                    'DigiLocker. You\'ll sign in to DigiLocker and consent to '
-                    'share your Aadhaar.',
-              ),
+            AppCard(
+              child: DigilockerCard(description: t.identityDigilockerDesc),
             ),
             const SizedBox(height: 14),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Selfie Verification',
+                  Text(t.identitySelfieVerification,
                       style: body(12,
                           weight: FontWeight.w600,
                           color: AppColors.forest800)),
                   const SizedBox(height: 6),
-                  _selfieTile(),
+                  _selfieTile(t),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            _trustPanel(),
+            _trustPanel(t),
             const SizedBox(height: 18),
             ForestButton(
-              label: 'Continue to Lineage',
+              label: t.identityContinueToLineage,
               icon: Icons.arrow_forward,
               expand: true,
               loading: _saving,
@@ -133,7 +127,7 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
     );
   }
 
-  Widget _selfieTile() {
+  Widget _selfieTile(AppLocalizations t) {
     final done = _selfie != null;
     return GestureDetector(
       onTap: _takeSelfie,
@@ -170,13 +164,13 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                 children: [
                   Text(
                       done
-                          ? 'Selfie captured successfully'
-                          : 'Take a selfie to match your ID photo',
+                          ? t.identitySelfieCaptured
+                          : t.identitySelfiePrompt,
                       style: body(13,
                           weight: FontWeight.w600, color: AppColors.ink)),
                   if (!done) ...[
                     const SizedBox(height: 2),
-                    Text('Open Camera',
+                    Text(t.identityOpenCamera,
                         style: body(11,
                             weight: FontWeight.w600,
                             color: AppColors.forest700)),
@@ -193,11 +187,11 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
     );
   }
 
-  Widget _trustPanel() {
-    const items = [
-      (Icons.lock_outline, 'AES-256 end-to-end encryption'),
-      (Icons.visibility_off_outlined, 'Never shared with other members'),
-      (Icons.verified_user_outlined, 'Archival-grade secure vault'),
+  Widget _trustPanel(AppLocalizations t) {
+    final items = [
+      (Icons.lock_outline, t.identityTrustEncryption),
+      (Icons.visibility_off_outlined, t.identityTrustNeverShared),
+      (Icons.verified_user_outlined, t.identityTrustVault),
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -213,7 +207,7 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
               const Icon(Icons.shield_outlined,
                   size: 16, color: AppColors.gold500),
               const SizedBox(width: 8),
-              Text('Trust & Security',
+              Text(t.identityTrustSecurity,
                   style: body(13,
                       weight: FontWeight.w700, color: AppColors.gold500)),
             ],
@@ -247,10 +241,10 @@ class OnboardingStepHeader extends StatelessWidget {
   /// 1-based current step (1..3).
   final int current;
 
-  static const _labels = ['Identity', 'Lineage', 'Heritage'];
-
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final labels = [t.onboardStepIdentity, t.onboardStepLineage, t.onboardStepHeritage];
     return Column(
       children: [
         Row(
@@ -266,7 +260,7 @@ class OnboardingStepHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (int i = 0; i < 3; i++)
-              Text(_labels[i],
+              Text(labels[i],
                   style: body(11,
                       weight: (i + 1) == current
                           ? FontWeight.w700

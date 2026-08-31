@@ -3,47 +3,49 @@ import 'package:go_router/go_router.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Wire value (backend enum, matches matrimonial-profile.schema.ts) → the
 /// compact label shown on its chip. Order here is the order the chips render
-/// in, left to right.
-const _marriageIntentionOptions = <String, String>{
-  'SOON': 'Soon',
-  'ONE_TO_TWO_YEARS': '1-2 Years',
-  'NOT_DECIDED': 'Not Decided',
-};
-const _childrenPreferenceOptions = <String, String>{
-  'WANT_CHILDREN': 'Want',
-  'DO_NOT_WANT_CHILDREN': "Don't Want",
-  'OPEN_TO_DISCUSS': 'Open',
-};
-const _familyPreferenceOptions = <String, String>{
-  'JOINT_FAMILY': 'Joint',
-  'NUCLEAR_FAMILY': 'Nuclear',
-  'FLEXIBLE': 'Flexible',
-};
-const _relocationPreferenceOptions = <String, String>{
-  'YES': 'Yes',
-  'NO': 'No',
-  'MAYBE': 'Maybe',
-};
-const _foodPreferenceOptions = <String, String>{
-  'VEGETARIAN': 'Vegetarian',
-  'NON_VEGETARIAN': 'Non-Vegetarian',
-  'EGGETARIAN': 'Eggetarian',
-  'OTHER': 'Other',
-};
-const _interestOptions = <String, String>{
-  'TRAVEL': 'Travel',
-  'MUSIC': 'Music',
-  'MOVIES': 'Movies',
-  'FITNESS': 'Fitness',
-  'SPORTS': 'Sports',
-  'READING': 'Reading',
-  'COOKING': 'Cooking',
-  'SPIRITUALITY': 'Spirituality',
-};
+/// in, left to right. Localized at call time (not `const`), so English wire
+/// keys always map to the active language's label.
+Map<String, String> _marriageIntentionOptionsOf(AppLocalizations t) => {
+      'SOON': t.matIntentionSoon,
+      'ONE_TO_TWO_YEARS': t.matIntentionOneToTwoYears,
+      'NOT_DECIDED': t.matIntentionNotDecided,
+    };
+Map<String, String> _childrenPreferenceOptionsOf(AppLocalizations t) => {
+      'WANT_CHILDREN': t.matChildrenWant,
+      'DO_NOT_WANT_CHILDREN': t.matChildrenDontWant,
+      'OPEN_TO_DISCUSS': t.matChildrenOpen,
+    };
+Map<String, String> _familyPreferenceOptionsOf(AppLocalizations t) => {
+      'JOINT_FAMILY': t.matFamilyJoint,
+      'NUCLEAR_FAMILY': t.matFamilyNuclear,
+      'FLEXIBLE': t.matFamilyFlexible,
+    };
+Map<String, String> _relocationPreferenceOptionsOf(AppLocalizations t) => {
+      'YES': t.matRelocationYes,
+      'NO': t.matRelocationNo,
+      'MAYBE': t.matRelocationMaybe,
+    };
+Map<String, String> _foodPreferenceOptionsOf(AppLocalizations t) => {
+      'VEGETARIAN': t.matFoodVegetarian,
+      'NON_VEGETARIAN': t.matFoodNonVegetarian,
+      'EGGETARIAN': t.matFoodEggetarian,
+      'OTHER': t.matFoodOther,
+    };
+Map<String, String> _interestOptionsOf(AppLocalizations t) => {
+      'TRAVEL': t.matInterestTravel,
+      'MUSIC': t.matInterestMusic,
+      'MOVIES': t.matInterestMovies,
+      'FITNESS': t.matInterestFitness,
+      'SPORTS': t.matInterestSports,
+      'READING': t.matInterestReading,
+      'COOKING': t.matInterestCooking,
+      'SPIRITUALITY': t.matInterestSpirituality,
+    };
 
 /// The matrimonial half of a member's profile — career, physical, family,
 /// horoscope and what they're looking for.
@@ -145,7 +147,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not load your details';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).matCouldNotLoadDetails;
         _loading = false;
       });
     }
@@ -172,7 +176,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     if (_partnerAgeMin != null &&
         _partnerAgeMax != null &&
         _partnerAgeMin! > _partnerAgeMax!) {
-      _snack('Preferred partner age: "from" cannot be greater than "to"');
+      _snack(AppLocalizations.of(context).matAgeFromToError);
       return;
     }
 
@@ -206,10 +210,12 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         if (_interests.isNotEmpty) 'interests': _interests.toList(),
       });
       if (!mounted) return;
-      _snack('Matrimonial details saved');
+      _snack(AppLocalizations.of(context).matDetailsSaved);
       if (context.canPop()) context.pop();
     } catch (e) {
-      _snack(e is ApiException ? e.message : 'Could not save your details');
+      _snack(e is ApiException
+          ? e.message
+          : AppLocalizations.of(context).matCouldNotSaveDetails);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -229,7 +235,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Matrimonial Details',
+        title: Text(AppLocalizations.of(context).matEditTitle,
             style: display(18, color: Colors.white)),
       ),
       body: _loading
@@ -243,77 +249,85 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   }
 
   Widget _form() {
+    final t = AppLocalizations.of(context);
     return Form(
       key: _formKey,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
-          _label('CAREER'),
-          _text('education', 'Education',
-              hint: 'e.g. MBA Finance, IIM Bangalore'),
-          _text('company', 'Company / organisation'),
-          _text('designation', 'Designation'),
-          _text('income', 'Income range', hint: 'e.g. ₹22-28L'),
+          _label(t.matSectionCareer),
+          _text('education', t.matEducation, hint: t.matEducationHint),
+          _text('company', t.matCompanyOrg),
+          _text('designation', t.matDesignation),
+          _text('income', t.matIncomeRange, hint: t.matIncomeRangeHint),
 
           const SizedBox(height: 16),
-          _label('PHYSICAL'),
-          _heightField(),
-          _choice('Complexion', const ['Fair', 'Wheatish', 'Dusky', 'Dark'],
-              _complexion, (v) => setState(() => _complexion = v)),
+          _label(t.matSectionPhysical),
+          _heightField(t),
+          _choice(
+              t.matComplexion,
+              [
+                t.matComplexionFair,
+                t.matComplexionWheatish,
+                t.matComplexionDusky,
+                t.matComplexionDark,
+              ],
+              _complexion,
+              (v) => setState(() => _complexion = v)),
 
           const SizedBox(height: 16),
-          _label('FAMILY'),
-          _choice('Family type', const ['Joint', 'Nuclear'], _familyType,
-              (v) => setState(() => _familyType = v)),
-          _text('fatherOccupation', "Father's occupation"),
-          _text('motherOccupation', "Mother's occupation"),
-          _text('siblings', 'Siblings', hint: 'e.g. 1 younger brother, B.Tech'),
+          _label(t.matSectionFamily),
+          _choice(t.matFamilyTypeLabel, [t.matFamilyJoint, t.matFamilyNuclear],
+              _familyType, (v) => setState(() => _familyType = v)),
+          _text('fatherOccupation', t.matFathersOccupation),
+          _text('motherOccupation', t.matMothersOccupation),
+          _text('siblings', t.matSiblings, hint: t.matSiblingsHint),
 
           const SizedBox(height: 16),
-          _label('HOROSCOPE'),
-          _text('star', 'Star (nakshatra)', hint: 'e.g. Rohini'),
-          _text('rashi', 'Rashi', hint: 'e.g. Vrishabha'),
-          _text('timeOfBirth', 'Time of birth', hint: 'e.g. 10:45 AM'),
-          _mangalField(),
+          _label(t.matSectionHoroscope),
+          _text('star', t.matStarNakshatraLabel, hint: t.matStarHint),
+          _text('rashi', t.matRashi, hint: t.matRashiHint),
+          _text('timeOfBirth', t.matTimeOfBirthLabel, hint: t.matTimeOfBirthHint),
+          _mangalField(t),
 
           const SizedBox(height: 16),
-          _label('COMPATIBILITY'),
-          _compatibilityBirthDetailsLink(),
-          _compatibilityConsentLink(),
+          _label(t.matSectionCompatibility),
+          _compatibilityBirthDetailsLink(t),
+          _compatibilityConsentLink(t),
 
           const SizedBox(height: 16),
-          _label('ABOUT YOU'),
-          _text('about', 'About you', maxLines: 4, maxLength: 2000),
+          _label(t.matSectionAboutYou),
+          _text('about', t.matAboutYouLabel, maxLines: 4, maxLength: 2000),
 
           const SizedBox(height: 16),
-          _label('WHAT YOU ARE LOOKING FOR'),
-          _ageRangeField(),
-          _multiline(_expectations, 'Partner expectations',
-              hint: 'One per line'),
-          _multiline(_preferredLocations, 'Preferred locations (optional)',
-              hint: 'Comma separated, e.g. Bengaluru, Mangaluru'),
-          _multiline(_gotraExclusions, 'Gotras to exclude (optional)',
-              hint: 'Comma separated. Your own gotra is always excluded.'),
+          _label(t.matSectionLookingFor),
+          _ageRangeField(t),
+          _multiline(_expectations, t.matPartnerExpectationsLabel,
+              hint: t.matOnePerLine),
+          _multiline(_preferredLocations, t.matPreferredLocationsOptional,
+              hint: t.matPreferredLocationsHint),
+          _multiline(_gotraExclusions, t.matGotrasToExcludeOptional,
+              hint: t.matGotrasToExcludeHint),
 
           const SizedBox(height: 16),
-          _label('MARRIAGE PREFERENCES'),
-          _enumChoice('Marriage intention', _marriageIntentionOptions,
+          _label(t.matSectionMarriagePreferences),
+          _enumChoice(t.matMarriageIntention, _marriageIntentionOptionsOf(t),
               _marriageIntention, (v) => setState(() => _marriageIntention = v)),
-          _enumChoice('Children', _childrenPreferenceOptions,
+          _enumChoice(t.matChildren, _childrenPreferenceOptionsOf(t),
               _childrenPreference, (v) => setState(() => _childrenPreference = v)),
-          _enumChoice('Family', _familyPreferenceOptions, _familyPreference,
+          _enumChoice(t.matFamily2, _familyPreferenceOptionsOf(t), _familyPreference,
               (v) => setState(() => _familyPreference = v)),
-          _enumChoice('Relocation', _relocationPreferenceOptions,
+          _enumChoice(t.matRelocation, _relocationPreferenceOptionsOf(t),
               _relocationPreference, (v) => setState(() => _relocationPreference = v)),
 
           const SizedBox(height: 16),
-          _label('LIFESTYLE'),
-          _enumChoice('Food preference', _foodPreferenceOptions,
+          _label(t.matSectionLifestyle),
+          _enumChoice(t.matFoodPreference, _foodPreferenceOptionsOf(t),
               _foodPreference, (v) => setState(() => _foodPreference = v)),
 
           const SizedBox(height: 16),
-          _label('INTERESTS'),
-          _multiEnumChoice('', _interestOptions, _interests),
+          _label(t.matSectionInterests),
+          _multiEnumChoice('', _interestOptionsOf(t), _interests),
 
           const SizedBox(height: 24),
           SizedBox(
@@ -325,14 +339,14 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : 'Save details',
+              child: Text(_saving ? t.matSaving2 : t.matSaveDetails,
                   style:
                       body(15, weight: FontWeight.w700, color: Colors.white)),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Saved privately as a draft. You publish it from the Matrimonial section once everything is filled in.',
+            t.matSavedAsDraftNote,
             textAlign: TextAlign.center,
             style: body(12, color: AppColors.textMuted, height: 1.4),
           ),
@@ -487,7 +501,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  Widget _heightField() {
+  Widget _heightField(AppLocalizations t) {
     // Centimetres, because the server stores a number so height ranges work.
     // The feet/inches echo is just so the value is recognisable.
     return Padding(
@@ -496,13 +510,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         initialValue: _heightCm?.toString() ?? '',
         keyboardType: TextInputType.number,
         style: body(14, color: AppColors.ink),
-        decoration: _dec('Height (cm)',
-            _heightCm == null ? 'e.g. 163' : _feetInches(_heightCm!)),
+        decoration: _dec(t.matHeightCm,
+            _heightCm == null ? t.matHeightHint : _feetInches(_heightCm!)),
         validator: (v) {
           if (v == null || v.trim().isEmpty) return null;
           final n = int.tryParse(v.trim());
-          if (n == null) return 'Enter a number in centimetres';
-          if (n < 120 || n > 250) return 'Height must be between 120 and 250 cm';
+          if (n == null) return t.matEnterNumberInCm;
+          if (n < 120 || n > 250) return t.matHeightRangeError;
           return null;
         },
         onChanged: (v) => setState(() => _heightCm = int.tryParse(v.trim())),
@@ -519,13 +533,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   /// Compatibility engine needs (exact birthplace + coordinates, time of
   /// birth, accuracy) — kept out of this form since it's its own concern with
   /// its own backend resource, not another matrimonial-profile field.
-  Widget _compatibilityBirthDetailsLink() {
+  Widget _compatibilityBirthDetailsLink(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OutlinedButton.icon(
         onPressed: () => context.push('/matrimonial/birth-details'),
         icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-        label: Text('Add birth details for compatibility →',
+        label: Text(t.matAddBirthDetailsLink,
             style: body(13, weight: FontWeight.w600)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.forest700,
@@ -542,13 +556,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   /// Compatibility engine checks before every calculation — its own screen
   /// for the same reason birth details get one: a distinct concern with its
   /// own backend resource.
-  Widget _compatibilityConsentLink() {
+  Widget _compatibilityConsentLink(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OutlinedButton.icon(
         onPressed: () => context.push('/matrimonial/compatibility-consent'),
         icon: const Icon(Icons.privacy_tip_outlined, size: 16),
-        label: Text('Manage compatibility consent →',
+        label: Text(t.matManageConsentLink,
             style: body(13, weight: FontWeight.w600)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.forest700,
@@ -561,7 +575,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  Widget _mangalField() {
+  Widget _mangalField(AppLocalizations t) {
     // Wrap, not Row: an unconstrained Row of a label + chips can overflow on
     // narrow devices — Wrap folds onto a second line instead.
     return Padding(
@@ -573,9 +587,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 6),
-            child: Text('Mangal dosha', style: body(13, color: AppColors.label)),
+            child: Text(t.matMangalDosha, style: body(13, color: AppColors.label)),
           ),
-          for (final (value, label) in [(true, 'Yes'), (false, 'No')])
+          for (final (value, label) in [(true, t.matRelocationYes), (false, t.matRelocationNo)])
             ChoiceChip(
               label: Text(label, style: body(13)),
               selected: _mangal == value,
@@ -587,7 +601,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  Widget _ageRangeField() {
+  Widget _ageRangeField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
@@ -597,7 +611,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               initialValue: _partnerAgeMin?.toString() ?? '',
               keyboardType: TextInputType.number,
               style: body(14, color: AppColors.ink),
-              decoration: _dec('Partner age from', null),
+              decoration: _dec(t.matPartnerAgeFrom, null),
               onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
             ),
           ),
@@ -607,7 +621,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               initialValue: _partnerAgeMax?.toString() ?? '',
               keyboardType: TextInputType.number,
               style: body(14, color: AppColors.ink),
-              decoration: _dec('Partner age to', null),
+              decoration: _dec(t.matPartnerAgeTo, null),
               onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
             ),
           ),

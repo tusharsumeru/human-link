@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/place_field.dart';
@@ -69,7 +70,9 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not pick file: $e')),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context).heritageErrorPickFile('$e'))),
       );
     }
   }
@@ -117,6 +120,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: SafeArea(
@@ -125,65 +129,60 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
           children: [
             const OnboardingStepHeader(current: 3),
             const SizedBox(height: 22),
-            Text('STEP 3 OF 3',
+            Text(t.heritageStepLabel,
                 style: body(12,
                     weight: FontWeight.w700,
                     color: AppColors.gold700,
                     letterSpacing: 1.4)),
             const SizedBox(height: 6),
-            Text('Cultural Profile & Heritage',
-                style: display(28, color: AppColors.forest900)),
+            Text(t.heritageTitle, style: display(28, color: AppColors.forest900)),
             const SizedBox(height: 8),
-            Text(
-              'The final step to documenting your legacy within the Daivajna '
-              'community.',
-              style: body(13, color: AppColors.textMuted, height: 1.5),
-            ),
+            Text(t.heritageSubtitle,
+                style: body(13, color: AppColors.textMuted, height: 1.5)),
             const SizedBox(height: 18),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OnboardingField(
-                      label: 'Gotra', controller: _gotra, hint: 'e.g. Kashyap'),
+                      label: t.heritageGotra,
+                      controller: _gotra,
+                      hint: t.heritageGotraHint),
                   const SizedBox(height: 14),
                   PlaceField(
-                      label: 'Native Place (Kula Devata Location)',
+                      label: t.heritageNativePlace,
                       controller: _native,
-                      hint: 'e.g. Gokarna'),
+                      hint: t.heritageNativePlaceHint),
                   const SizedBox(height: 14),
                   OnboardingField(
-                    label: 'Professional Bio',
+                    label: t.heritageBio,
                     controller: _bio,
-                    hint: 'Tell the community about your work and skills.',
+                    hint: t.heritageBioHint,
                     maxLines: 4,
                   ),
                   const SizedBox(height: 14),
-                  _matrimonialTile(),
+                  _matrimonialTile(t),
                   const SizedBox(height: 14),
-                  Text(
-                    'Optional: Upload Family Documents (birth certificate, old '
-                    'letters or heirlooms - JPG / PNG)',
-                    style: body(11, color: AppColors.textMuted, height: 1.4),
-                  ),
+                  Text(t.heritageUploadNote,
+                      style: body(11, color: AppColors.textMuted, height: 1.4)),
                   const SizedBox(height: 6),
-                  _document == null ? _uploadPrompt() : _documentPreview(),
+                  _document == null ? _uploadPrompt(t) : _documentPreview(t),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            _welcomePanel(),
+            _welcomePanel(t),
             const SizedBox(height: 18),
             Row(
               children: [
                 OutlineButtonX(
-                  label: 'Back to Lineage',
+                  label: t.heritageBackToLineage,
                   onPressed: () => context.go('/onboarding/lineage'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ForestButton(
-                    label: 'Complete Profile ✓',
+                    label: t.heritageCompleteProfile,
                     expand: true,
                     loading: _saving,
                     onPressed: _saving ? null : _complete,
@@ -197,7 +196,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     );
   }
 
-  Widget _matrimonialTile() {
+  Widget _matrimonialTile(AppLocalizations t) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => setState(() => _matrimonial = !_matrimonial),
@@ -227,16 +226,12 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Opt-in to Matrimonial Hub',
+                  Text(t.heritageMatrimonialOptIn,
                       style: body(13,
                           weight: FontWeight.w600, color: AppColors.ink)),
                   const SizedBox(height: 2),
-                  Text(
-                    'Make your profile discoverable to families seeking '
-                    'matrimonial connections within the Samaj. You can change '
-                    'this preference anytime.',
-                    style: body(11, color: AppColors.textMuted, height: 1.4),
-                  ),
+                  Text(t.heritageMatrimonialDesc,
+                      style: body(11, color: AppColors.textMuted, height: 1.4)),
                 ],
               ),
             ),
@@ -246,7 +241,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     );
   }
 
-  Widget _uploadPrompt() {
+  Widget _uploadPrompt(AppLocalizations t) {
     return GestureDetector(
       onTap: _pickDocument,
       child: Container(
@@ -261,15 +256,14 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
           children: [
             const Icon(Icons.upload_file, size: 28, color: AppColors.gold700),
             const SizedBox(height: 8),
-            Text('Click to upload family documents',
-                style: body(12, color: AppColors.label)),
+            Text(t.heritageUploadPrompt, style: body(12, color: AppColors.label)),
           ],
         ),
       ),
     );
   }
 
-  Widget _documentPreview() {
+  Widget _documentPreview(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -292,7 +286,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
             ),
             TextButton(
               onPressed: _pickDocument,
-              child: Text('Change',
+              child: Text(t.heritageChange,
                   style: body(13,
                       weight: FontWeight.w700, color: AppColors.gold700)),
             ),
@@ -302,11 +296,11 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     );
   }
 
-  Widget _welcomePanel() {
-    const benefits = [
-      'Access to the Global Lineage Directory',
-      'Participation in Samaja Governance',
-      'Community Welfare Program Eligibility',
+  Widget _welcomePanel(AppLocalizations t) {
+    final benefits = [
+      t.heritageBenefit1,
+      t.heritageBenefit2,
+      t.heritageBenefit3,
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -317,16 +311,12 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Welcome to the Samaj',
+          Text(t.heritageWelcomeTitle,
               style: body(12,
                   weight: FontWeight.w700, color: AppColors.forest300)),
           const SizedBox(height: 6),
-          Text(
-            'By completing this step, you become a verified member in our '
-            'living digital tree. You help maintain the cultural integrity and '
-            'social fabric of the Daivajna community.',
-            style: body(13, color: Colors.white, height: 1.5),
-          ),
+          Text(t.heritageWelcomeBody,
+              style: body(13, color: Colors.white, height: 1.5)),
           const SizedBox(height: 12),
           for (final b in benefits)
             Padding(

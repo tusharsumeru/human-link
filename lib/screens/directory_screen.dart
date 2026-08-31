@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
@@ -138,7 +139,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     final filtered = _filtered;
 
     return AppShell(
-      title: 'Member Directory',
+      title: AppLocalizations.of(context).dirTitle,
       currentRoute: '/directory',
       scrollable: false,
       padding: EdgeInsets.zero,
@@ -172,6 +173,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
   // ── Search + filters ────────────────────────────────────────────────────────
   Widget _searchField() {
+    final t = AppLocalizations.of(context);
     return Row(
       children: [
         Expanded(
@@ -181,7 +183,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             style: body(14, color: AppColors.ink),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Search members, gotras, or locations…',
+              hintText: t.dirSearchHint,
               hintStyle: body(14, color: AppColors.hint),
               prefixIcon:
                   const Icon(Icons.search_rounded, size: 18, color: AppColors.hint),
@@ -202,7 +204,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         ),
         const SizedBox(width: 8),
         GestureDetector(
-          onTap: () => _toast(context, 'Advanced filters coming soon'),
+          onTap: () => _toast(context, t.dirAdvancedFiltersSoon),
           child: Container(
             width: 44,
             height: 44,
@@ -223,25 +225,26 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       });
 
   Widget _filterRow() {
+    final t = AppLocalizations.of(context);
     // Wrap so the chips flow onto a second line instead of overflowing.
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        _chip('All Members', _mode == _Mode.all && !_mapView,
+        _chip(t.dirAllMembers, _mode == _Mode.all && !_mapView,
             () => _setMode(_Mode.all)),
-        _chip('By Area', _mode == _Mode.area && !_mapView,
+        _chip(t.dirByArea, _mode == _Mode.area && !_mapView,
             () => _setMode(_Mode.area)),
-        _chip('By Gotra', _mode == _Mode.gotra && !_mapView,
+        _chip(t.dirByGotra, _mode == _Mode.gotra && !_mapView,
             () => _setMode(_Mode.gotra)),
-        _chip('By Occupation', _mode == _Mode.occupation && !_mapView,
+        _chip(t.dirByOccupation, _mode == _Mode.occupation && !_mapView,
             () => _setMode(_Mode.occupation)),
-        _mapChip(),
+        _mapChip(t),
       ],
     );
   }
 
-  Widget _mapChip() {
+  Widget _mapChip(AppLocalizations t) {
     return GestureDetector(
       onTap: () => setState(() => _mapView = !_mapView),
       child: Container(
@@ -258,7 +261,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             Icon(Icons.map_outlined,
                 size: 14, color: _mapView ? Colors.white : AppColors.gold700),
             const SizedBox(width: 5),
-            Text('Map View',
+            Text(t.dirMapView,
                 style: body(13,
                     weight: FontWeight.w700,
                     color: _mapView ? Colors.white : AppColors.gold700)),
@@ -289,6 +292,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
   // ── Content ─────────────────────────────────────────────────────────────────
   Widget _content(List<Map<String, dynamic>> filtered, String? myGotra) {
+    final t = AppLocalizations.of(context);
     if (filtered.isEmpty) {
       return _empty();
     }
@@ -306,18 +310,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
       children: [
-        _sectionHeader('Nearby Members', trailing: 'View All →'),
+        _sectionHeader(t.dirNearbyMembers, trailing: t.dirViewAll),
         if (myPlace.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Text('From your native place first',
+            child: Text(t.dirFromNativePlaceFirst,
                 style: body(11, color: AppColors.textMuted)),
           ),
         const SizedBox(height: 10),
         if (nearby.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text('No other members yet.',
+            child: Text(t.dirNoOtherMembersYet,
                 style: body(13, color: AppColors.textMuted)),
           )
         else
@@ -333,7 +337,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         ),
         const SizedBox(height: 22),
         if (suggested.isNotEmpty) ...[
-          _sectionHeader('Suggested Connections'),
+          _sectionHeader(t.dirSuggestedConnections),
           const SizedBox(height: 10),
           for (final m in suggested) ...[
             _SuggestedCard(
@@ -364,16 +368,17 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   }
 
   Widget _empty() {
+    final t = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.groups_outlined, size: 40, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text(_search.isEmpty ? 'No members yet' : 'No members found',
+          Text(_search.isEmpty ? t.dirNoMembersYet : t.dirNoMembersFound,
               style: display(16, color: AppColors.forest900)),
           const SizedBox(height: 4),
-          Text('Members appear here as your Vamsha Vruksha grows.',
+          Text(t.dirMembersAppearHere,
               textAlign: TextAlign.center,
               style: body(13, color: AppColors.textMuted)),
         ],
@@ -405,11 +410,11 @@ String _branchOf(Map m) {
 
 // ── Member cards ──────────────────────────────────────────────────────────────
 
-String _placeOf(Map m) {
+String _placeOf(Map m, AppLocalizations t) {
   final native = (m['native'] ?? '').toString().trim();
   if (native.isNotEmpty) return native.split(',').first.trim();
   final branch = (m['branch'] ?? '').toString().trim();
-  return branch.isEmpty ? 'Samaj member' : branch;
+  return branch.isEmpty ? t.dirSamajMember : branch;
 }
 
 class _NearbyCard extends StatelessWidget {
@@ -421,6 +426,7 @@ class _NearbyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final name = (member['name'] ?? '').toString();
     final gotra = (member['gotra'] ?? '').toString();
     return GestureDetector(
@@ -449,7 +455,7 @@ class _NearbyCard extends StatelessWidget {
               style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
           const SizedBox(height: 2),
           if (gotra.isNotEmpty)
-            Text('$gotra Gotra',
+            Text(t.dirGotraSuffix(gotra),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: body(11, color: AppColors.textMuted)),
@@ -460,7 +466,7 @@ class _NearbyCard extends StatelessWidget {
                   size: 11, color: AppColors.hint),
               const SizedBox(width: 3),
               Expanded(
-                child: Text(_placeOf(member),
+                child: Text(_placeOf(member, t),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: body(11, color: AppColors.hint)),
@@ -472,7 +478,7 @@ class _NearbyCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniButton(
-                  label: 'Message',
+                  label: t.dirMessage,
                   filled: false,
                   onTap: () => openMemberChat(context, member),
                 ),
@@ -480,7 +486,7 @@ class _NearbyCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: _MiniButton(
-                  label: 'Connect',
+                  label: t.dirConnect,
                   filled: true,
                   onTap: () => onConnect(member),
                 ),
@@ -503,12 +509,13 @@ class _SuggestedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final name = (member['name'] ?? '').toString();
     final gotra = (member['gotra'] ?? '').toString();
     final occ = (member['occupation'] ?? '').toString().trim();
     final reason = occ.isNotEmpty
-        ? '$occ · shares your $gotra gotra.'
-        : 'Shares your $gotra gotra, rooted in ${_placeOf(member)}.';
+        ? t.dirReasonWithOcc(occ, gotra)
+        : t.dirReasonNoOcc(gotra, _placeOf(member, t));
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -526,7 +533,7 @@ class _SuggestedCard extends StatelessWidget {
               color: const Color(0xFFF0FBF4),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text('SAME GOTRA',
+            child: Text(t.dirSameGotra,
                 style: body(9,
                     weight: FontWeight.w700,
                     color: AppColors.forest700,
@@ -542,7 +549,7 @@ class _SuggestedCard extends StatelessWidget {
           Row(
             children: [
               _MiniButton(
-                label: 'View Profile',
+                label: t.dirViewProfile,
                 filled: true,
                 onTap: () => onView(member),
               ),
@@ -575,6 +582,7 @@ class _CommunityMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -589,11 +597,11 @@ class _CommunityMapCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('Community Map',
+                Text(t.dirCommunityMap,
                     style: body(14,
                         weight: FontWeight.w700, color: AppColors.forest900)),
                 const Spacer(),
-                Text('$count members',
+                Text(t.dirMembersCount(count),
                     style: body(11, color: AppColors.textMuted)),
               ],
             ),
@@ -624,7 +632,7 @@ class _CommunityMapCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Explore Region',
+                            Text(t.dirExploreRegion,
                                 style: body(12,
                                     weight: FontWeight.w600,
                                     color: AppColors.forest800)),
@@ -705,22 +713,23 @@ class _GroupedList extends StatelessWidget {
   final void Function(Map<String, dynamic>) onConnect;
   final void Function(Map<String, dynamic>) onView;
 
-  String _key(Map m) => switch (mode) {
+  String _key(Map m, AppLocalizations t) => switch (mode) {
         _Mode.area => _branchOf(m),
         _Mode.gotra => (m['gotra'] ?? '').toString().trim().isEmpty
-            ? 'Other'
+            ? t.dirGroupOther
             : (m['gotra']).toString(),
         _Mode.occupation => (m['occupation'] ?? '').toString().trim().isEmpty
-            ? 'Not specified'
+            ? t.dirGroupNotSpecified
             : (m['occupation']).toString(),
         _Mode.all => 'All',
       };
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final grouped = <String, List<Map<String, dynamic>>>{};
     for (final m in members) {
-      grouped.putIfAbsent(_key(m), () => []).add(m);
+      grouped.putIfAbsent(_key(m, t), () => []).add(m);
     }
     final keys = grouped.keys.toList()..sort();
 
@@ -755,13 +764,14 @@ class _RowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final name = (member['name'] ?? '').toString();
     final gotra = (member['gotra'] ?? '').toString();
     final occ = (member['occupation'] ?? '').toString().trim();
     final sub = [
-      if (gotra.isNotEmpty) '$gotra Gotra',
+      if (gotra.isNotEmpty) t.dirGotraSuffix(gotra),
       if (occ.isNotEmpty) occ,
-      _placeOf(member),
+      _placeOf(member, t),
     ].join(' · ');
 
     return AppCard(
@@ -843,12 +853,13 @@ class _MemberSheetState extends State<MemberSheet> {
   Future<void> _copyPhone() async {
     await Clipboard.setData(ClipboardData(text: _s('phone')));
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Number copied')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).dirNumberCopied)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final name = _s('name');
     final userName = _s('userName');
     final verified = _m['verified'] == true;
@@ -908,16 +919,16 @@ class _MemberSheetState extends State<MemberSheet> {
             ),
             const SizedBox(height: 18),
             if (_s('gotra').isNotEmpty)
-              _detail(Icons.spa_outlined, 'Gotra', _s('gotra')),
+              _detail(Icons.spa_outlined, t.dirGotra, _s('gotra')),
             if (_s('native').isNotEmpty)
-              _detail(Icons.place_outlined, 'Native', _s('native')),
+              _detail(Icons.place_outlined, t.dirNative, _s('native')),
             if (_s('occupation').isNotEmpty)
-              _detail(Icons.work_outline, 'Occupation', _s('occupation')),
+              _detail(Icons.work_outline, t.dirOccupation, _s('occupation')),
             // Present only when this member turned on `showPhoneToMembers` —
             // the server sends `phone: ''` for everyone else, so an empty
             // string here means "withheld", not "missing".
             if (_s('phone').isNotEmpty)
-              _detail(Icons.phone_outlined, 'Phone', _s('phone'),
+              _detail(Icons.phone_outlined, t.dirPhone, _s('phone'),
                   onTap: _copyPhone),
             // Only members who turned "Share with members" on in their profile
             // reach here with a number: the directory and /api/user/:id send
@@ -933,7 +944,7 @@ class _MemberSheetState extends State<MemberSheet> {
               children: [
                 Expanded(
                   child: ForestButton(
-                    label: 'Connect',
+                    label: t.dirConnect,
                     // A call icon, not person-add: the button dials now.
                     icon: Icons.call_rounded,
                     expand: true,
@@ -946,7 +957,7 @@ class _MemberSheetState extends State<MemberSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlineButtonX(
-                    label: 'Message',
+                    label: t.dirMessage,
                     expand: true,
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -966,6 +977,7 @@ class _MemberSheetState extends State<MemberSheet> {
   /// and retyping it from the sheet is the one thing a member would rather not
   /// do by hand.
   Widget _phoneRow(String phone) {
+    final t = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -976,7 +988,7 @@ class _MemberSheetState extends State<MemberSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Phone', style: body(11, color: AppColors.textMuted)),
+                Text(t.dirPhone, style: body(11, color: AppColors.textMuted)),
                 const SizedBox(height: 1),
                 Text(phone,
                     style: body(14,
@@ -989,7 +1001,7 @@ class _MemberSheetState extends State<MemberSheet> {
               Clipboard.setData(ClipboardData(text: phone));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('$phone copied'),
+                  content: Text(t.dirPhoneCopied(phone)),
                   backgroundColor: AppColors.forest800,
                 ),
               );
@@ -1092,7 +1104,7 @@ class _MapView extends StatelessWidget {
                 child: Container(
                   color: const Color(0xFFF0FBF4),
                   alignment: Alignment.center,
-                  child: Text('No members to place on the map',
+                  child: Text(AppLocalizations.of(context).dirNoMembersToPlace,
                       style: body(14,
                           weight: FontWeight.w600, color: AppColors.hint)),
                 ),
@@ -1166,6 +1178,7 @@ void _toast(BuildContext context, String msg) {
 // data — say so rather than opening an empty dialer.
 Future<void> connectMember(BuildContext context, Map<String, dynamic> member) async {
   final messenger = ScaffoldMessenger.of(context);
+  final t = AppLocalizations.of(context);
   final name = (member['name'] ?? '').toString().trim();
   final id = (member['id'] ?? '').toString().trim();
   messenger.hideCurrentSnackBar();
@@ -1186,8 +1199,7 @@ Future<void> connectMember(BuildContext context, Map<String, dynamic> member) as
   if (phone.isEmpty) {
     messenger.showSnackBar(SnackBar(
       content: Text(
-          '${name.isEmpty ? 'This member' : name} has disabled their phone '
-          'number. You cannot call them - send a message instead.',
+          t.dirPhoneDisabled(name.isEmpty ? t.dirThisMember : name),
           style: body(13, color: Colors.white)),
       backgroundColor: AppColors.forest800,
       behavior: SnackBarBehavior.floating,
@@ -1204,7 +1216,7 @@ Future<void> connectMember(BuildContext context, Map<String, dynamic> member) as
   } catch (_) {
     if (!context.mounted) return;
     messenger.showSnackBar(SnackBar(
-      content: Text('Could not open the dialer for $phone',
+      content: Text(t.dirCouldNotOpenDialer(phone),
           style: body(13, color: Colors.white)),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
@@ -1238,10 +1250,11 @@ void openMemberChat(BuildContext context, Map<String, dynamic> member) {
   if (id.isEmpty) return;
   final name = (member['name'] ?? '').toString().trim();
   final userName = (member['userName'] ?? '').toString().trim();
+  final defaultName = AppLocalizations.of(context).dirDefaultMemberName;
   Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => ChatScreen(
       otherUserId: id,
-      otherName: name.isNotEmpty ? name : (userName.isEmpty ? 'Member' : userName),
+      otherName: name.isNotEmpty ? name : (userName.isEmpty ? defaultName : userName),
       otherAvatarUrl: (member['profileUrl'] ?? '').toString(),
     ),
   ));

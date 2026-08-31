@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/api_client.dart';
 import '../data/models/compatibility_models.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
@@ -52,8 +53,9 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _loadError =
-            e is ApiException ? e.message : 'Could not load your consent settings';
+        _loadError = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).compConsentLoadError;
         _loading = false;
       });
     }
@@ -77,6 +79,7 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -84,7 +87,7 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Compatibility Consent', style: display(18, color: Colors.white)),
+        title: Text(t.compConsentTitle, style: display(18, color: Colors.white)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -99,7 +102,7 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
                             textAlign: TextAlign.center,
                             style: body(14, color: AppColors.textMuted)),
                         const SizedBox(height: 14),
-                        OutlinedButton(onPressed: _load, child: const Text('Retry')),
+                        OutlinedButton(onPressed: _load, child: Text(t.commonRetry)),
                       ],
                     ),
                   ),
@@ -109,10 +112,8 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
                   children: [
                     _ConsentPurposeCard(
                       icon: Icons.cake_outlined,
-                      title: 'Birth-Data Matching',
-                      description:
-                          'Use your birth date, time and place to calculate traditional '
-                          'Jataka (10 Porutham) compatibility with another member.',
+                      title: t.compBirthDataMatching,
+                      description: t.compBirthDataMatchingDesc,
                       status: _find(CompatibilityConsentType.birthDataMatching),
                       onChanged: _applyUpdate,
                     ),
@@ -168,7 +169,9 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is ApiException ? e.message : "Couldn't save that. Try again."),
+        content: Text(e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).compCouldNotSaveRetry),
       ));
     }
   }
@@ -179,6 +182,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final status = widget.status;
     final on = status?.satisfiesCalculation ?? false;
     // Genuinely GRANTED, just not under the policy currently in effect — a
@@ -213,8 +217,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Our consent policy was updated since you last agreed - '
-                      'switch this back on to confirm again.',
+                      t.compPolicyUpdatedNote,
                       style: body(11, color: AppColors.gold700, height: 1.4),
                     ),
                   ),
@@ -227,7 +230,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
             children: [
               Expanded(
                 child: Text(
-                  on ? 'Allowed' : 'Not allowed',
+                  on ? t.compAllowed : t.compNotAllowed,
                   style: body(14, weight: FontWeight.w600, color: AppColors.ink),
                 ),
               ),
@@ -253,7 +256,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
           ),
           if (on && status?.grantedAt != null) ...[
             const SizedBox(height: 8),
-            Text('Granted ${_formatDate(status!.grantedAt!)}',
+            Text(t.compGrantedOn(_formatDate(status!.grantedAt!)),
                 style: body(11, color: AppColors.hint)),
           ],
         ],

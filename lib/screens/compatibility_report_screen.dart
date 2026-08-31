@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/api_client.dart';
 import '../data/models/compatibility_models.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/compatibility_report_view.dart';
@@ -59,7 +60,9 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not load the compatibility report';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).compReportLoadError;
         _loading = false;
       });
     }
@@ -67,9 +70,10 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final myName = context.watch<AuthService>().user?.name ?? 'You';
+    final t = AppLocalizations.of(context);
+    final myName = context.watch<AuthService>().user?.name ?? t.compYou;
     final otherName =
-        widget.otherName.trim().isNotEmpty ? widget.otherName.trim() : 'This member';
+        widget.otherName.trim().isNotEmpty ? widget.otherName.trim() : t.compThisMember;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -78,17 +82,17 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Compatibility Report', style: display(18, color: Colors.white)),
+        title: Text(t.compReportTitle, style: display(18, color: Colors.white)),
       ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _errorState(_error!)
+                ? _errorState(_error!, t)
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
                     children: [
-                      _header(myName, otherName),
+                      _header(myName, otherName, t),
                       const SizedBox(height: 16),
                       CompatibilityReportView(report: _report!),
                     ],
@@ -97,7 +101,7 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
     );
   }
 
-  Widget _errorState(String message) {
+  Widget _errorState(String message, AppLocalizations t) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -110,14 +114,14 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
                 textAlign: TextAlign.center,
                 style: body(14, color: AppColors.textMuted)),
             const SizedBox(height: 14),
-            OutlineButtonX(label: 'Try again', onPressed: _load),
+            OutlineButtonX(label: t.compTryAgain, onPressed: _load),
           ],
         ),
       ),
     );
   }
 
-  Widget _header(String myName, String otherName) {
+  Widget _header(String myName, String otherName, AppLocalizations t) {
     return AppCard(
       child: Column(
         children: [
@@ -131,7 +135,7 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
             child: const Icon(Icons.favorite_rounded, size: 26, color: AppColors.gold700),
           ),
           const SizedBox(height: 14),
-          Text('Compatibility Report',
+          Text(t.compReportTitle,
               style: display(20, color: AppColors.forest900),
               textAlign: TextAlign.center),
           const SizedBox(height: 6),

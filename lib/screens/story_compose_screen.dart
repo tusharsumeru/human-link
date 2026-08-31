@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../data/api_client.dart';
 import '../data/story_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/family_search_sheet.dart';
 import '../widgets/ui_kit.dart';
@@ -42,16 +43,17 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     super.dispose();
   }
 
-  ({String label, IconData icon}) get _visInfo => switch (_visibility) {
-        'followers' => (label: 'Family & Followers', icon: Icons.groups_outlined),
-        'private' => (label: 'Only me', icon: Icons.lock_outline),
-        _ => (label: 'Vamsha Community', icon: Icons.public),
+  ({String label, IconData icon}) _visInfo(AppLocalizations t) => switch (_visibility) {
+        'followers' => (label: t.storyVisFamilyFollowers, icon: Icons.groups_outlined),
+        'private' => (label: t.storyVisOnlyMe, icon: Icons.lock_outline),
+        _ => (label: t.storyVisCommunity, icon: Icons.public),
       };
 
   Future<void> _pickTagged() async {
+    final t = AppLocalizations.of(context);
     final res = await showFamilySearchSheet(
       context,
-      title: 'Tag Family Members',
+      title: t.storyTagFamilyMembers,
       multi: true,
       selectedIds: _tagged.map((m) => (m['_id'] ?? '').toString()).toSet(),
     );
@@ -67,7 +69,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
   Future<void> _pickTreeNode() async {
     final res = await showFamilySearchSheet(
       context,
-      title: 'Link to an Ancestor',
+      title: AppLocalizations.of(context).storyLinkAncestor,
       multi: false,
     );
     if (res != null && res.isNotEmpty) {
@@ -97,6 +99,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
   }
 
   Future<void> _pickVisibility() async {
+    final t = AppLocalizations.of(context);
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.cream,
@@ -108,15 +111,15 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 14),
-            Text('Who can see this story?',
+            Text(t.storyWhoCanSee,
                 style: display(17, color: AppColors.forest900)),
             const SizedBox(height: 6),
-            _visTile('community', Icons.public, 'Vamsha Community',
-                'Everyone in the Samaj'),
-            _visTile('followers', Icons.groups_outlined, 'Family & Followers',
-                'People connected to you'),
-            _visTile('private', Icons.lock_outline, 'Only me',
-                'Private - nobody else can see it'),
+            _visTile('community', Icons.public, t.storyVisCommunity,
+                t.storyVisCommunityDesc),
+            _visTile('followers', Icons.groups_outlined, t.storyVisFamilyFollowers,
+                t.storyVisFollowersDesc),
+            _visTile('private', Icons.lock_outline, t.storyVisOnlyMe,
+                t.storyVisPrivateDesc),
             const SizedBox(height: 12),
           ],
         ),
@@ -143,6 +146,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     setState(() => _posting = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final t = AppLocalizations.of(context);
     try {
       await StoryStore.instance.addStory(
         widget.filePath,
@@ -159,7 +163,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
       if (!mounted) return;
       navigator.pop(); // back to the feed
       messenger.showSnackBar(SnackBar(
-        content: Text('Story shared - live for 24 hours ✨',
+        content: Text(t.storyShared,
             style: body(13, color: Colors.white)),
         backgroundColor: AppColors.forest800,
         behavior: SnackBarBehavior.floating,
@@ -169,8 +173,8 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
       if (!mounted) return;
       setState(() => _posting = false);
       messenger.showSnackBar(SnackBar(
-        content: Text(
-            'Couldn\'t post: ${e is ApiException ? e.message : 'please try again'}'),
+        content: Text(t.storyCouldNotPost(
+            e is ApiException ? e.message : t.storyPleaseTryAgain)),
         backgroundColor: Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
       ));
@@ -181,7 +185,8 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: Text('$label - coming soon', style: body(13, color: Colors.white)),
+        content: Text(AppLocalizations.of(context).storyComingSoon(label),
+            style: body(13, color: Colors.white)),
         backgroundColor: AppColors.forest800,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
@@ -190,18 +195,19 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vis = _visInfo;
+    final t = AppLocalizations.of(context);
+    final vis = _visInfo(t);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
         backgroundColor: AppColors.cream,
         elevation: 0,
         foregroundColor: AppColors.forest900,
-        title: Text('Share Story', style: display(18, color: AppColors.forest900)),
+        title: Text(t.storyShareTitle, style: display(18, color: AppColors.forest900)),
         actions: [
           TextButton(
-            onPressed: () => _soon('Drafts'),
-            child: Text('HELP',
+            onPressed: () => _soon(t.storyDrafts),
+            child: Text(t.storyHelp,
                 style: body(12,
                     weight: FontWeight.w700,
                     color: AppColors.forest700,
@@ -223,7 +229,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    widget.isVideo ? 'Review your recording' : 'Review your photo',
+                    widget.isVideo ? t.storyReviewRecording : t.storyReviewPhoto,
                     style: body(12, color: AppColors.textMuted)
                         .copyWith(fontStyle: FontStyle.italic),
                   ),
@@ -231,7 +237,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                 const SizedBox(height: 18),
 
                 // Caption
-                Text('Caption',
+                Text(t.storyCaption,
                     style: body(14,
                         weight: FontWeight.w700, color: AppColors.forest900)),
                 const SizedBox(height: 8),
@@ -243,7 +249,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                   textCapitalization: TextCapitalization.sentences,
                   style: body(14, color: AppColors.ink),
                   decoration: InputDecoration(
-                    hintText: 'Write a caption about this family memory…',
+                    hintText: t.storyCaptionHint,
                     hintStyle: body(13, color: AppColors.hint),
                     counterText: '',
                     filled: true,
@@ -267,9 +273,9 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                   iconBg: const Color(0xFFF3D9CE),
                   icon: Icons.person_add_alt_1_outlined,
                   iconColor: const Color(0xFFB05E7A),
-                  title: 'Tag Family Members',
+                  title: t.storyTagFamilyMembers,
                   subtitle: _tagged.isEmpty
-                      ? 'Search your Vamsha Vruksha'
+                      ? t.storySearchVamshaVruksha
                       : _tagged.map((m) => m['name']).join(', '),
                   onTap: _pickTagged,
                 ),
@@ -278,9 +284,9 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                   iconBg: const Color(0xFFE7E2DA),
                   icon: Icons.place_outlined,
                   iconColor: AppColors.forest700,
-                  title: 'Add Location',
+                  title: t.storyAddLocation,
                   subtitle: _locationName == null
-                      ? 'Villages, temples, or community centers'
+                      ? t.storyLocationSubtitle
                       : '$_locationName · ${_locationKind ?? ''}',
                   onTap: _pickLocation,
                 ),
@@ -289,10 +295,10 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                   iconBg: AppColors.forest700,
                   icon: Icons.account_tree_outlined,
                   iconColor: Colors.white,
-                  title: 'Link to Tree Node',
+                  title: t.storyLinkToTreeNode,
                   subtitle: _treeNode == null
-                      ? 'Attach this story to an ancestor'
-                      : 'Linked to ${_treeNode!['name']}',
+                      ? t.storyAttachAncestor
+                      : t.storyLinkedTo(_treeNode!['name']),
                   onTap: _pickTreeNode,
                   trailing: Switch(
                     value: _treeNode != null,
@@ -309,14 +315,14 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                 ),
                 const SizedBox(height: 16),
                 GestureDetector(
-                  onTap: () => _soon('Advanced settings'),
+                  onTap: () => _soon(t.storyAdvancedSettings),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.settings_outlined,
                           size: 15, color: AppColors.forest700),
                       const SizedBox(width: 6),
-                      Text('ADVANCED SETTINGS',
+                      Text(t.storyAdvancedSettings,
                           style: body(12,
                               weight: FontWeight.w700,
                               color: AppColors.forest700,
@@ -346,7 +352,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Visible to',
+                          Text(t.storyVisibleTo,
                               style: body(11, color: AppColors.textMuted)),
                           const SizedBox(height: 2),
                           Row(
@@ -371,7 +377,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                   ),
                   const SizedBox(width: 12),
                   ForestButton(
-                    label: 'Post to Community',
+                    label: t.storyPostToCommunity,
                     icon: Icons.send_rounded,
                     loading: _posting,
                     onPressed: _posting ? null : _post,
@@ -511,12 +517,12 @@ class _LocationSheetState extends State<_LocationSheet> {
       TextEditingController(text: widget.initialName);
   late String _kind = widget.initialKind;
 
-  static const _kinds = <(String, String)>[
-    ('village', 'Village'),
-    ('temple', 'Temple'),
-    ('community_center', 'Community Center'),
-    ('other', 'Other'),
-  ];
+  List<(String, String)> _kindsOf(AppLocalizations t) => [
+        ('village', t.storyKindVillage),
+        ('temple', t.storyKindTemple),
+        ('community_center', t.storyKindCommunityCenter),
+        ('other', t.storyKindOther),
+      ];
 
   @override
   void dispose() {
@@ -526,6 +532,7 @@ class _LocationSheetState extends State<_LocationSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
@@ -546,7 +553,7 @@ class _LocationSheetState extends State<_LocationSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              Text('Add Location', style: display(17, color: AppColors.forest900)),
+              Text(t.storyAddLocation, style: display(17, color: AppColors.forest900)),
               const SizedBox(height: 12),
               TextField(
                 controller: _ctrl,
@@ -554,7 +561,7 @@ class _LocationSheetState extends State<_LocationSheet> {
                 textCapitalization: TextCapitalization.words,
                 style: body(14, color: AppColors.ink),
                 decoration: InputDecoration(
-                  hintText: 'e.g. Kumta, Mahalasa Temple…',
+                  hintText: t.storyLocationHint,
                   filled: true,
                   fillColor: Colors.white,
                   enabledBorder: OutlineInputBorder(
@@ -573,7 +580,7 @@ class _LocationSheetState extends State<_LocationSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final k in _kinds)
+                  for (final k in _kindsOf(t))
                     ChoiceChip(
                       label: Text(k.$2),
                       selected: _kind == k.$1,
@@ -593,12 +600,12 @@ class _LocationSheetState extends State<_LocationSheet> {
                     TextButton(
                       onPressed: () =>
                           Navigator.of(context).pop((name: '', kind: '')),
-                      child: Text('Remove',
+                      child: Text(t.commonRemove,
                           style: body(14, color: Colors.red)),
                     ),
                   const Spacer(),
                   ForestButton(
-                    label: 'Save',
+                    label: t.commonSave,
                     onPressed: () => Navigator.of(context)
                         .pop((name: _ctrl.text.trim(), kind: _kind)),
                   ),

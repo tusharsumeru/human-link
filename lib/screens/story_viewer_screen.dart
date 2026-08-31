@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/story_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// One frame in the story viewer. Media is a Cloudinary URL (image or video);
@@ -171,21 +172,22 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
 
   Future<void> _confirmDelete(StorySlide slide) async {
     _pause();
+    final t = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text('Delete story?', style: display(18, color: AppColors.forest900)),
-        content: Text('This removes it for everyone.',
+        title: Text(t.storyDeleteTitle, style: display(18, color: AppColors.forest900)),
+        content: Text(t.storyDeleteBody,
             style: body(13, color: AppColors.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: body(14, color: AppColors.textMuted)),
+            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Delete',
+            child: Text(t.storyDeleteAction,
                 style: body(14, weight: FontWeight.w700, color: Colors.red)),
           ),
         ],
@@ -204,6 +206,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final slide = widget.slides[_i];
     return Scaffold(
       backgroundColor: Colors.black,
@@ -234,7 +237,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
                   child: _progressBars(),
                 ),
-                _header(slide),
+                _header(slide, t),
               ],
             ),
           ),
@@ -255,7 +258,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               left: 0,
               right: 0,
               bottom: 0,
-              child: SafeArea(top: false, child: _seenByBar(slide)),
+              child: SafeArea(top: false, child: _seenByBar(slide, t)),
             ),
         ],
       ),
@@ -336,7 +339,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
         ),
       );
 
-  Widget _header(StorySlide s) {
+  Widget _header(StorySlide s, AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 2, 4, 4),
       child: Row(
@@ -361,7 +364,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           weight: FontWeight.w700, color: Colors.white)),
                 ),
                 const SizedBox(width: 8),
-                Text(_ago(s.createdAt), style: body(12, color: Colors.white70)),
+                Text(_ago(s.createdAt, t), style: body(12, color: Colors.white70)),
               ],
             ),
           ),
@@ -380,7 +383,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     );
   }
 
-  Widget _seenByBar(StorySlide slide) {
+  Widget _seenByBar(StorySlide slide, AppLocalizations t) {
     return GestureDetector(
       onTap: () => _showViewers(slide.storyId!),
       behavior: HitTestBehavior.opaque,
@@ -393,7 +396,9 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             const Icon(Icons.visibility_outlined, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Text(
-              slide.viewCount == 0 ? 'No views yet' : 'Seen by ${slide.viewCount}',
+              slide.viewCount == 0
+                  ? t.storyNoViewsYet
+                  : t.storySeenByCount(slide.viewCount),
               style: body(14, weight: FontWeight.w600, color: Colors.white),
             ),
             const SizedBox(width: 4),
@@ -426,6 +431,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return SafeArea(
       top: false,
       child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -456,7 +462,9 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                         size: 18, color: AppColors.forest700),
                     const SizedBox(width: 8),
                     Text(
-                        loading ? 'Viewers' : 'Viewers · ${viewers.length}',
+                        loading
+                            ? t.storyViewers
+                            : t.storyViewersCount(viewers.length),
                         style: display(16, color: AppColors.forest900)),
                   ],
                 ),
@@ -473,7 +481,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 28),
                   child: Center(
-                    child: Text('No one has viewed this story yet.',
+                    child: Text(t.storyNoOneViewedYet,
                         style: body(13, color: AppColors.textMuted)),
                   ),
                 )
@@ -490,7 +498,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                       final user = v['user'];
                       final name = (user is Map ? user['userName'] : null)
                               ?.toString() ??
-                          'Member';
+                          t.storyMemberFallback;
                       final at =
                           DateTime.tryParse((v['viewedAt'] ?? '').toString());
                       return ListTile(
@@ -511,7 +519,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                                 weight: FontWeight.w600, color: AppColors.ink)),
                         trailing: at == null
                             ? null
-                            : Text(_ago(at), style: body(12, color: AppColors.hint)),
+                            : Text(_ago(at, t), style: body(12, color: AppColors.hint)),
                       );
                     },
                   ),
@@ -526,10 +534,10 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 }
 
 /// Compact relative time ("Just now", "3m", "2h").
-String _ago(DateTime t) {
-  final d = DateTime.now().difference(t);
-  if (d.inSeconds < 60) return 'Just now';
-  if (d.inMinutes < 60) return '${d.inMinutes}m';
-  if (d.inHours < 24) return '${d.inHours}h';
-  return '${d.inDays}d';
+String _ago(DateTime dt, AppLocalizations t) {
+  final d = DateTime.now().difference(dt);
+  if (d.inSeconds < 60) return t.timeJustNow;
+  if (d.inMinutes < 60) return t.storyAgoMinutesCompact(d.inMinutes);
+  if (d.inHours < 24) return t.storyAgoHoursCompact(d.inHours);
+  return t.storyAgoDaysCompact(d.inDays);
 }

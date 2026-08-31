@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/create_post_flow.dart';
 import '../services/auth_service.dart';
+import '../services/locale_service.dart';
 import '../theme/app_theme.dart';
 import 'pexels_image.dart';
 
@@ -52,24 +54,28 @@ class NavDest {
   const NavDest(this.icon, this.label, this.route);
 }
 
-const memberNav = [
-  NavDest(Icons.grid_view_rounded, 'Dashboard', '/dashboard'),
-  NavDest(Icons.park_rounded, 'Family Tree', '/family-tree'),
-  NavDest(Icons.navigation_rounded, 'Invitations', '/invitations'),
-  NavDest(Icons.map_rounded, 'Directory', '/directory'),
-  NavDest(Icons.favorite_rounded, 'Matrimonial', '/matrimonial'),
-  NavDest(Icons.groups_rounded, 'Welfare', '/welfare'),
-  NavDest(Icons.temple_hindu_rounded, 'Purohit', '/purohit'),
-];
+/// Member sidebar/nav items. Labels are localized at call time (not `const`)
+/// since they depend on the active [AppLocalizations].
+List<NavDest> memberNavOf(AppLocalizations t) => [
+      NavDest(Icons.grid_view_rounded, t.navDashboard, '/dashboard'),
+      NavDest(Icons.park_rounded, t.navFamilyTree, '/family-tree'),
+      NavDest(Icons.navigation_rounded, t.navInvitations, '/invitations'),
+      NavDest(Icons.map_rounded, t.navDirectory, '/directory'),
+      NavDest(Icons.favorite_rounded, t.navMatrimonial, '/matrimonial'),
+      NavDest(Icons.groups_rounded, t.navWelfare, '/welfare'),
+      NavDest(Icons.temple_hindu_rounded, t.navPurohit, '/purohit'),
+    ];
 
-const elderNav = [
-  NavDest(Icons.park_rounded, 'Lineage Tree', '/elder'),
-  NavDest(Icons.shield_rounded, 'Member Requests', '/elder/verifications'),
-  NavDest(Icons.inventory_2_rounded, 'Archives', '/elder/archive'),
-  NavDest(Icons.groups_rounded, 'Community', '/elder/members'),
-  NavDest(Icons.forum_rounded, 'Moderation', '/elder/conflict/ck-1'),
-  NavDest(Icons.settings_rounded, 'Settings', '/elder/events'),
-];
+List<NavDest> elderNavOf(AppLocalizations t) => [
+      NavDest(Icons.park_rounded, t.navLineageTree, '/elder'),
+      NavDest(
+          Icons.shield_rounded, t.navMemberRequests, '/elder/verifications'),
+      NavDest(Icons.inventory_2_rounded, t.navArchives, '/elder/archive'),
+      NavDest(Icons.groups_rounded, t.navCommunity, '/elder/members'),
+      NavDest(
+          Icons.forum_rounded, t.navModeration, '/elder/conflict/ck-1'),
+      NavDest(Icons.settings_rounded, t.navSettings, '/elder/events'),
+    ];
 
 /// The authenticated app frame: a forest sidebar drawer, a translucent top bar
 /// with bell + avatar, and a mobile bottom nav — ported from SidebarLayout +
@@ -97,7 +103,8 @@ class AppShell extends StatelessWidget {
     final auth = context.watch<AuthService>();
     final user = auth.user;
     final isElder = user?.isElder ?? false;
-    final nav = isElder ? elderNav : memberNav;
+    final t = AppLocalizations.of(context);
+    final nav = isElder ? elderNavOf(t) : memberNavOf(t);
 
     final body = Padding(padding: padding, child: child);
 
@@ -132,7 +139,7 @@ class AppShell extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.forum_outlined, color: AppColors.forest700),
-            tooltip: 'Messages',
+            tooltip: t.navMessages,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ConversationsScreen()),
             ),
@@ -161,6 +168,62 @@ class AppShell extends StatelessWidget {
   }
 }
 
+/// English / Hindi / Kannada toggle, shown above Profile/Logout in the drawer.
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker();
+
+  static const _options = [
+    (Locale('en'), 'English'),
+    (Locale('hi'), 'हिन्दी'),
+    (Locale('kn'), 'ಕನ್ನಡ'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = context.watch<LocaleService>();
+    final t = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          Text(t.commonLanguage,
+              style: body(12, color: Colors.white54)),
+          const Spacer(),
+          for (final (loc, label) in _options)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => locale.setLocale(loc),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: locale.locale == loc
+                        ? AppColors.gold500.withValues(alpha: 0.22)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: locale.locale == loc
+                          ? AppColors.gold500
+                          : Colors.white24,
+                    ),
+                  ),
+                  child: Text(label,
+                      style: body(11,
+                          weight: FontWeight.w600,
+                          color: locale.locale == loc
+                              ? AppColors.gold500
+                              : Colors.white70)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Sidebar extends StatelessWidget {
   const _Sidebar({required this.nav, required this.isElder});
   final List<NavDest> nav;
@@ -169,6 +232,7 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = GoRouterState.of(context).uri.path;
+    final t = AppLocalizations.of(context);
 
     return Drawer(
       backgroundColor: AppColors.forest900,
@@ -196,9 +260,9 @@ class _Sidebar extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Daivajna Samaja',
+                        Text(t.appName,
                             style: display(14, color: Colors.white)),
-                        Text('Bangalore · Heritage Portal',
+                        Text(t.appTagline,
                             style: body(11, color: AppColors.forest300)),
                       ],
                     ),
@@ -228,10 +292,11 @@ class _Sidebar extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 child: Column(
                   children: [
+                    const _LanguagePicker(),
                     ListTile(
                       leading: const Icon(Icons.person_outline_rounded,
                           color: Colors.white70, size: 20),
-                      title: Text('My Profile',
+                      title: Text(t.myProfile,
                           style: body(13, color: Colors.white70)),
                       onTap: () {
                         Navigator.pop(context);
@@ -241,7 +306,7 @@ class _Sidebar extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.logout_rounded,
                           color: Color(0xFFFCA5A5), size: 20),
-                      title: Text('Logout',
+                      title: Text(t.logout,
                           style: body(13, color: const Color(0xFFFCA5A5))),
                       onTap: () async {
                         final auth = context.read<AuthService>();
@@ -320,23 +385,24 @@ class _BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final path = current ?? GoRouterState.of(context).uri.path;
+    final t = AppLocalizations.of(context);
 
     // Tabs shown to the left of the center action, and to the right.
     final leftItems = isElder
-        ? const [
-            NavDest(Icons.park_rounded, 'Tree', '/elder'),
-            NavDest(Icons.shield_rounded, 'Requests', '/elder/verifications'),
+        ? [
+            NavDest(Icons.park_rounded, t.navTree, '/elder'),
+            NavDest(Icons.shield_rounded, t.navRequests, '/elder/verifications'),
           ]
-        : const [
-            NavDest(Icons.grid_view_rounded, 'Home', '/dashboard'),
+        : [
+            NavDest(Icons.grid_view_rounded, t.navHome, '/dashboard'),
           ];
     final rightItems = isElder
-        ? const [
-            NavDest(Icons.groups_rounded, 'Members', '/elder/members'),
-            NavDest(Icons.inventory_2_rounded, 'Archive', '/elder/archive'),
+        ? [
+            NavDest(Icons.groups_rounded, t.navMembers, '/elder/members'),
+            NavDest(Icons.inventory_2_rounded, t.navArchive, '/elder/archive'),
           ]
-        : const [
-            NavDest(Icons.park_rounded, 'Tree', '/family-tree'),
+        : [
+            NavDest(Icons.park_rounded, t.navTree, '/family-tree'),
           ];
 
     return Container(
@@ -397,7 +463,8 @@ class _BottomBar extends StatelessWidget {
               const Icon(Icons.menu_rounded,
                   size: 20, color: Color(0xFF9CA3AF)),
               const SizedBox(height: 3),
-              Text('More', style: body(11, color: const Color(0xFF9CA3AF))),
+              Text(AppLocalizations.of(context).navMore,
+                  style: body(11, color: const Color(0xFF9CA3AF))),
             ],
           ),
         ),
@@ -424,7 +491,7 @@ class _BottomBar extends StatelessWidget {
                   size: 22, color: Colors.white),
             ),
             const SizedBox(height: 2),
-            Text('Post',
+            Text(AppLocalizations.of(context).navPost,
                 style: body(11,
                     weight: FontWeight.w600, color: AppColors.forest800)),
           ],

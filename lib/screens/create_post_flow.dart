@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/feed_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -23,6 +24,7 @@ Future<void> showCreateOptions(BuildContext context) async {
   final auth = context.read<AuthService>();
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.of(context);
+  final t = AppLocalizations.of(context);
 
   String? path;
   try {
@@ -30,7 +32,8 @@ Future<void> showCreateOptions(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(type: FileType.media);
     path = result?.files.single.path;
   } catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
+    messenger.showSnackBar(
+        SnackBar(content: Text(t.postCouldNotPickMedia('$e'))));
     return;
   }
   if (path == null) return; // cancelled or no path
@@ -57,6 +60,7 @@ Future<void> _composeAndUpload(
   required bool isReel,
 }) async {
   final messenger = ScaffoldMessenger.of(navContext);
+  final t = AppLocalizations.of(navContext);
   final user = auth.user;
 
   final result = await _composeCaption(
@@ -75,14 +79,14 @@ Future<void> _composeAndUpload(
       mediaPath: path,
       caption: result.caption,
       isReel: isReel,
-      author: user?.name ?? 'You',
+      author: user?.name ?? t.postAuthorFallback,
       // Only the place the author explicitly picked — no "Samaj Member" label
       // and no auto-filled native place.
       location: result.location,
       hashtags: _hashtagsIn(result.caption),
     );
     messenger.showSnackBar(SnackBar(
-      content: Text(isReel ? 'Reel shared 🎬' : 'Post shared ✨',
+      content: Text(isReel ? t.postReelShared : t.postShared,
           style: body(13, color: Colors.white)),
       backgroundColor: AppColors.forest800,
       behavior: SnackBarBehavior.floating,
@@ -93,7 +97,8 @@ Future<void> _composeAndUpload(
     // never loses the pick just because the network dropped.
     messenger.showSnackBar(SnackBar(
       content: Text(
-          'Upload failed: ${e is ApiException ? e.message : 'check your connection'}',
+          t.postUploadFailed(
+              e is ApiException ? e.message : t.postCheckConnection),
           style: body(13, color: Colors.white)),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
@@ -126,6 +131,7 @@ Future<_ComposeResult?> _composeCaption(
   required bool isReel,
 }) {
   final controller = TextEditingController();
+  final t = AppLocalizations.of(context);
   String location = ''; // the place the author picks, if any
   bool locating = false; // fetching the current GPS location
   return showModalBottomSheet<_ComposeResult>(
@@ -154,7 +160,7 @@ Future<_ComposeResult?> _composeCaption(
                           icon: const Icon(Icons.close_rounded),
                           onPressed: () => Navigator.of(ctx).pop(),
                         ),
-                        Text(isReel ? 'New Reel' : 'New Post',
+                        Text(isReel ? t.postNewReel : t.postNewPost,
                             style: display(18, color: AppColors.forest900)),
                       ],
                     ),
@@ -186,7 +192,7 @@ Future<_ComposeResult?> _composeCaption(
                             textCapitalization: TextCapitalization.sentences,
                             style: body(13, color: AppColors.ink),
                             decoration: InputDecoration(
-                              hintText: 'Write a caption…',
+                              hintText: t.postCaptionHint,
                               hintStyle: body(13, color: AppColors.hint),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -215,6 +221,7 @@ Future<_ComposeResult?> _composeCaption(
                     _LocationRow(
                       location: location,
                       locating: locating,
+                      t: t,
                       onUseCurrent: () async {
                         if (locating) return;
                         setSheetState(() => locating = true);
@@ -235,8 +242,7 @@ Future<_ComposeResult?> _composeCaption(
                           setSheetState(() => locating = false);
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Could not get your location.')),
+                              SnackBar(content: Text(t.postCouldNotGetLocation)),
                             );
                           }
                         }
@@ -245,13 +251,15 @@ Future<_ComposeResult?> _composeCaption(
                     ),
                     const SizedBox(height: 16),
                     ForestButton(
-                      label: 'Share',
+                      label: t.postShareButton,
                       icon: Icons.send_rounded,
                       expand: true,
                       onPressed: () => Navigator.of(ctx).pop(
                         _ComposeResult(
                           controller.text.trim().isEmpty
-                              ? (isReel ? 'New reel' : 'New post')
+                              ? (isReel
+                                  ? t.postDefaultReelCaption
+                                  : t.postDefaultPostCaption)
                               : controller.text.trim(),
                           location,
                         ),
@@ -276,18 +284,20 @@ class _LocationRow extends StatelessWidget {
     required this.locating,
     required this.onUseCurrent,
     required this.onClear,
+    required this.t,
   });
   final String location;
   final bool locating;
   final VoidCallback onUseCurrent;
   final VoidCallback onClear;
+  final AppLocalizations t;
 
   @override
   Widget build(BuildContext context) {
     if (location.isEmpty) {
       return _Action(
         icon: Icons.my_location_rounded,
-        label: locating ? 'Locating…' : 'Current location',
+        label: locating ? t.postLocating : t.postCurrentLocation,
         onTap: onUseCurrent,
         busy: locating,
       );
@@ -313,7 +323,7 @@ class _LocationRow extends StatelessWidget {
               icon: const Icon(Icons.close_rounded,
                   size: 18, color: AppColors.hint),
               onPressed: onClear,
-              tooltip: 'Remove location',
+              tooltip: t.postRemoveLocation,
             ),
           ],
         ),

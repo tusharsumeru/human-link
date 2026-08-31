@@ -16,6 +16,7 @@ import '../data/feed_store.dart';
 import '../data/repository.dart';
 import '../data/saved_store.dart';
 import '../data/story_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
@@ -33,11 +34,11 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppShell(
-      title: 'Samaj Feed',
+    return AppShell(
+      title: AppLocalizations.of(context).dashTitle,
       currentRoute: '/dashboard',
       padding: EdgeInsets.zero,
-      child: _Feed(),
+      child: const _Feed(),
     );
   }
 }
@@ -76,12 +77,16 @@ class _FeedState extends State<_Feed> {
     });
     try {
       final data = await Repository.instance.feed(limit: 20);
+      if (!mounted) return;
+      // Only safe to read here, after the first await: initState() runs
+      // before this widget's first build, and AppLocalizations.of(context)
+      // throws if called that early (no InheritedWidget to depend on yet).
+      final t = AppLocalizations.of(context);
       final raw = (data['posts'] as List?) ?? const [];
-      final currentUserId =
-          mounted ? (context.read<AuthService>().user?.id ?? '') : '';
+      final currentUserId = context.read<AuthService>().user?.id ?? '';
       final posts = raw
           .whereType<Map>()
-          .map((m) => _Post.fromBackend(Map<String, dynamic>.from(m),
+          .map((m) => _Post.fromBackend(t, Map<String, dynamic>.from(m),
               currentUserId: currentUserId))
           .toList();
       if (!mounted) return;
@@ -92,11 +97,12 @@ class _FeedState extends State<_Feed> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _feedErrorMessage(e);
+        _error = _feedErrorMessage(AppLocalizations.of(context), e);
         _loading = false;
       });
     }
   }
+
 
   /// Drops [post] from the feed after it's deleted (or hidden). A post still
   /// held by [FeedStore] (this session's own upload) is removed there too, so
@@ -126,32 +132,31 @@ class _FeedState extends State<_Feed> {
 
   /// A message that points at the actual failure. Network errors name the
   /// server being dialled, since a stale `API_BASE_URL` is the usual cause.
-  String _feedErrorMessage(Object e) {
+  String _feedErrorMessage(AppLocalizations t, Object e) {
     if (e is ApiException) {
       return e.statusCode == null
-          ? '${e.message}\nCould not reach ${ApiConfig.baseUrl}'
-          : '${e.message} (${e.statusCode})';
+          ? t.dashErrorCouldNotReachSuffix(e.message, ApiConfig.baseUrl)
+          : t.dashErrorWithStatus(e.message, '${e.statusCode}');
     }
     if (e is SocketException ||
         e is TimeoutException ||
         e is HttpException ||
         e is ClientException) {
-      return "Can't reach the server at ${ApiConfig.baseUrl}.\n"
-          'Check that the backend is running, or pass '
-          '--dart-define=API_BASE_URL=<host>.';
+      return t.dashErrorServerUnreachable(ApiConfig.baseUrl);
     }
-    return 'Could not load the feed.\n$e';
+    return t.dashErrorGeneric('$e');
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return ListenableBuilder(
       listenable: FeedStore.instance,
       builder: (context, _) {
         // Locally-uploaded posts (this session) sit on top of the real backend
         // feed. No demo/seed content — an empty backend shows an empty feed.
         final userPosts =
-            FeedStore.instance.posts.map(_Post.fromUser).toList();
+            FeedStore.instance.posts.map((p) => _Post.fromUser(t, p)).toList();
         // A post uploaded this session also comes back in the backend feed on
         // the next refresh — keep the local card (it renders from the local
         // file, so no re-download) and drop the duplicate.
@@ -182,7 +187,7 @@ class _FeedState extends State<_Feed> {
                     const Icon(Icons.cloud_off_rounded,
                         size: 44, color: AppColors.hint),
                     const SizedBox(height: 12),
-                    Text("Couldn't load the feed",
+                    Text(t.dashCouldNotLoadFeed,
                         style: display(16, color: AppColors.forest900)),
                     const SizedBox(height: 4),
                     Text(_error!,
@@ -192,7 +197,7 @@ class _FeedState extends State<_Feed> {
                     OutlinedButton.icon(
                       onPressed: _loadFeed,
                       icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: Text('Retry',
+                      label: Text(t.commonRetry,
                           style: body(13, weight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.forest700,
@@ -210,10 +215,10 @@ class _FeedState extends State<_Feed> {
                     const Icon(Icons.photo_library_outlined,
                         size: 44, color: AppColors.hint),
                     const SizedBox(height: 12),
-                    Text('No posts yet',
+                    Text(t.dashNoPostsYet,
                         style: display(16, color: AppColors.forest900)),
                     const SizedBox(height: 4),
-                    Text('Be the first to share something with the Samaj.',
+                    Text(t.dashBeFirstToShare,
                         textAlign: TextAlign.center,
                         style: body(13, color: AppColors.textMuted)),
                   ],
@@ -231,7 +236,7 @@ class _FeedState extends State<_Feed> {
             // know what's up there.
             if (_error == null)
               Center(
-                child: Text('You\'re all caught up ✦',
+                child: Text(t.dashAllCaughtUp,
                     style: body(12, color: AppColors.hint)),
               ),
             const SizedBox(height: 32),
@@ -322,6 +327,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     if (source == null || !mounted) return; // dismissed
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final t = AppLocalizations.of(context);
 
     final String capturedPath;
     final bool capturedVideo;
@@ -338,8 +344,8 @@ class _StoriesShelfState extends State<_StoriesShelf> {
         final result = await FilePicker.platform.pickFiles(type: FileType.media);
         picked = result?.files.single.path;
       } catch (e) {
-        messenger
-            .showSnackBar(SnackBar(content: Text('Could not pick media: $e')));
+        messenger.showSnackBar(
+            SnackBar(content: Text(t.dashCouldNotPickMedia('$e'))));
         return;
       }
       if (picked == null) return; // cancelled
@@ -356,6 +362,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
 
   /// Small sheet: capture with the Camera, or select an image/video from files.
   Future<_CaptureSource?> _chooseStorySource() {
+    final t = AppLocalizations.of(context);
     return showModalBottomSheet<_CaptureSource>(
       context: context,
       backgroundColor: AppColors.cream,
@@ -381,7 +388,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                   Expanded(
                     child: _SourceBox(
                       icon: Icons.photo_camera_rounded,
-                      label: 'Camera',
+                      label: t.dashCamera,
                       onTap: () =>
                           Navigator.of(ctx).pop(_CaptureSource.camera),
                     ),
@@ -390,7 +397,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                   Expanded(
                     child: _SourceBox(
                       icon: Icons.perm_media_rounded,
-                      label: 'Select file',
+                      label: t.dashSelectFile,
                       onTap: () => Navigator.of(ctx).pop(_CaptureSource.file),
                     ),
                   ),
@@ -409,10 +416,11 @@ class _StoriesShelfState extends State<_StoriesShelf> {
       _pickAndPostStory();
       return;
     }
+    final t = AppLocalizations.of(context);
     final slides = [
       for (final s in mine)
         StorySlide(
-          author: 'Your Story',
+          author: t.dashYourStory,
           createdAt: s.createdAt,
           mediaUrl: s.mediaUrl,
           isVideo: s.isVideo,
@@ -426,18 +434,24 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     _openViewer(slides);
   }
 
-  void _openTray(StoryTray tray) {
+  /// Opens the tray at [startIndex] chained with every tray after it in the
+  /// rail — so finishing one member's stories continues straight into the
+  /// next member's (Instagram-style) instead of closing the viewer just
+  /// because that one tray ran out.
+  void _openTray(int startIndex) {
+    final trays = StoryStore.instance.otherTrays;
     final slides = [
-      for (final s in tray.stories)
-        StorySlide(
-          author: tray.author.userName,
-          createdAt: s.createdAt,
-          mediaUrl: s.mediaUrl,
-          isVideo: s.isVideo,
-          caption: s.caption,
-          storyId: s.id,
-          onShown: () => StoryStore.instance.markViewed(s.id),
-        ),
+      for (var i = startIndex; i < trays.length; i++)
+        for (final s in trays[i].stories)
+          StorySlide(
+            author: trays[i].author.userName,
+            createdAt: s.createdAt,
+            mediaUrl: s.mediaUrl,
+            isVideo: s.isVideo,
+            caption: s.caption,
+            storyId: s.id,
+            onShown: () => StoryStore.instance.markViewed(s.id),
+          ),
     ];
     _openViewer(slides);
   }
@@ -468,7 +482,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-                child: Text('FAMILY UPDATES',
+                child: Text(AppLocalizations.of(context).dashFamilyUpdates,
                     style: body(12,
                         weight: FontWeight.w700,
                         color: AppColors.gold700,
@@ -493,7 +507,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                     return _TrayCircle(
                       tray: tray,
                       viewed: StoryStore.instance.trayViewed(tray),
-                      onTap: () => _openTray(tray),
+                      onTap: () => _openTray(i - 1),
                     );
                   },
                 ),
@@ -521,9 +535,10 @@ class _YourStory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     if (!hasStory) {
       return _StoryTile(
-        label: 'Your Story',
+        label: t.dashYourStory,
         onTap: onTap,
         avatar: CustomPaint(
           painter: const _DashedCirclePainter(color: AppColors.forest600),
@@ -535,9 +550,9 @@ class _YourStory extends StatelessWidget {
         ),
       );
     }
-    final name = context.watch<AuthService>().user?.name ?? 'You';
+    final name = context.watch<AuthService>().user?.name ?? t.dashYou;
     return _StoryTile(
-      label: 'Your Story',
+      label: t.dashYourStory,
       onTap: onTap,
       avatar: SizedBox(
         width: 64,
@@ -731,7 +746,7 @@ class _Post {
 
   /// Builds a feed card from a user-created upload. The id is the server's
   /// once the upload lands, so likes and comments hit the real post.
-  factory _Post.fromUser(UserPost p) => _Post(
+  factory _Post.fromUser(AppLocalizations t, UserPost p) => _Post(
         id: p.feedId,
         pending: (p.uploading || p.failed) ? p : null,
         author: p.author,
@@ -741,7 +756,7 @@ class _Post {
         caption: p.caption,
         likes: 0,
         comments: 0,
-        time: 'Just now',
+        time: t.timeJustNow,
         mediaPath: p.mediaPath,
         isReel: p.isReel,
         isMine: true,
@@ -751,7 +766,8 @@ class _Post {
   /// [currentUserId] decides whether the 3-dot menu offers Delete (mine) or
   /// Report/Hide (someone else's) — `userId` comes back either as a populated
   /// `{_id, userName}` map or a bare id string depending on the endpoint.
-  factory _Post.fromBackend(Map<String, dynamic> m, {String currentUserId = ''}) {
+  factory _Post.fromBackend(AppLocalizations t, Map<String, dynamic> m,
+      {String currentUserId = ''}) {
     final urls = m['mediaUrls'];
     final mediaUrl = (urls is List && urls.isNotEmpty) ? urls.first.toString() : null;
     final isVideo = (m['postType'] ?? '').toString() == 'video';
@@ -760,7 +776,7 @@ class _Post {
         (userField is Map ? userField['_id'] : userField)?.toString() ?? '';
     final author = (m['userName'] ??
             (userField is Map ? userField['userName'] : null) ??
-            'Samaj Member')
+            t.profileSamajMember)
         .toString();
     return _Post(
       id: (m['_id'] ?? '').toString(),
@@ -772,7 +788,7 @@ class _Post {
       likes: (m['likeCount'] as num?)?.toInt() ?? 0,
       comments: (m['commentCount'] as num?)?.toInt() ?? 0,
       shareCount: (m['shareCount'] as num?)?.toInt() ?? 0,
-      time: _timeAgo(m['createdAt']?.toString()),
+      time: _timeAgo(t, m['createdAt']?.toString()),
       mediaUrl: mediaUrl,
       isReel: isVideo,
       isMine: authorId.isNotEmpty && authorId == currentUserId,
@@ -815,16 +831,20 @@ class _Post {
 }
 
 /// "3h", "2d", "Just now" — a compact relative time from an ISO-8601 string.
-String _timeAgo(String? iso) {
-  if (iso == null || iso.isEmpty) return 'Recently';
-  final t = DateTime.tryParse(iso);
-  if (t == null) return 'Recently';
-  final d = DateTime.now().difference(t);
-  if (d.inMinutes < 1) return 'Just now';
-  if (d.inMinutes < 60) return '${d.inMinutes}m ago';
-  if (d.inHours < 24) return '${d.inHours}h ago';
-  if (d.inDays < 7) return '${d.inDays}d ago';
-  return '${(d.inDays / 7).floor()}w ago';
+String _timeAgo(AppLocalizations t, String? iso) {
+  if (iso == null || iso.isEmpty) return t.timeRecently;
+
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) return t.timeRecently;
+
+  final d = DateTime.now().difference(parsed);
+
+  if (d.inMinutes < 1) return t.timeJustNow;
+  if (d.inMinutes < 60) return t.timeMinutesAgo(d.inMinutes);
+  if (d.inHours < 24) return t.timeHoursAgo(d.inHours);
+  if (d.inDays < 7) return t.timeDaysAgo(d.inDays);
+
+  return t.timeWeeksAgo((d.inDays / 7).floor());
 }
 
 class _PostCard extends StatefulWidget {
@@ -892,7 +912,8 @@ class _PostCardState extends State<_PostCard> {
     } catch (e) {
       if (!mounted || requestId != _likeRequestId) return;
       setState(() => _liked = wasLiked);
-      _showSnack(context, e is ApiException ? e.message : 'Could not update like');
+      _showSnack(context,
+          e is ApiException ? e.message : AppLocalizations.of(context).couldNotUpdateLike);
     }
   }
 
@@ -910,6 +931,7 @@ class _PostCardState extends State<_PostCard> {
   /// post, Report/Hide from feed/Copy link for someone else's.
   Future<void> _showPostMenu(BuildContext context) async {
     final mine = widget.post.isMine;
+    final t = AppLocalizations.of(context);
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.cream,
@@ -932,7 +954,7 @@ class _PostCardState extends State<_PostCard> {
             if (mine) ...[
               _menuTile(
                 icon: Icons.delete_outline_rounded,
-                label: 'Delete post',
+                label: t.postMenuDelete,
                 destructive: true,
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
@@ -941,7 +963,7 @@ class _PostCardState extends State<_PostCard> {
               ),
               _menuTile(
                 icon: Icons.edit_outlined,
-                label: 'Edit caption',
+                label: t.postMenuEditCaption,
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
                   _editCaption(context);
@@ -950,7 +972,7 @@ class _PostCardState extends State<_PostCard> {
             ] else ...[
               _menuTile(
                 icon: Icons.flag_outlined,
-                label: 'Report post',
+                label: t.postMenuReport,
                 destructive: true,
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
@@ -959,17 +981,17 @@ class _PostCardState extends State<_PostCard> {
               ),
               _menuTile(
                 icon: Icons.visibility_off_outlined,
-                label: 'Hide from feed',
+                label: t.postMenuHide,
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
                   widget.onDeleted?.call();
-                  _showSnack(context, 'Post hidden');
+                  _showSnack(context, t.postHidden);
                 },
               ),
             ],
             _menuTile(
               icon: Icons.link_rounded,
-              label: 'Copy link',
+              label: t.postMenuCopyLink,
               onTap: () {
                 Navigator.of(sheetCtx).pop();
                 _copyLink(context);
@@ -999,33 +1021,35 @@ class _PostCardState extends State<_PostCard> {
   Future<void> _copyLink(BuildContext context) async {
     final slug = widget.post.author.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
     final kind = widget.post.isReel ? 'reel' : 'post';
+    final t = AppLocalizations.of(context);
     await Clipboard.setData(
         ClipboardData(text: 'https://samaj.app/$kind/$slug'));
-    if (context.mounted) _showSnack(context, 'Link copied to clipboard');
+    if (context.mounted) _showSnack(context, t.linkCopied);
   }
 
   /// No backend endpoint exists for reports yet, so this just acknowledges
   /// the tap — matching how "Add to story" is stubbed in the share sheet.
   void _reportPost(BuildContext context) {
-    _showSnack(context, 'Thanks - we\'ll take a look at this post');
+    _showSnack(context, AppLocalizations.of(context).reportThanks);
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final t = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text('Delete post?', style: display(18, color: AppColors.forest900)),
-        content: Text('This removes it for everyone in the Samaj.',
+        title: Text(t.deletePostTitle, style: display(18, color: AppColors.forest900)),
+        content: Text(t.deletePostBody,
             style: body(13, color: AppColors.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: body(14, color: AppColors.textMuted)),
+            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Delete',
+            child: Text(t.postDelete,
                 style: body(14, weight: FontWeight.w700, color: Colors.red)),
           ),
         ],
@@ -1039,13 +1063,14 @@ class _PostCardState extends State<_PostCard> {
       widget.onDeleted?.call();
     } catch (e) {
       if (!context.mounted) return;
-      _showSnack(context, e is ApiException ? e.message : 'Could not delete post');
+      _showSnack(context, e is ApiException ? e.message : t.couldNotDeletePost);
     }
   }
 
   Future<void> _editCaption(BuildContext context) async {
+    final t = AppLocalizations.of(context);
     if (!isBackendPostId(widget.post.id)) {
-      _showSnack(context, "Can't edit the caption until the upload finishes.");
+      _showSnack(context, t.cantEditCaptionYet);
       return;
     }
     final controller = TextEditingController(text: widget.post.caption);
@@ -1053,22 +1078,22 @@ class _PostCardState extends State<_PostCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text('Edit caption', style: display(18, color: AppColors.forest900)),
+        title: Text(t.postMenuEditCaption, style: display(18, color: AppColors.forest900)),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: 4,
           maxLength: 2000,
-          decoration: const InputDecoration(hintText: 'Write a caption…'),
+          decoration: InputDecoration(hintText: t.writeACaption),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: body(14, color: AppColors.textMuted)),
+            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text('Save', style: body(14, weight: FontWeight.w700, color: AppColors.forest700)),
+            child: Text(t.commonSave, style: body(14, weight: FontWeight.w700, color: AppColors.forest700)),
           ),
         ],
       ),
@@ -1078,16 +1103,17 @@ class _PostCardState extends State<_PostCard> {
     try {
       await Repository.instance.editPostCaption(widget.post.id, newCaption);
       widget.onCaptionUpdated?.call(newCaption);
-      if (context.mounted) _showSnack(context, 'Caption updated');
+      if (context.mounted) _showSnack(context, t.captionUpdated);
     } catch (e) {
       if (!context.mounted) return;
-      _showSnack(context, e is ApiException ? e.message : 'Could not update caption');
+      _showSnack(context, e is ApiException ? e.message : t.couldNotUpdateCaption);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final p = widget.post;
+    final t = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       clipBehavior: Clip.antiAlias,
@@ -1231,7 +1257,7 @@ class _PostCardState extends State<_PostCard> {
                             const Icon(Icons.play_arrow_rounded,
                                 size: 14, color: Colors.white),
                             const SizedBox(width: 2),
-                            Text('Reel',
+                            Text(t.dashReel,
                                 style: body(10,
                                     weight: FontWeight.w700,
                                     color: Colors.white)),
@@ -1277,7 +1303,7 @@ class _PostCardState extends State<_PostCard> {
                 ListenableBuilder(
                   listenable: CommentStore.instance,
                   builder: (context, _) => _ActionIcon(
-                    icon: Icons.chat_bubble_outline_rounded,
+                    iconWidget: const _RoundCommentIcon(size: 25, color: AppColors.label),
                     onTap: () => showCommentsSheet(context, postId: p.id),
                     count: CommentStore.instance
                         .countFor(p.id, fallback: p.comments),
@@ -1309,8 +1335,8 @@ class _PostCardState extends State<_PostCard> {
                         _showSnack(
                             context,
                             nowSaved
-                                ? 'Saved to your profile'
-                                : 'Removed from saved');
+                                ? t.savedToProfile
+                                : t.removedFromSaved);
                       },
                     );
                   },
@@ -1514,6 +1540,7 @@ class _UploadOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final failed = post.failed;
+    final t = AppLocalizations.of(context);
     return Container(
       color: Colors.black.withValues(alpha: failed ? 0.55 : 0.35),
       alignment: Alignment.center,
@@ -1528,14 +1555,14 @@ class _UploadOverlay extends StatelessWidget {
                   strokeWidth: 2.5, color: Colors.white),
             ),
             const SizedBox(height: 12),
-            Text('Uploading…',
+            Text(t.uploadingEllipsis,
                 style: body(13,
                     weight: FontWeight.w600, color: Colors.white)),
           ] else ...[
             const Icon(Icons.cloud_off_rounded,
                 size: 34, color: Colors.white),
             const SizedBox(height: 8),
-            Text('Upload failed',
+            Text(t.uploadFailed,
                 style: body(13,
                     weight: FontWeight.w700, color: Colors.white)),
             const SizedBox(height: 8),
@@ -1549,16 +1576,16 @@ class _UploadOverlay extends StatelessWidget {
                     } catch (e) {
                       if (!context.mounted) return;
                       _showSnack(context,
-                          e is ApiException ? e.message : 'Still offline');
+                          e is ApiException ? e.message : t.stillOffline);
                     }
                   },
-                  child: Text('Retry',
+                  child: Text(t.commonRetry,
                       style: body(13,
                           weight: FontWeight.w700, color: Colors.white)),
                 ),
                 TextButton(
                   onPressed: () => FeedStore.instance.remove(post),
-                  child: Text('Discard',
+                  child: Text(t.discard,
                       style: body(13, color: Colors.white70)),
                 ),
               ],
@@ -1572,12 +1599,18 @@ class _UploadOverlay extends StatelessWidget {
 
 class _ActionIcon extends StatelessWidget {
   const _ActionIcon({
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.onTap,
     this.color = AppColors.label,
     this.count = 0,
-  });
-  final IconData icon;
+  }) : assert(icon != null || iconWidget != null,
+            'need either an IconData or a custom iconWidget');
+  final IconData? icon;
+
+  /// A custom-painted replacement for [icon], for a shape Material's icon
+  /// font doesn't offer (e.g. the round comment bubble).
+  final Widget? iconWidget;
   final VoidCallback onTap;
   final Color color;
 
@@ -1594,7 +1627,7 @@ class _ActionIcon extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 25, color: color),
+            iconWidget ?? Icon(icon, size: 25, color: color),
             if (count > 0) ...[
               const SizedBox(width: 5),
               Text('$count',
@@ -1606,6 +1639,62 @@ class _ActionIcon extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The Lucide "message-circle" glyph — reproduced from its exact SVG path
+/// data (`M7.9 20A9 9 0 1 0 4 16.1L2 22Z`, 24×24 viewBox) rather than
+/// hand-derived, so the shape is exact rather than approximated.
+class _RoundCommentIcon extends StatelessWidget {
+  const _RoundCommentIcon({this.size = 25, this.color = AppColors.label});
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _RoundCommentPainter(color)),
+    );
+  }
+}
+
+class _RoundCommentPainter extends CustomPainter {
+  _RoundCommentPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 24;
+    canvas.save();
+    canvas.scale(scale);
+
+    final path = Path()
+      ..moveTo(7.9, 20)
+      ..arcToPoint(
+        const Offset(4, 16.1),
+        radius: const Radius.circular(9),
+        largeArc: true,
+        clockwise: false,
+      )
+      ..lineTo(2, 22)
+      ..close();
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _RoundCommentPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 /// Initials avatar on a forest gradient (matches the app's no-stock-photo look).

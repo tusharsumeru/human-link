@@ -4,20 +4,30 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/place_field.dart';
 
 /// Human-readable labels for the compatibility spec's `birthTimeAccuracy`
-/// enum, in the order they should be offered.
-const _accuracyOptions = <String, String>{
-  'EXACT_DOCUMENT_VERIFIED': 'Exact - verified by a document (e.g. birth certificate)',
-  'EXACT_FAMILY_CONFIRMED': 'Exact - confirmed by family',
-  'APPROXIMATE_15_MINUTES': 'Approximate - within 15 minutes',
-  'APPROXIMATE_30_MINUTES': 'Approximate - within 30 minutes',
-  'APPROXIMATE_60_MINUTES': 'Approximate - within 60 minutes',
-  'UNKNOWN': 'Unknown',
-};
+/// enum, in the order they should be offered. Localized at call time — the
+/// keys are the stable wire values sent to the backend.
+Map<String, String> _accuracyOptionsOf(AppLocalizations t) => {
+      'EXACT_DOCUMENT_VERIFIED': t.birthAccuracyExactDocument,
+      'EXACT_FAMILY_CONFIRMED': t.birthAccuracyExactFamily,
+      'APPROXIMATE_15_MINUTES': t.birthAccuracyApprox15,
+      'APPROXIMATE_30_MINUTES': t.birthAccuracyApprox30,
+      'APPROXIMATE_60_MINUTES': t.birthAccuracyApprox60,
+      'UNKNOWN': t.birthAccuracyUnknown,
+    };
+const _accuracyKeys = [
+  'EXACT_DOCUMENT_VERIFIED',
+  'EXACT_FAMILY_CONFIRMED',
+  'APPROXIMATE_15_MINUTES',
+  'APPROXIMATE_30_MINUTES',
+  'APPROXIMATE_60_MINUTES',
+  'UNKNOWN',
+];
 
 /// Coarse country → primary IANA timezone, so a member never types a
 /// timezone by hand. Covers India (this Samaj's primary audience) plus common
@@ -109,14 +119,15 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
         ].where((s) => s.isNotEmpty).join(', ');
         _timeOfBirth = _parseTime((profile['timeOfBirth'] ?? '').toString());
         final accuracy = (profile['birthTimeAccuracy'] ?? '').toString();
-        _accuracy = _accuracyOptions.containsKey(accuracy) ? accuracy : null;
+        _accuracy = _accuracyKeys.contains(accuracy) ? accuracy : null;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _loadError =
-            e is ApiException ? e.message : 'Could not load your birth details';
+        _loadError = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).birthCouldNotLoad;
         _loading = false;
       });
     }
@@ -146,7 +157,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: _timeOfBirth ?? const TimeOfDay(hour: 12, minute: 0),
-      helpText: 'Time of birth',
+      helpText: AppLocalizations.of(context).birthTimePickerHelp,
     );
     if (picked != null) setState(() => _timeOfBirth = picked);
   }
@@ -166,47 +177,45 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       };
 
   Future<void> _save() async {
+    final t = AppLocalizations.of(context);
     final user = context.read<AuthService>().user;
     final dob = user?.dob ?? '';
     final gender = user?.gender ?? '';
     final role = _roleFor(gender);
 
     if (dob.isEmpty) {
-      _snack('Add your date of birth in Profile → Edit first.');
+      _snack(t.birthAddDob);
       return;
     }
     if (role == null) {
-      _snack('Add your gender in Profile → Edit first - it decides your '
-          'traditional bride/groom role.');
+      _snack(t.birthAddGender);
       return;
     }
     if (_birthCity.isEmpty ||
         _birthCountry.isEmpty ||
         _latitude == null ||
         _longitude == null) {
-      _snack('Search for your birthplace and pick it from the suggestions.');
+      _snack(t.birthSearchPlace);
       return;
     }
     if (_latitude! < -90 || _latitude! > 90) {
-      _snack('That birthplace has an invalid latitude - try searching again.');
+      _snack(t.birthInvalidLatitude);
       return;
     }
     if (_longitude! < -180 || _longitude! > 180) {
-      _snack('That birthplace has an invalid longitude - try searching again.');
+      _snack(t.birthInvalidLongitude);
       return;
     }
     if (_timezone.isEmpty) {
-      _snack('Could not determine a timezone for that place - try a more '
-          'specific search, including the country.');
+      _snack(t.birthNoTimezone);
       return;
     }
     if (_accuracy == null) {
-      _snack('Choose how confident you are about the time of birth.');
+      _snack(t.birthChooseAccuracy);
       return;
     }
     if (_accuracy != 'UNKNOWN' && _timeOfBirth == null) {
-      _snack('Add the time of birth, or set the accuracy to "Unknown" if '
-          "it's genuinely not known.");
+      _snack(t.birthAddTimeOrUnknown);
       return;
     }
 
@@ -228,10 +237,10 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
         'birthTimeAccuracy': _accuracy,
       });
       if (!mounted) return;
-      _snack('Birth details saved');
+      _snack(t.birthSaved);
       if (context.canPop()) context.pop();
     } catch (e) {
-      _snack(e is ApiException ? e.message : 'Could not save your birth details');
+      _snack(e is ApiException ? e.message : t.birthCouldNotSave);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -246,6 +255,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -253,7 +263,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Birth Details', style: display(18, color: Colors.white)),
+        title: Text(t.birthTitle, style: display(18, color: Colors.white)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -261,11 +271,11 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
               ? Center(
                   child: Text(_loadError!,
                       style: body(14, color: AppColors.textMuted)))
-              : _form(),
+              : _form(t),
     );
   }
 
-  Widget _form() {
+  Widget _form(AppLocalizations t) {
     final user = context.watch<AuthService>().user;
     final dob = user?.dob ?? '';
     final gender = user?.gender ?? '';
@@ -275,44 +285,43 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
         Text(
-          'Used only for the South Indian Jataka and horoscope compatibility '
-          'check - never shown on your public profile.',
+          t.birthDisclaimer,
           style: body(12, color: AppColors.textMuted, height: 1.5),
         ),
         const SizedBox(height: 16),
 
-        _label('FROM YOUR PROFILE'),
+        _label(t.birthFromProfile),
         _readOnlyRow(
           icon: Icons.cake_outlined,
-          label: 'Date of birth',
-          value: dob.isEmpty ? 'Not set' : dob,
+          label: t.birthDateOfBirth,
+          value: dob.isEmpty ? t.birthNotSet : dob,
           warn: dob.isEmpty,
         ),
         _readOnlyRow(
           icon: Icons.people_outline_rounded,
-          label: 'Traditional role',
-          value: role ?? 'Set your gender in Profile → Edit',
+          label: t.birthTraditionalRole,
+          value: role ?? t.birthSetGender,
           warn: role == null,
         ),
 
         const SizedBox(height: 16),
-        _label('BIRTHPLACE'),
+        _label(t.birthBirthplace),
         PlaceField(
-          label: 'Birth city',
+          label: t.birthCityLabel,
           controller: _placeCtrl,
-          hint: 'e.g. Mysuru, Karnataka, India',
+          hint: t.birthCityHint,
           onPlaceSelected: _onPlaceSelected,
         ),
         if (_latitude != null && _longitude != null) ...[
           const SizedBox(height: 10),
-          _derivedSummary(),
+          _derivedSummary(t),
         ],
 
         const SizedBox(height: 16),
-        _label('TIME OF BIRTH'),
-        _timeField(),
+        _label(t.birthTimeOfBirth),
+        _timeField(t),
         const SizedBox(height: 14),
-        _accuracyField(),
+        _accuracyField(t),
 
         const SizedBox(height: 24),
         SizedBox(
@@ -324,7 +333,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
                   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving…' : 'Save birth details',
+            child: Text(_saving ? t.birthSaving : t.birthSaveButton,
                 style: body(15, weight: FontWeight.w700, color: Colors.white)),
           ),
         ),
@@ -332,9 +341,9 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     );
   }
 
-  Widget _label(String t) => Padding(
+  Widget _label(String label) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(t,
+        child: Text(label,
             style: body(11,
                 weight: FontWeight.w700,
                 color: AppColors.gold700,
@@ -372,7 +381,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     );
   }
 
-  Widget _derivedSummary() {
+  Widget _derivedSummary(AppLocalizations t) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -382,16 +391,15 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Derived automatically',
+          Text(t.birthDerivedAutomatically,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.forest700,
                   letterSpacing: 0.6)),
           const SizedBox(height: 6),
           Text(
-            'Lat/Lon: ${_latitude!.toStringAsFixed(4)}, '
-            '${_longitude!.toStringAsFixed(4)}\n'
-            'Timezone: $_timezone',
+            t.birthLatLon(_latitude!.toStringAsFixed(4),
+                _longitude!.toStringAsFixed(4), _timezone),
             style: body(12, color: AppColors.forest800, height: 1.5),
           ),
         ],
@@ -399,7 +407,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     );
   }
 
-  Widget _timeField() {
+  Widget _timeField(AppLocalizations t) {
     return InkWell(
       onTap: _pickTime,
       borderRadius: BorderRadius.circular(12),
@@ -418,7 +426,7 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
             Expanded(
               child: Text(
                 _timeOfBirth == null
-                    ? 'Not set'
+                    ? t.birthNotSet
                     : _timeOfBirth!.format(context),
                 style: body(14,
                     weight: FontWeight.w600,
@@ -435,11 +443,11 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     );
   }
 
-  Widget _accuracyField() {
+  Widget _accuracyField(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Birth-time accuracy',
+        Text(t.birthTimeAccuracy,
             style: body(12,
                 weight: FontWeight.w600, color: AppColors.forest800)),
         const SizedBox(height: 6),
@@ -454,11 +462,12 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
             child: DropdownButton<String>(
               value: _accuracy,
               isExpanded: true,
-              hint: Text('Select accuracy', style: body(14, color: AppColors.hint)),
+              hint: Text(t.birthSelectAccuracy, style: body(14, color: AppColors.hint)),
               icon: const Icon(Icons.keyboard_arrow_down_rounded,
                   color: AppColors.hint),
               style: body(13, color: AppColors.ink),
-              items: _accuracyOptions.entries
+              items: _accuracyOptionsOf(t)
+                  .entries
                   .map((e) => DropdownMenuItem(
                       value: e.key,
                       child: Text(e.value, overflow: TextOverflow.ellipsis)))

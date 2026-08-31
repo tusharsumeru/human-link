@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -61,7 +63,7 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   fl_chart: ^0.69.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   # Hands the planned invitation route to the phone's maps app for turn-by-turn
   # navigation (in-app map plans it, Google/Apple Maps drives it), and opens
   # the phone dialer for the directory "Connect" action (tel: URIs).
@@ -74,6 +76,17 @@ dependencies:
   # with the existing share_plus package.
   pdf: ^3.11.1
   path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+  # Saves a generated file (the compatibility certificate PDF) into the
+  # phone's own public Downloads / Files area — visible in the Files app,
+  # not just reachable through the in-app Share sheet.
+  file_saver: ^0.4.0
+  # Local (device-only, no server push) notification shown after a PDF
+  # finishes downloading — tapping it opens the saved file directly.
+  flutter_local_notifications: ^18.0.1
+  # Opens the downloaded PDF in whatever viewer the phone already has
+  # (Android: via a content:// URI through FileProvider; iOS: via UIDocumentInteractionController).
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:
@@ -98,6 +111,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Generates AppLocalizations from lib/l10n/*.arb (see l10n.yaml) at build
+  # time — `flutter gen-l10n` / `flutter pub get` regenerate it.
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// The result handed back from the camera screen: the captured file and whether
@@ -56,7 +57,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
       if (cameras.isEmpty) {
         setState(() {
           _initializing = false;
-          _error = 'No camera available on this device.';
+          _error = AppLocalizations.of(context).cameraNoneAvailable;
         });
         return;
       }
@@ -71,7 +72,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
       if (mounted) {
         setState(() {
           _initializing = false;
-          _error = 'Camera unavailable: $e';
+          _error = AppLocalizations.of(context).cameraUnavailable('$e');
         });
       }
     }
@@ -91,8 +92,8 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
         setState(() {
           _initializing = false;
           _error = e is CameraException
-              ? 'Camera permission is required. Enable it in Settings.'
-              : 'Could not start the camera: $e';
+              ? AppLocalizations.of(context).cameraPermissionRequired
+              : AppLocalizations.of(context).cameraCouldNotStart('$e');
         });
       }
       return;
@@ -114,12 +115,13 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     if (_busy || _isRecording) return;
+    final t = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
       final file = await controller.takePicture();
       if (mounted) Navigator.of(context).pop(CaptureResult(file.path, false));
     } catch (e) {
-      _showError('Could not take the photo.');
+      _showError(t.cameraCouldNotTakePhoto);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -128,6 +130,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     if (_busy || _isRecording) return;
+    final t = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
       await controller.startVideoRecording();
@@ -153,7 +156,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
         });
       });
     } catch (e) {
-      _showError('Could not start recording.');
+      _showError(t.cameraCouldNotStartRecording);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -165,12 +168,13 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     _tick?.cancel();
     // Guard against a double stop (finger lift + auto-stop racing).
     if (_busy) return;
+    final t = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
       final file = await controller.stopVideoRecording();
       if (mounted) Navigator.of(context).pop(CaptureResult(file.path, true));
     } catch (e) {
-      _showError('Could not save the recording.');
+      _showError(t.cameraCouldNotSaveRecording);
       if (mounted) {
         setState(() {
           _isRecording = false;
@@ -216,6 +220,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -261,9 +266,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _isRecording
-                        ? 'Release to stop'
-                        : 'Tap for photo  ·  Hold to record',
+                    _isRecording ? t.cameraReleaseToStop : t.cameraTapOrHold,
                     style: body(13, color: Colors.white),
                   ),
                   const SizedBox(height: 14),

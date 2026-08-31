@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/demo_data.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
@@ -33,40 +34,41 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
     }
   }
 
-  String _riskLabel(String level) {
+  String _riskLabel(String level, AppLocalizations t) {
     switch (level) {
       case 'high':
-        return 'High Risk';
+        return t.elderHighRisk;
       case 'medium':
-        return 'Med Risk';
+        return t.elderMedRisk;
       default:
-        return 'Low Risk';
+        return t.elderLowRisk;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final user = context.watch<AuthService>().user;
-    final firstName = (user?.name ?? 'Elder').split(' ').first;
+    final firstName = (user?.name ?? t.elderDefaultName).split(' ').first;
     final preview = kVerificationRequests.take(3).toList();
 
     return AppShell(
-      title: 'Lineage Tree',
+      title: t.elderLineageTree,
       currentRoute: '/elder',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _welcomeHeader(firstName),
+          _welcomeHeader(firstName, t),
           const SizedBox(height: 20),
-          _statCards(),
+          _statCards(t),
           const SizedBox(height: 20),
-          _pendingPreview(preview),
+          _pendingPreview(preview, t),
           const SizedBox(height: 20),
-          _alertsCard(),
+          _alertsCard(t),
           const SizedBox(height: 20),
-          _quickActions(),
+          _quickActions(t),
           const SizedBox(height: 20),
-          _lineageOverview(),
+          _lineageOverview(t),
           const SizedBox(height: 12),
         ],
       ),
@@ -74,7 +76,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Welcome header ───────────────────────────────────────────────────────
-  Widget _welcomeHeader(String firstName) {
+  Widget _welcomeHeader(String firstName, AppLocalizations t) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -85,22 +87,21 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ELDER PORTAL · DAIVAJNA SAMAJA',
+          Text(t.elderPortalKicker,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.forest300,
                   letterSpacing: 1.4)),
           const SizedBox(height: 8),
-          Text('Welcome back, $firstName',
+          Text(t.elderWelcomeBack(firstName),
               style: display(26, color: Colors.white)),
           const SizedBox(height: 6),
-          Text('Guardian of the Tree',
+          Text(t.elderGuardianOfTree,
               style: body(13,
                   weight: FontWeight.w600, color: const Color(0xFFFCD34D))),
           const SizedBox(height: 8),
           Text(
-            'Your lineage oversight and community management dashboard. '
-            'Review pending verifications, resolve conflicts, and guide the Samaja.',
+            t.elderDashboardBlurb,
             style: body(13, color: AppColors.forest300, height: 1.5),
           ),
         ],
@@ -109,22 +110,22 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Stat cards ───────────────────────────────────────────────────────────
-  Widget _statCards() {
+  Widget _statCards(AppLocalizations t) {
     final stats = [
       (
         '${kVerificationRequests.length}',
-        'Pending Verifications',
+        t.elderPendingVerifications,
         Icons.shield_rounded,
         AppColors.gold700
       ),
       (
         '${kConflictCases.length}',
-        'Active Conflicts',
+        t.elderActiveConflicts,
         Icons.warning_amber_rounded,
         _high
       ),
-      ('1,428', 'Total Members', Icons.groups_rounded, AppColors.forest700),
-      ('86', 'Active Branches', Icons.park_rounded, AppColors.forest600),
+      ('1,428', t.elderTotalMembers, Icons.groups_rounded, AppColors.forest700),
+      ('86', t.elderActiveBranches, Icons.park_rounded, AppColors.forest600),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -166,7 +167,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Pending member requests preview ──────────────────────────────────────
-  Widget _pendingPreview(List<Map<String, dynamic>> preview) {
+  Widget _pendingPreview(List<Map<String, dynamic>> preview, AppLocalizations t) {
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -188,7 +189,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Pending Member Requests',
+                  child: Text(t.elderPendingMemberRequests,
                       style: display(16, color: AppColors.forest900)),
                 ),
               ],
@@ -197,7 +198,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
           const Divider(height: 1, color: Color(0xFFF1ECE2)),
           for (var i = 0; i < preview.length; i++) ...[
             if (i > 0) const Divider(height: 1, color: Color(0xFFF6F1E8)),
-            _previewRow(preview[i]),
+            _previewRow(preview[i], t),
           ],
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 6, 18, 14),
@@ -205,7 +206,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => context.go('/elder/verifications'),
-                child: Text('Review →',
+                child: Text(t.elderReview,
                     style: body(13,
                         weight: FontWeight.w700, color: AppColors.forest700)),
               ),
@@ -216,7 +217,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
     );
   }
 
-  Widget _previewRow(Map<String, dynamic> r) {
+  Widget _previewRow(Map<String, dynamic> r, AppLocalizations t) {
     final risk = r['riskLevel'] as String;
     final color = _riskColor(risk);
     final required = (r['vouchesRequired'] as int?) ?? 0;
@@ -249,7 +250,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: body(11, color: AppColors.textMuted)),
                   const SizedBox(height: 3),
-                  Text('Vouches: ${r['vouches']}/$required',
+                  Text(t.elderVouches(r['vouches'] as int, required),
                       style: body(11,
                           weight: FontWeight.w600,
                           color: AppColors.forest700)),
@@ -257,7 +258,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Pill(_riskLabel(risk),
+            Pill(_riskLabel(risk, t),
                 bg: color.withValues(alpha: 0.14), fg: color),
           ],
         ),
@@ -266,7 +267,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Alerts / conflicts card ──────────────────────────────────────────────
-  Widget _alertsCard() {
+  Widget _alertsCard(AppLocalizations t) {
     return AppCard(
       onTap: () => context.push('/elder/conflict/ck-1'),
       child: Row(
@@ -286,16 +287,15 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tree Alerts & Conflicts',
+                Text(t.elderTreeAlertsConflicts,
                     style: display(15, color: AppColors.forest900)),
                 const SizedBox(height: 4),
                 Text(
-                  '"Ananth Rao (1892-1954)" appears in both Mysore and '
-                  'Bangalore branches with conflicting parentage.',
+                  t.elderAlertSample,
                   style: body(12, color: AppColors.textMuted, height: 1.45),
                 ),
                 const SizedBox(height: 6),
-                Text('Resolve Now →',
+                Text(t.elderResolveNow,
                     style: body(12,
                         weight: FontWeight.w700, color: AppColors.forest700)),
               ],
@@ -307,17 +307,17 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Quick actions grid ───────────────────────────────────────────────────
-  Widget _quickActions() {
+  Widget _quickActions(AppLocalizations t) {
     final actions = [
-      ('Member Directory', Icons.groups_rounded, '/elder/members'),
-      ('Digital Archive', Icons.inventory_2_rounded, '/elder/archive'),
-      ('Manage Events', Icons.calendar_month_rounded, '/elder/events'),
-      ('Verifications', Icons.shield_rounded, '/elder/verifications'),
+      (t.elderMemberDirectory, Icons.groups_rounded, '/elder/members'),
+      (t.elderDigitalArchive, Icons.inventory_2_rounded, '/elder/archive'),
+      (t.elderManageEvents, Icons.calendar_month_rounded, '/elder/events'),
+      (t.elderVerifications, Icons.shield_rounded, '/elder/verifications'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Management', titleSize: 20),
+        SectionHeader(title: t.elderManagement, titleSize: 20),
         const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 2,
@@ -355,7 +355,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Small lineage tree overview snippet ──────────────────────────────────
-  Widget _lineageOverview() {
+  Widget _lineageOverview(AppLocalizations t) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -366,7 +366,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('LINEAGE WISDOM',
+          Text(t.elderLineageWisdom,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.forest300,
@@ -404,8 +404,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '"A tree without roots is just wood; a community without history '
-            'is just a crowd."',
+            t.elderLineageQuote,
             style: display(14,
                 color: Colors.white, fontStyle: FontStyle.italic, height: 1.5),
           ),

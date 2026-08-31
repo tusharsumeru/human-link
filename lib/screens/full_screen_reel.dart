@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/saved_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Immersive full-screen reel player. Opens playing from where the feed left
@@ -86,10 +87,11 @@ class _FullScreenReelPageState extends State<FullScreenReelPage> {
   void _toggleSave() {
     final item = widget.saved!;
     final nowSaved = SavedStore.instance.toggle(item);
+    final t = AppLocalizations.of(context);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: Text(nowSaved ? 'Saved to your profile' : 'Removed from saved',
+        content: Text(nowSaved ? t.reelSavedToProfile : t.reelRemovedFromSaved,
             style: body(13, color: Colors.white)),
         backgroundColor: AppColors.forest800,
         behavior: SnackBarBehavior.floating,

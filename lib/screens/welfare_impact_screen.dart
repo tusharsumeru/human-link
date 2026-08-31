@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
@@ -12,19 +13,19 @@ import '../widgets/ui_kit.dart';
 class WelfareImpactScreen extends StatelessWidget {
   const WelfareImpactScreen({super.key});
 
-  static const _allocation = [
-    _Alloc('Temple & Heritage', 40, AppColors.forest800),
-    _Alloc('Education', 30, AppColors.forest700),
-    _Alloc('Health & Welfare', 15, AppColors.gold700),
-    _Alloc('Cultural Events', 15, AppColors.gold500),
-  ];
+  static List<_Alloc> _allocationOf(AppLocalizations t) => [
+        _Alloc(t.welfareAllocTempleHeritage, 40, AppColors.forest800),
+        _Alloc(t.welfareAllocEducation, 30, AppColors.forest700),
+        _Alloc(t.welfareAllocHealthWelfare, 15, AppColors.gold700),
+        _Alloc(t.welfareAllocCulturalEvents, 15, AppColors.gold500),
+      ];
 
-  static const _donors = [
-    _Donor('Shri Narayanarao Shet', '₹90,000', 'Elder Committee Head', 17815020),
-    _Donor('Dr. Suma Rao', '₹51,000', 'Samaj Life Patron', 11138457),
-    _Donor('Vivek Kamath', '₹40,000', 'IT Professionals Chapter', 2601464),
-    _Donor('Rajesh Pai', '₹35,000', 'Entrepreneur, Bengaluru', 5746790),
-  ];
+  static List<_Donor> _donorsOf(AppLocalizations t) => [
+        _Donor('Shri Narayanarao Shet', '₹90,000', t.welfareDonorHeadRole, 17815020),
+        _Donor('Dr. Suma Rao', '₹51,000', t.welfareDonorPatronRole, 11138457),
+        _Donor('Vivek Kamath', '₹40,000', t.welfareDonorItRole, 2601464),
+        _Donor('Rajesh Pai', '₹35,000', t.welfareDonorEntrepreneurRole, 5746790),
+      ];
 
   void _back(BuildContext context) {
     if (context.canPop()) {
@@ -36,6 +37,7 @@ class WelfareImpactScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final campaigns = Repository.instance.welfare();
     final totalRaised =
         campaigns.fold<int>(0, (s, c) => s + (c['raised'] as int));
@@ -51,22 +53,22 @@ class WelfareImpactScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => _back(context),
         ),
-        title: Text('Impact Report', style: display(18, color: Colors.white)),
+        title: Text(t.welfareImpactReport, style: display(18, color: Colors.white)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          Text('DAIVAJNA SAMAJA BANGALORE - ANNUAL TRANSPARENCY REPORT',
+          Text(t.welfareAnnualReportKicker,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.gold700,
                   letterSpacing: 1.2)),
           const SizedBox(height: 8),
-          Text('Heritage Impact 2024-25',
+          Text(t.welfareImpactTitle,
               style: display(26, color: AppColors.forest900)),
           const SizedBox(height: 6),
           Text(
-              'A record of our community’s generous contributions and their measurable outcomes.',
+              t.welfareRecordOfContributions,
               style: body(13, color: AppColors.textMuted, height: 1.5)),
           const SizedBox(height: 18),
 
@@ -77,7 +79,7 @@ class WelfareImpactScreen extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.trending_up_rounded,
                   value: formatLakh(totalRaised),
-                  label: 'Total Raised',
+                  label: t.welfareTotalRaised,
                   color: AppColors.forest800,
                 ),
               ),
@@ -86,7 +88,7 @@ class WelfareImpactScreen extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.people_alt_rounded,
                   value: '1,240',
-                  label: 'Families Helped',
+                  label: t.welfareFamiliesHelped,
                   color: AppColors.forest700,
                 ),
               ),
@@ -99,7 +101,7 @@ class WelfareImpactScreen extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.campaign_rounded,
                   value: '${campaigns.length}',
-                  label: 'Campaigns Funded',
+                  label: t.welfareCampaignsFunded,
                   color: AppColors.gold700,
                 ),
               ),
@@ -108,7 +110,7 @@ class WelfareImpactScreen extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.school_rounded,
                   value: '30',
-                  label: 'Scholarships',
+                  label: t.welfareScholarships,
                   color: AppColors.gold500,
                 ),
               ),
@@ -121,10 +123,10 @@ class WelfareImpactScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Category Breakdown',
+                Text(t.welfareCategoryBreakdown,
                     style: display(17, color: AppColors.forest900)),
                 const SizedBox(height: 4),
-                Text('Share of funds raised by campaign category',
+                Text(t.welfareCategoryBreakdownSubtitle,
                     style: body(12, color: AppColors.textMuted)),
                 const SizedBox(height: 16),
                 _CategoryPie(campaigns: campaigns, total: totalRaised),
@@ -138,17 +140,17 @@ class WelfareImpactScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fund Allocation',
+                Text(t.welfareFundAllocation,
                     style: display(17, color: AppColors.forest900)),
                 const SizedBox(height: 14),
-                for (final a in _allocation) ...[
+                for (final a in _allocationOf(t)) ...[
                   _AllocRow(alloc: a),
                   const SizedBox(height: 12),
                 ],
                 const Divider(color: AppColors.border, height: 1),
                 const SizedBox(height: 12),
                 Text(
-                    '“Every rupee documented. Every decision transparent.” - Daivajna Audit Committee',
+                    t.welfareAuditQuote,
                     style: body(12,
                         color: AppColors.hint,
                         height: 1.5,
@@ -168,14 +170,14 @@ class WelfareImpactScreen extends StatelessWidget {
                     const Icon(Icons.favorite_rounded,
                         size: 16, color: AppColors.gold700),
                     const SizedBox(width: 8),
-                    Text('Guardian Donors',
+                    Text(t.welfareGuardianDonors,
                         style: display(17, color: AppColors.forest900)),
                   ],
                 ),
                 const SizedBox(height: 14),
-                for (var i = 0; i < _donors.length; i++) ...[
-                  _DonorRow(donor: _donors[i]),
-                  if (i != _donors.length - 1) ...[
+                for (var i = 0, donors = _donorsOf(t); i < donors.length; i++) ...[
+                  _DonorRow(donor: donors[i]),
+                  if (i != donors.length - 1) ...[
                     const SizedBox(height: 12),
                     const Divider(color: AppColors.border, height: 1),
                     const SizedBox(height: 12),
@@ -189,23 +191,21 @@ class WelfareImpactScreen extends StatelessWidget {
           // Testimonial cards.
           _Testimonial(
             photoId: 7485047,
-            quote:
-                '“This temple is proof that our Samaj never forgets its roots.”',
-            author: 'Priya K., Community Member',
+            quote: t.welfareTestimonial1,
+            author: t.welfareTestimonial1Author,
           ),
           const SizedBox(height: 12),
           _Testimonial(
             photoId: 17184880,
-            quote:
-                '“The scholarship let me finish my engineering degree. I am forever grateful to the Samaj.”',
-            author: 'Asha H., Gokarna',
+            quote: t.welfareTestimonial2,
+            author: t.welfareTestimonial2Author,
           ),
           const SizedBox(height: 18),
 
           SizedBox(
             width: double.infinity,
             child: ForestButton(
-              label: 'Support a Campaign',
+              label: t.welfareSupportCampaign,
               icon: Icons.arrow_forward_rounded,
               expand: true,
               onPressed: () => context.go('/welfare'),

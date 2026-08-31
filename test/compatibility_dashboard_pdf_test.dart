@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:daivajna_census/data/api_client.dart';
 import 'package:daivajna_census/data/repository.dart';
+import 'package:daivajna_census/l10n/generated/app_localizations.dart';
 import 'package:daivajna_census/screens/compatibility_dashboard_screen.dart';
 import 'package:daivajna_census/services/auth_service.dart';
 import 'package:daivajna_census/services/compatibility_pdf_export.dart' as pdf_export;
@@ -96,6 +98,13 @@ Map<String, dynamic> _reportJson() => {
 Widget _app(AuthService authService) => ChangeNotifierProvider<AuthService>.value(
       value: authService,
       child: const MaterialApp(
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: CompatibilityDashboardScreen(reportId: 'report-1', otherName: 'Asha'),
       ),
     );
@@ -130,7 +139,11 @@ void main() {
   late Repository originalRepository;
   late SharePlatform originalSharePlatform;
   late pdf_export.SavePdfFn originalSaveImpl;
+<<<<<<< HEAD
   late pdf_export.DownloadPdfFn originalDownloadImpl;
+=======
+  late pdf_export.SavePublicPdfFn originalSavePublicImpl;
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   late AuthService authService;
   late _FakeSavedPdf fakeSave;
   late _FakeDeviceDownload fakeDownload;
@@ -143,11 +156,22 @@ void main() {
     originalRepository = Repository.instance;
     originalSharePlatform = SharePlatform.instance;
     originalSaveImpl = pdf_export.saveCompatibilityPdfImpl;
+<<<<<<< HEAD
     originalDownloadImpl = pdf_export.downloadCompatibilityPdfImpl;
     fakeSave = _FakeSavedPdf();
     pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
     fakeDownload = _FakeDeviceDownload();
     pdf_export.downloadCompatibilityPdfImpl = fakeDownload.download;
+=======
+    originalSavePublicImpl = pdf_export.savePublicCompatibilityPdfImpl;
+    fakeSave = _FakeSavedPdf();
+    pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
+    // The real implementation hits a platform channel (file_saver) that
+    // doesn't exist in the widget-test sandbox — faked out the same way as
+    // saveCompatibilityPdfImpl above, just returning a plausible path.
+    pdf_export.savePublicCompatibilityPdfImpl =
+        ({required bytes, required fileName}) async => '/fake/downloads/$fileName';
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
 
     final fake = _FakeApiClient((_) async => _reportJson());
     Repository.instance = Repository(api: fake);
@@ -161,7 +185,11 @@ void main() {
     Repository.instance = originalRepository;
     SharePlatform.instance = originalSharePlatform;
     pdf_export.saveCompatibilityPdfImpl = originalSaveImpl;
+<<<<<<< HEAD
     pdf_export.downloadCompatibilityPdfImpl = originalDownloadImpl;
+=======
+    pdf_export.savePublicCompatibilityPdfImpl = originalSavePublicImpl;
+>>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   });
 
   testWidgets('dashboard still renders correctly alongside the new PDF/Share actions', (tester) async {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
@@ -14,13 +15,13 @@ import '../widgets/ui_kit.dart';
 
 /// Sort wire value (sent to the backend as-is) → its menu label, in render
 /// order. The backend does the actual ordering — this only names the option
-/// the member picked.
-const _sortOptions = <String, String>{
-  'BEST_MATCH': 'Best Match',
-  'NEWEST': 'Newest',
-  'AGE_LOW_TO_HIGH': 'Age: Low to High',
-  'AGE_HIGH_TO_LOW': 'Age: High to Low',
-};
+/// the member picked. Localized at call time (not `const`).
+Map<String, String> _sortOptionsOf(AppLocalizations t) => {
+      'BEST_MATCH': t.discSortBestMatch,
+      'NEWEST': t.discSortNewest,
+      'AGE_LOW_TO_HIGH': t.discSortAgeLowHigh,
+      'AGE_HIGH_TO_LOW': t.discSortAgeHighLow,
+    };
 const _defaultSort = 'BEST_MATCH';
 
 /// Matrimony → Discover Matches. Same eligible pool as the Matrimonial Hub,
@@ -105,7 +106,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     } catch (e) {
       if (!mounted || reqId != _loadReqId) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not load matches';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).discCouldNotLoad;
         _loading = false;
       });
     }
@@ -143,8 +146,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       if (!mounted) return;
       setState(() => _loadingMore = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            e is ApiException ? e.message : 'Could not load more matches'),
+        content: Text(e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).discCouldNotLoadMore),
       ));
     }
   }
@@ -164,15 +168,16 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Discover Matches',
+      title: t.discTitle,
       currentRoute: '/matrimonial/discover',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _Intro(),
           const SizedBox(height: 14),
-          _filterBar(),
+          _filterBar(t),
           const SizedBox(height: 14),
           if (_loading)
             const Padding(
@@ -180,22 +185,22 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
               child: Center(child: CircularProgressIndicator()),
             )
           else if (_error != null)
-            _errorState(_error!)
+            _errorState(_error!, t)
           else if (_matches.isEmpty)
-            _filters.isEmpty ? _emptyState() : _emptyFilteredState()
+            _filters.isEmpty ? _emptyState(t) : _emptyFilteredState(t)
           else ...[
             ..._matches.map((m) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _MatchCard(match: m),
                 )),
-            if (_hasMore) _loadMoreButton(),
+            if (_hasMore) _loadMoreButton(t),
           ],
         ],
       ),
     );
   }
 
-  Widget _filterBar() {
+  Widget _filterBar(AppLocalizations t) {
     return Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -211,7 +216,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     weight: FontWeight.w700, color: AppColors.forest800),
               ),
               TextSpan(
-                text: _totalCount == 1 ? ' match' : ' matches',
+                text: _totalCount == 1 ? t.discMatch : t.discMatches,
                 style: body(13, color: AppColors.textMuted),
               ),
             ]),
@@ -223,15 +228,15 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _filterButton(),
-            _sortButton(),
+            _filterButton(t),
+            _sortButton(t),
           ],
         ),
       ],
     );
   }
 
-  Widget _filterButton() {
+  Widget _filterButton(AppLocalizations t) {
     final count = _filters.activeGroupCount;
     return OutlinedButton.icon(
       onPressed: _loading ? null : _openFilters,
@@ -244,14 +249,14 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       ),
       icon: Icon(Icons.tune_rounded,
           size: 16, color: count > 0 ? Colors.white : AppColors.forest800),
-      label: Text(count > 0 ? 'Filter ($count)' : 'Filter',
+      label: Text(count > 0 ? t.discFilterCount(count) : t.discFilter,
           style: body(13,
               weight: FontWeight.w700,
               color: count > 0 ? Colors.white : AppColors.forest800)),
     );
   }
 
-  Widget _sortButton() {
+  Widget _sortButton(AppLocalizations t) {
     return PopupMenuButton<String>(
       enabled: !_loading,
       initialValue: _sort,
@@ -262,7 +267,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       itemBuilder: (_) => [
-        for (final entry in _sortOptions.entries)
+        for (final entry in _sortOptionsOf(t).entries)
           PopupMenuItem<String>(
             value: entry.key,
             child: Row(
@@ -288,7 +293,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Sort: ${_sortOptions[_sort]}',
+            Text(t.discSortLabel(_sortOptionsOf(t)[_sort] ?? ''),
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
             const SizedBox(width: 2),
@@ -300,7 +305,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     );
   }
 
-  Widget _loadMoreButton() {
+  Widget _loadMoreButton(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Center(
@@ -318,7 +323,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                       horizontal: 24, vertical: 12),
                 ),
                 onPressed: _loadMore,
-                child: Text('Load more',
+                child: Text(t.discLoadMore,
                     style: body(13,
                         weight: FontWeight.w700, color: AppColors.forest800)),
               ),
@@ -326,7 +331,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     );
   }
 
-  Widget _emptyState() {
+  Widget _emptyState(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
@@ -334,12 +339,12 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           const Icon(Icons.favorite_border_rounded,
               size: 30, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text('No matches to show yet',
+          Text(t.discNoMatchesYet,
               style:
                   body(15, weight: FontWeight.w600, color: AppColors.hint)),
           const SizedBox(height: 6),
           Text(
-            'Complete your marriage preferences and interests for better matches.',
+            t.discCompletePreferences,
             textAlign: TextAlign.center,
             style: body(13, color: AppColors.textMuted),
           ),
@@ -348,21 +353,21 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     );
   }
 
-  Widget _emptyFilteredState() {
+  Widget _emptyFilteredState(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
           const Icon(Icons.search_off_rounded, size: 30, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text('No matches found for these filters.',
+          Text(t.discNoMatchesForFilters,
               textAlign: TextAlign.center,
               style:
                   body(15, weight: FontWeight.w600, color: AppColors.hint)),
           const SizedBox(height: 10),
           TextButton(
             onPressed: _clearFilters,
-            child: Text('Clear Filters',
+            child: Text(t.discClearFilters,
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
           ),
@@ -371,7 +376,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     );
   }
 
-  Widget _errorState(String message) {
+  Widget _errorState(String message, AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
@@ -384,7 +389,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           const SizedBox(height: 10),
           TextButton(
             onPressed: _load,
-            child: Text('Try again',
+            child: Text(t.commonRetry,
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
           ),
@@ -399,6 +404,7 @@ class _Intro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -423,10 +429,10 @@ class _Intro extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Discover Matches', style: display(16, color: Colors.white)),
+                Text(t.discTitle, style: display(16, color: Colors.white)),
                 const SizedBox(height: 6),
                 Text(
-                  'Ranked by how well each profile fits your marriage preferences, food, interests, location and age - highest match first.',
+                  t.discIntroBody,
                   style: body(12, color: AppColors.forest300, height: 1.5),
                 ),
               ],
@@ -444,6 +450,7 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final m = match;
     final id = (m['profileId'] ?? '').toString();
     final name = (m['name'] ?? '').toString();
@@ -454,7 +461,7 @@ class _MatchCard extends StatelessWidget {
         ? (m['matchPercentage'] as num).round()
         : null;
     final level = (m['matchLevel'] ?? '').toString();
-    final levelLabel = matchLevelLabels[level] ?? level;
+    final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
     final levelColor = matchLevelColors[level] ?? AppColors.hint;
 
     return AppCard(
@@ -498,7 +505,7 @@ class _MatchCard extends StatelessWidget {
                         Text('$percentage%',
                             style: display(22, color: levelColor)),
                         const SizedBox(width: 8),
-                        Text('Match',
+                        Text(t.discMatchLabel,
                             style: body(13,
                                 weight: FontWeight.w600,
                                 color: AppColors.textMuted)),
@@ -514,7 +521,7 @@ class _MatchCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: ForestButton(
-                      label: 'View Profile',
+                      label: t.discViewProfile,
                       icon: Icons.favorite_rounded,
                       onPressed:
                           id.isEmpty ? null : () => context.push('/matrimonial/$id'),

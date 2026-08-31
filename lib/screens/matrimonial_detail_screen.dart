@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/discovery_match_badge.dart';
@@ -74,7 +75,7 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text('Candidate Profile',
+        title: Text(AppLocalizations.of(context).matCandidateProfile,
             style: display(18, color: Colors.white)),
       ),
       body: _loading
@@ -86,17 +87,18 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
   }
 
   Widget _notFound() {
+    final t = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
           const SizedBox(height: 12),
-          Text('Profile not found',
+          Text(t.matProfileNotFound,
               style: body(15, weight: FontWeight.w600, color: AppColors.hint)),
           const SizedBox(height: 14),
           ForestButton(
-            label: 'Back to Matrimonial Hub',
+            label: t.matBackToHub,
             onPressed: () => context.go('/matrimonial'),
           ),
         ],
@@ -111,6 +113,7 @@ class _CandidateDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final c = candidate;
     final premium = c['matrimonialFee'] == true;
 
@@ -128,7 +131,7 @@ class _CandidateDetail extends StatelessWidget {
             if (c['discoveryMatch'] != null &&
                 (c['discoveryMatch'] as Map)['matchPercentage'] != null) ...[
               _section(
-                title: 'Match Summary',
+                title: t.matMatchSummary,
                 icon: Icons.favorite_rounded,
                 child: DiscoveryMatchDetail(
                     discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?),
@@ -136,53 +139,53 @@ class _CandidateDetail extends StatelessWidget {
               const SizedBox(height: 14),
             ],
             _section(
-              title: 'Professional',
+              title: t.matProfessional,
               icon: Icons.business_center_outlined,
               child: _KeyValueGrid(pairs: [
-                ('Education', c['education'] as String),
-                ('Company', c['company'] as String),
-                ('Designation', c['designation'] as String),
-                ('Annual Income', c['income'] as String),
+                (t.matEducation, c['education'] as String),
+                (t.matCompany, c['company'] as String),
+                (t.matDesignation, c['designation'] as String),
+                (t.matAnnualIncome, c['income'] as String),
               ]),
             ),
             const SizedBox(height: 14),
             _section(
-              title: 'Personal',
+              title: t.matPersonal,
               icon: Icons.person_outline_rounded,
               child: _KeyValueGrid(pairs: [
-                ('Height', c['height'] as String),
-                ('Complexion', c['complexion'] as String),
-                ('Family Type', c['familyType'] as String),
+                (t.matHeight, c['height'] as String),
+                (t.matComplexion, c['complexion'] as String),
+                (t.matFamilyType, c['familyType'] as String),
               ]),
             ),
             const SizedBox(height: 14),
             _section(
-              title: 'Family',
+              title: t.matFamily,
               icon: Icons.groups_outlined,
               child: _KeyValueColumn(pairs: [
-                ('Father', c['fatherOccupation'] as String),
-                ('Mother', c['motherOccupation'] as String),
-                ('Siblings', c['siblings'] as String),
+                (t.matFather, c['fatherOccupation'] as String),
+                (t.matMother, c['motherOccupation'] as String),
+                (t.matSiblings, c['siblings'] as String),
               ]),
             ),
             const SizedBox(height: 14),
             _section(
-              title: 'Horoscope',
+              title: t.matHoroscope,
               icon: Icons.star_outline_rounded,
               iconColor: AppColors.gold700,
               child: _KeyValueGrid(pairs: [
-                ('Star / Nakshatra', c['star'] as String),
-                ('Rashi', c['rashi'] as String),
-                ('Mangal',
+                (t.matStarNakshatra, c['star'] as String),
+                (t.matRashi, c['rashi'] as String),
+                (t.matMangal,
                     // The API sends a real boolean; null means "not answered".
-                    c['mangal'] == true ? 'Mangalik' : 'Non-Mangalik'),
-                ('Gotra / Surname', c['gotraSurname'] as String),
-                ('Time of Birth', c['timeOfBirth'] as String),
+                    c['mangal'] == true ? t.matMangalik : t.matNonMangalik),
+                (t.matGotraSurname, c['gotraSurname'] as String),
+                (t.matTimeOfBirth, c['timeOfBirth'] as String),
               ]),
             ),
             const SizedBox(height: 14),
             _section(
-              title: 'About',
+              title: t.matAbout,
               icon: Icons.notes_rounded,
               child: Text(c['about'] as String,
                   style: body(13, color: AppColors.textMuted, height: 1.6)),
@@ -190,7 +193,7 @@ class _CandidateDetail extends StatelessWidget {
             if ((c['interests'] as List?)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 14),
               _section(
-                title: 'Interests',
+                title: t.matInterests,
                 icon: Icons.interests_rounded,
                 iconColor: AppColors.gold700,
                 child: Wrap(
@@ -206,7 +209,7 @@ class _CandidateDetail extends StatelessWidget {
             ],
             const SizedBox(height: 14),
             _section(
-              title: 'Partner Expectations',
+              title: t.matPartnerExpectations,
               icon: Icons.favorite_outline_rounded,
               child: _ExpectationsList(
                 items: (c['partnerExpectations'] as List)
@@ -310,7 +313,7 @@ class _PhotoHeader extends StatelessWidget {
                       const Icon(Icons.verified,
                           size: 14, color: AppColors.gold500),
                       const SizedBox(width: 5),
-                      Text('Verified',
+                      Text(AppLocalizations.of(context).matVerified,
                           style: body(11,
                               weight: FontWeight.w700,
                               color: AppColors.forest800)),
@@ -456,23 +459,22 @@ class _Footer extends StatelessWidget {
   final bool premium;
 
   void _premiumNotice(BuildContext context) {
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Premium Profile',
+        title: Text(t.matPremiumProfileTitle,
             style: display(18, color: AppColors.forest900)),
         content: Text(
-          'This is a premium profile. Connections are arranged exclusively '
-          'through the Elder Committee. Please contact a Samaj elder to '
-          'proceed with an introduction.',
+          t.matPremiumProfileBody,
           style: body(13, color: AppColors.textMuted, height: 1.5),
         ),
         actions: [
           GoldButton(
-            label: 'Understood',
+            label: t.matUnderstood,
             onPressed: () => Navigator.of(ctx).pop(),
           ),
         ],
@@ -524,7 +526,7 @@ class _Footer extends StatelessWidget {
           children: [
             if (premium)
               GoldButton(
-                label: 'Premium - Connect via Elder Committee',
+                label: AppLocalizations.of(context).matPremiumConnectViaElder,
                 icon: Icons.workspace_premium_rounded,
                 expand: true,
                 onPressed: () => _premiumNotice(context),
@@ -532,7 +534,7 @@ class _Footer extends StatelessWidget {
             if (showCompatibility) ...[
               if (premium) const SizedBox(height: 8),
               OutlineButtonX(
-                label: 'Check Compatibility',
+                label: AppLocalizations.of(context).matCheckCompatibility,
                 expand: true,
                 onPressed: () => _checkCompatibility(context, myId),
               ),

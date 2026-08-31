@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
@@ -47,6 +48,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
   }
 
   void _submit(Map<String, dynamic> campaign) {
+    final t = AppLocalizations.of(context);
     final title = campaign['title'] as String;
     showDialog<void>(
       context: context,
@@ -66,18 +68,18 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('Dhanyavaad! 🙏',
+              child: Text(t.welfareDhanyavaad,
                   style: display(20, color: AppColors.forest900)),
             ),
           ],
         ),
         content: Text(
-          'Thank you! Your contribution to $title is received.',
+          t.welfareThankYouReceived(title),
           style: body(14, color: AppColors.textMuted, height: 1.5),
         ),
         actions: [
           ForestButton(
-            label: 'Back to Welfare',
+            label: t.welfareBackToWelfare,
             onPressed: () {
               Navigator.of(ctx).pop();
               context.go('/welfare');
@@ -103,25 +105,26 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title:
-            Text('Make a Contribution', style: display(18, color: Colors.white)),
+        title: Text(AppLocalizations.of(context).welfareMakeContribution,
+            style: display(18, color: Colors.white)),
       ),
       body: campaign == null ? _notFound() : _form(campaign),
     );
   }
 
   Widget _notFound() {
+    final t = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
           const SizedBox(height: 12),
-          Text('Campaign not found',
+          Text(t.welfareCampaignNotFound,
               style: body(15, weight: FontWeight.w600, color: AppColors.hint)),
           const SizedBox(height: 14),
           ForestButton(
-            label: 'Back to Welfare',
+            label: t.welfareBackToWelfare,
             onPressed: () => context.go('/welfare'),
           ),
         ],
@@ -130,6 +133,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
   }
 
   Widget _form(Map<String, dynamic> c) {
+    final t = AppLocalizations.of(context);
     final raised = c['raised'] as int;
     final goal = c['goal'] as int;
     final pct = goal == 0 ? 0 : ((raised / goal) * 100).round();
@@ -184,18 +188,19 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Text('${formatLakh(raised)} raised',
+                            Text(t.welfareRaised(formatLakh(raised)),
                                 style: body(13,
                                     weight: FontWeight.w700,
                                     color: AppColors.forest800)),
                             const Spacer(),
-                            Text('$pct%',
+                            Text(t.welfarePctLabel(pct),
                                 style: body(12, color: AppColors.textMuted)),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                            '${c['daysLeft']} days left · ${c['backers']} contributors',
+                            t.welfareDaysLeftContributors(
+                                c['daysLeft'] as int, c['backers'] as int),
                             style: body(12, color: AppColors.hint)),
                       ],
                     ),
@@ -224,13 +229,13 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Transparency Pledge',
+                        Text(t.welfareTransparencyPledge,
                             style: body(13,
                                 weight: FontWeight.w700,
                                 color: AppColors.forest800)),
                         const SizedBox(height: 4),
                         Text(
-                            '100% of your contribution flows directly to a monitored committee account, published quarterly in the Impact Report.',
+                            t.welfareTransparencyPledgeBody,
                             style: body(12,
                                 color: AppColors.textMuted, height: 1.5)),
                       ],
@@ -242,7 +247,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             const SizedBox(height: 18),
 
             // Amount presets.
-            _label('SELECT AMOUNT (₹)'),
+            _label(t.welfareSelectAmount),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -265,18 +270,18 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               controller: _customCtrl,
               keyboardType: TextInputType.number,
               onChanged: (_) => setState(() {}),
-              decoration: _inputDecoration('Enter custom amount'),
+              decoration: _inputDecoration(t.welfareEnterCustomAmount),
             ),
             const SizedBox(height: 18),
 
             // Donor name.
-            _label('DONOR NAME'),
+            _label(t.welfareDonorName),
             const SizedBox(height: 10),
             TextField(
               controller: _nameCtrl,
               enabled: !_anonymous,
               decoration: _inputDecoration(
-                  _anonymous ? 'Anonymous' : 'Your name'),
+                  _anonymous ? t.welfareAnonymous : t.welfareYourName),
             ),
             const SizedBox(height: 6),
             SwitchListTile.adaptive(
@@ -284,18 +289,18 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               activeThumbColor: AppColors.forest700,
               value: _anonymous,
               onChanged: (v) => setState(() => _anonymous = v),
-              title: Text('Donate anonymously',
+              title: Text(t.welfareDonateAnonymously,
                   style: body(13, weight: FontWeight.w600)),
             ),
             const SizedBox(height: 8),
 
             // Payment method.
-            _label('PAYMENT METHOD'),
+            _label(t.welfarePaymentMethod),
             const SizedBox(height: 10),
             _PayOption(
               id: 'upi',
               icon: Icons.qr_code_rounded,
-              label: 'UPI / QR Code',
+              label: t.welfareUpiQr,
               selected: _payMethod == 'upi',
               onTap: () => setState(() => _payMethod = 'upi'),
             ),
@@ -303,7 +308,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             _PayOption(
               id: 'card',
               icon: Icons.credit_card_rounded,
-              label: 'Credit / Debit Card',
+              label: t.welfareCreditDebitCard,
               selected: _payMethod == 'card',
               onTap: () => setState(() => _payMethod = 'card'),
             ),
@@ -311,7 +316,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             _PayOption(
               id: 'netbanking',
               icon: Icons.account_balance_rounded,
-              label: 'Net Banking',
+              label: t.welfareNetBanking,
               selected: _payMethod == 'netbanking',
               onTap: () => setState(() => _payMethod = 'netbanking'),
             ),
@@ -334,7 +339,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ForestButton(
-                  label: 'Donate ₹${formatIndian(_finalAmount)}',
+                  label: t.welfareDonateAmount(formatIndian(_finalAmount)),
                   icon: Icons.favorite_rounded,
                   expand: true,
                   onPressed:

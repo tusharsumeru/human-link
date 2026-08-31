@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
@@ -61,7 +62,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not load profiles';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).matCouldNotLoadProfiles;
         _loading = false;
       });
     }
@@ -69,17 +72,18 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Matrimonial',
+      title: t.matTitle,
       currentRoute: '/matrimonial',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _discoverMatchesButton(context),
+          _discoverMatchesButton(context, t),
           const SizedBox(height: 14),
-          _genderLabel(),
+          _genderLabel(t),
           const SizedBox(height: 16),
-          Text('${_candidates.length} profiles',
+          Text(t.matProfilesCount(_candidates.length),
               style: body(13, color: AppColors.textMuted)),
           const SizedBox(height: 12),
           if (_loading)
@@ -88,9 +92,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
               child: Center(child: CircularProgressIndicator()),
             )
           else if (_error != null)
-            _errorState(_error!)
+            _errorState(_error!, t)
           else if (_candidates.isEmpty)
-            _emptyState()
+            _emptyState(t)
           else
             ..._candidates.map((c) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
@@ -101,7 +105,7 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     );
   }
 
-  Widget _discoverMatchesButton(BuildContext context) {
+  Widget _discoverMatchesButton(BuildContext context, AppLocalizations t) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -113,17 +117,17 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
         onPressed: () => context.push('/matrimonial/discover'),
         icon: const Icon(Icons.auto_awesome_rounded,
             size: 18, color: AppColors.forest800),
-        label: Text('Discover Matches',
+        label: Text(t.matDiscoverMatches,
             style: body(14, weight: FontWeight.w700, color: AppColors.forest800)),
       ),
     );
   }
 
-  Widget _genderLabel() {
+  Widget _genderLabel(AppLocalizations t) {
     final label = switch (_gender) {
-      'F' => 'Showing Brides',
-      'M' => 'Showing Grooms',
-      _ => 'Showing All Profiles',
+      'F' => t.matShowingBrides,
+      'M' => t.matShowingGrooms,
+      _ => t.matShowingAllProfiles,
     };
     return Row(
       children: [
@@ -135,7 +139,7 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     );
   }
 
-  Widget _emptyState() {
+  Widget _emptyState(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
@@ -143,7 +147,7 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const Icon(Icons.favorite_border_rounded,
               size: 30, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text('No profiles yet',
+          Text(t.matNoProfilesYet,
               style:
                   body(15, weight: FontWeight.w600, color: AppColors.hint)),
         ],
@@ -151,7 +155,7 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     );
   }
 
-  Widget _errorState(String message) {
+  Widget _errorState(String message, AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
@@ -164,7 +168,7 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const SizedBox(height: 10),
           TextButton(
             onPressed: _load,
-            child: Text('Try again',
+            child: Text(t.matTryAgain,
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
           ),
@@ -180,10 +184,11 @@ class _CandidateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final c = candidate;
     final verified = c['verified'] == true;
     final premium = c['matrimonialFee'] == true;
-    final gender = c['gender'] == 'F' ? 'Bride' : 'Groom';
+    final gender = c['gender'] == 'F' ? t.matBride : t.matGroom;
     final id = c['id'] as String;
 
     return AppCard(
@@ -238,7 +243,7 @@ class _CandidateCard extends StatelessWidget {
                             const Icon(Icons.verified,
                                 size: 13, color: AppColors.gold500),
                             const SizedBox(width: 4),
-                            Text('Verified',
+                            Text(t.matVerified,
                                 style: body(10,
                                     weight: FontWeight.w700,
                                     color: AppColors.forest800)),
@@ -265,9 +270,9 @@ class _CandidateCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       if (premium)
-                        const _PremiumChip()
+                        _PremiumChip(t: t)
                       else
-                        Pill('Free',
+                        Pill(t.matFree,
                             bg: const Color(0xFFF0FBF4),
                             fg: AppColors.forest700,
                             fontSize: 10),
@@ -299,7 +304,7 @@ class _CandidateCard extends StatelessWidget {
                           fontSize: 10),
                       const Spacer(),
                       ForestButton(
-                        label: 'View Profile',
+                        label: t.matViewProfile,
                         icon: Icons.favorite_rounded,
                         onPressed: () => context.push('/matrimonial/$id'),
                       ),
@@ -331,7 +336,8 @@ class _CandidateCard extends StatelessWidget {
 }
 
 class _PremiumChip extends StatelessWidget {
-  const _PremiumChip();
+  const _PremiumChip({required this.t});
+  final AppLocalizations t;
 
   @override
   Widget build(BuildContext context) {
@@ -347,7 +353,7 @@ class _PremiumChip extends StatelessWidget {
           const Icon(Icons.workspace_premium_rounded,
               size: 12, color: Colors.white),
           const SizedBox(width: 4),
-          Text('Premium',
+          Text(t.matPremium,
               style:
                   body(10, weight: FontWeight.w700, color: Colors.white)),
         ],

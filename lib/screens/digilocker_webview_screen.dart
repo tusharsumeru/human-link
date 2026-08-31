@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Hosts the Surepass DigiLocker "Via Link" page in an in-app WebView.
@@ -68,11 +69,12 @@ class _DigilockerWebViewScreenState extends State<DigilockerWebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         foregroundColor: Colors.white,
-        title: Text('Verify with DigiLocker',
+        title: Text(t.digilockerVerifyTitle,
             style: display(17, color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -88,7 +90,7 @@ class _DigilockerWebViewScreenState extends State<DigilockerWebViewScreen> {
                 Navigator.of(context).pop(true);
               }
             },
-            child: const Text('Done', style: TextStyle(color: Colors.white)),
+            child: Text(t.commonDone, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

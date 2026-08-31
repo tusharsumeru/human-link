@@ -51,6 +51,14 @@
 	<string>This app needs camera access to capture your photo for the census entry.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs photo library access to attach your photo to the census entry.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to attach a place to posts and find nearby Samaj members.</string>
+	<!-- Makes files saved via file_saver (e.g. the downloaded compatibility
+	     PDF) visible in the iOS Files app, in this app's own folder. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

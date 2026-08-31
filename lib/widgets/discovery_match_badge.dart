@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Display-only label/colour for the backend's `matchLevel` string
@@ -8,14 +9,15 @@ import '../theme/app_theme.dart';
 /// in `matchLevelFor()`; this only decides how an already-decided level is
 /// worded and coloured. Shared by the Matrimonial Hub card and the Discover
 /// Matches card so the same pair of profiles never shows two different
-/// numbers in two different places.
-const Map<String, String> matchLevelLabels = {
-  'EXCELLENT': 'Excellent Match',
-  'HIGH': 'High Match',
-  'GOOD': 'Good Match',
-  'MODERATE': 'Moderate Match',
-  'LOW': 'Low Match',
-};
+/// numbers in two different places. Localized at call time — the keys are
+/// the stable wire values sent by the backend.
+Map<String, String> matchLevelLabelsOf(AppLocalizations t) => {
+      'EXCELLENT': t.matchLevelExcellent,
+      'HIGH': t.matchLevelHigh,
+      'GOOD': t.matchLevelGood,
+      'MODERATE': t.matchLevelModerate,
+      'LOW': t.matchLevelLow,
+    };
 
 const Map<String, Color> matchLevelColors = {
   'EXCELLENT': AppColors.forest700,
@@ -43,8 +45,9 @@ class DiscoveryMatchBadge extends StatelessWidget {
         (dm['matchPercentage'] is num) ? (dm['matchPercentage'] as num).round() : null;
     if (percentage == null) return const SizedBox.shrink();
 
+    final t = AppLocalizations.of(context);
     final level = (dm['matchLevel'] ?? '').toString();
-    final levelLabel = matchLevelLabels[level] ?? level;
+    final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
     final levelColor = matchLevelColors[level] ?? AppColors.hint;
 
     return Row(
@@ -52,7 +55,7 @@ class DiscoveryMatchBadge extends StatelessWidget {
         Text('$percentage%',
             style: body(20, weight: FontWeight.w800, color: levelColor)),
         const SizedBox(width: 7),
-        Text('Match', style: body(15, weight: FontWeight.w600, color: AppColors.textMuted)),
+        Text(t.matchBadgeMatch, style: body(15, weight: FontWeight.w600, color: AppColors.textMuted)),
         if (levelLabel.isNotEmpty) ...[
           const SizedBox(width: 8),
           Text('· $levelLabel',
@@ -65,17 +68,18 @@ class DiscoveryMatchBadge extends StatelessWidget {
 
 /// `discoveryMatch.factors[].factor` (a DiscoveryMatchFactor key from the
 /// backend) → display name. Naming only — which factors exist and how they're
-/// weighted is entirely server-side (see discovery-match-rules.ts).
-const Map<String, String> _factorLabels = {
-  'marriageIntention': 'Marriage Intention',
-  'childrenPreference': 'Children',
-  'familyPreference': 'Family Type',
-  'relocationPreference': 'Relocation',
-  'foodPreference': 'Food Preference',
-  'interests': 'Interests',
-  'location': 'Location',
-  'age': 'Age',
-};
+/// weighted is entirely server-side (see discovery-match-rules.ts). Localized
+/// at call time — the keys are the stable wire values from the backend.
+Map<String, String> _factorLabelsOf(AppLocalizations t) => {
+      'marriageIntention': t.matchFactorMarriageIntention,
+      'childrenPreference': t.matchFactorChildren,
+      'familyPreference': t.matchFactorFamilyType,
+      'relocationPreference': t.matchFactorRelocation,
+      'foodPreference': t.matchFactorFoodPreference,
+      'interests': t.matchFactorInterests,
+      'location': t.matchFactorLocation,
+      'age': t.matchFactorAge,
+    };
 
 /// The full Discovery Match breakdown for the Candidate Profile screen: the
 /// same percentage/level shown on the Hub and Discover Matches cards (via
@@ -100,8 +104,9 @@ class DiscoveryMatchDetail extends StatelessWidget {
         (dm['matchPercentage'] is num) ? (dm['matchPercentage'] as num).round() : null;
     if (percentage == null) return const SizedBox.shrink();
 
+    final t = AppLocalizations.of(context);
     final level = (dm['matchLevel'] ?? '').toString();
-    final levelLabel = matchLevelLabels[level] ?? level;
+    final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
     final levelColor = matchLevelColors[level] ?? AppColors.hint;
     final factors = ((dm['factors'] as List?) ?? const [])
         .whereType<Map>()
@@ -131,15 +136,15 @@ class DiscoveryMatchDetail extends StatelessWidget {
         ),
         if (factors.isNotEmpty) ...[
           const SizedBox(height: 14),
-          for (final f in factors) _factorRow(f),
+          for (final f in factors) _factorRow(f, t),
         ],
       ],
     );
   }
 
-  Widget _factorRow(Map<String, dynamic> f) {
+  Widget _factorRow(Map<String, dynamic> f, AppLocalizations t) {
     final key = (f['factor'] ?? '').toString();
-    final label = _factorLabels[key] ?? key;
+    final label = _factorLabelsOf(t)[key] ?? key;
     final applicable = f['applicable'] == true;
     final score = (f['score'] is num) ? (f['score'] as num) : null;
 
@@ -153,7 +158,7 @@ class DiscoveryMatchDetail extends StatelessWidget {
                 size: 15, color: AppColors.hint),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('$label - not enough information to compare',
+              child: Text(t.matchFactorNotEnoughInfo(label),
                   style: body(13, color: AppColors.textMuted, height: 1.35)),
             ),
           ],
@@ -170,7 +175,7 @@ class DiscoveryMatchDetail extends StatelessWidget {
           const Icon(Icons.circle, size: 8, color: AppColors.gold700),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('$label - $factorPercentage% aligned',
+            child: Text(t.matchFactorAligned(label, factorPercentage),
                 style: body(13, color: AppColors.label, height: 1.35)),
           ),
         ],

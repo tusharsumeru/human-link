@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/api_client.dart';
 import '../data/models/compatibility_models.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/compatibility_report_view.dart';
@@ -96,6 +97,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
   }
 
   Future<void> _calculate() async {
+    final t = AppLocalizations.of(context);
     final myRole = TraditionalRole.forGender(
         context.read<AuthService>().user?.gender ?? '');
     final otherRole = TraditionalRole.forGender(widget.otherGender);
@@ -106,10 +108,8 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
         _error = CompatibilityRequestError(
           reason: CompatibilityErrorReason.missingRole,
           message: myRole == null
-              ? 'Add your gender in Profile → Edit first - it decides your '
-                  'traditional bride/groom role.'
-              : "This member's profile doesn't have a gender on file, so "
-                  "their traditional role can't be determined.",
+              ? t.compErrorGenericMissingRoleMine
+              : t.compErrorGenericMissingRoleTheirs,
           profile: myRole == null
               ? CompatibilityErrorProfile.a
               : CompatibilityErrorProfile.b,
@@ -138,9 +138,9 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
       if (response.reportId.trim().isEmpty) {
         setState(() {
           _report = null;
-          _error = const CompatibilityRequestError(
+          _error = CompatibilityRequestError(
             reason: CompatibilityErrorReason.apiError,
-            message: 'Could not calculate compatibility right now.',
+            message: t.compErrorCalcFailed,
           );
           _loading = false;
         });
@@ -163,9 +163,9 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
       if (!mounted) return;
       setState(() {
         _report = null;
-        _error = const CompatibilityRequestError(
+        _error = CompatibilityRequestError(
           reason: CompatibilityErrorReason.apiError,
-          message: 'Could not calculate compatibility right now.',
+          message: t.compErrorCalcFailed,
         );
         _loading = false;
       });
@@ -174,10 +174,11 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final myName = context.watch<AuthService>().user?.name ?? 'You';
+    final t = AppLocalizations.of(context);
+    final myName = context.watch<AuthService>().user?.name ?? t.compYou;
     final otherName = widget.otherName.trim().isNotEmpty
         ? widget.otherName.trim()
-        : 'This member';
+        : t.compThisMember;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -186,18 +187,18 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Compatibility Report', style: display(18, color: Colors.white)),
+        title: Text(t.compReportTitle, style: display(18, color: Colors.white)),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
           children: [
-            _header(myName, otherName),
+            _header(myName, otherName, t),
             const SizedBox(height: 16),
-            _consentStatusCard(),
+            _consentStatusCard(t),
             const SizedBox(height: 16),
             if (_error != null) ...[
-              _errorCard(_error!),
+              _errorCard(_error!, t),
               const SizedBox(height: 16),
             ],
             if (_report != null) ...[
@@ -208,8 +209,8 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               width: double.infinity,
               child: ForestButton(
                 label: _report != null
-                    ? 'Recalculate'
-                    : (_error != null ? 'Retry' : 'Calculate Compatibility'),
+                    ? t.compRecalculate
+                    : (_error != null ? t.compRetry : t.compCalculateCompatibility),
                 icon: Icons.auto_awesome_rounded,
                 expand: true,
                 loading: _loading,
@@ -226,7 +227,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
   /// shown proactively rather than only after the API rejects a request.
   /// Only ever the signed-in member's own status (self-only endpoint); the
   /// other profile's consent is never fetched or shown here.
-  Widget _consentStatusCard() {
+  Widget _consentStatusCard(AppLocalizations t) {
     if (_loadingConsent) {
       return const AppCard(
         child: SizedBox(
@@ -259,15 +260,15 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your consent · Birth-data matching',
+                Text(t.compYourConsentBirthData,
                     style: body(12, weight: FontWeight.w700, color: AppColors.forest900)),
                 const SizedBox(height: 2),
                 Text(
                   ok
-                      ? 'Allowed - required for this calculation.'
+                      ? t.compAllowedRequiredForCalc
                       : outdated
-                          ? 'Our consent policy changed - please re-confirm.'
-                          : 'Not allowed yet - required before calculating.',
+                          ? t.compPolicyChangedReconfirm
+                          : t.compNotAllowedYet,
                   style: body(11, color: AppColors.textMuted),
                 ),
               ],
@@ -275,7 +276,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
           ),
           TextButton(
             onPressed: _openConsentScreen,
-            child: Text(ok ? 'Manage' : 'Review',
+            child: Text(ok ? t.compManage : t.compReview,
                 style: body(12, weight: FontWeight.w700, color: AppColors.forest700)),
           ),
         ],
@@ -283,7 +284,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
     );
   }
 
-  Widget _header(String myName, String otherName) {
+  Widget _header(String myName, String otherName, AppLocalizations t) {
     return AppCard(
       child: Column(
         children: [
@@ -298,7 +299,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
                 size: 26, color: AppColors.gold700),
           ),
           const SizedBox(height: 14),
-          Text('Compatibility Report',
+          Text(t.compReportTitle,
               style: display(20, color: AppColors.forest900),
               textAlign: TextAlign.center),
           const SizedBox(height: 6),
@@ -312,41 +313,39 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
 
   // ── Error / notice states ───────────────────────────────────────────────
 
-  Widget _errorCard(CompatibilityRequestError error) {
+  Widget _errorCard(CompatibilityRequestError error, AppLocalizations t) {
     final mine = error.profile == CompatibilityErrorProfile.a;
     return switch (error.reason) {
       CompatibilityErrorReason.missingRole => _noticeCard(
           icon: Icons.person_outline_rounded,
-          title: 'Traditional role unknown',
+          title: t.compTraditionalRoleUnknown,
           message: error.message,
-          actionLabel: mine ? 'Go to Profile' : null,
+          actionLabel: mine ? t.compGoToProfile : null,
           onAction: mine ? () => context.push('/profile/edit') : null,
         ),
       CompatibilityErrorReason.missingBirthData => _noticeCard(
           icon: Icons.cake_outlined,
           title: mine
-              ? 'Your birth details are incomplete'
-              : 'Their birth details are incomplete',
+              ? t.compYourBirthDetailsIncomplete
+              : t.compTheirBirthDetailsIncomplete,
           message: mine
-              ? 'Add your exact birth time and place to calculate the Jataka match.'
-              : "This member hasn't finished their birth details yet - "
-                  'check back later.',
-          actionLabel: mine ? 'Add birth details' : null,
+              ? t.compAddBirthDetailsBody
+              : t.compTheirBirthDetailsBody,
+          actionLabel: mine ? t.compAddBirthDetailsAction : null,
           onAction: mine ? () => context.push('/matrimonial/birth-details') : null,
         ),
       CompatibilityErrorReason.missingConsent => _noticeCard(
           icon: Icons.privacy_tip_outlined,
-          title: mine ? 'Your consent is needed' : 'Their consent is needed',
+          title: mine ? t.compYourConsentNeeded : t.compTheirConsentNeeded,
           message: mine
-              ? "You haven't allowed birth-data matching yet - review and "
-                  'grant it to run this check.'
-              : "This member hasn't allowed birth-data matching yet.",
-          actionLabel: mine ? 'Review consent' : null,
+              ? t.compYourConsentNeededBody
+              : t.compTheirConsentNeededBody,
+          actionLabel: mine ? t.compReviewConsent : null,
           onAction: mine ? _openConsentScreen : null,
         ),
       CompatibilityErrorReason.apiError => _noticeCard(
           icon: Icons.error_outline_rounded,
-          title: 'Something went wrong',
+          title: t.compSomethingWentWrong,
           message: error.message,
           isError: true,
         ),

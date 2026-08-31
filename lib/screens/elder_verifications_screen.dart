@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
@@ -35,14 +36,14 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     }
   }
 
-  String _riskLabel(String level) {
+  String _riskLabel(String level, AppLocalizations t) {
     switch (level) {
       case 'high':
-        return 'High Risk';
+        return t.elderHighRisk;
       case 'medium':
-        return 'Med Risk';
+        return t.elderMedRisk;
       default:
-        return 'Low Risk';
+        return t.elderLowRisk;
     }
   }
 
@@ -68,27 +69,28 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
       return matchRisk && matchAadhaar;
     }).toList();
 
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Member Requests',
+      title: t.elderMemberRequests,
       currentRoute: '/elder/verifications',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _filterSection(),
+          _filterSection(t),
           const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Text(
-              'Pending Claims (${filtered.length})',
+              t.elderPendingClaims(filtered.length),
               style: display(18, color: AppColors.forest900),
             ),
           ),
           const SizedBox(height: 12),
           if (filtered.isEmpty)
-            _empty()
+            _empty(t)
           else
             for (final r in filtered) ...[
-              _requestCard(r),
+              _requestCard(r, t),
               const SizedBox(height: 12),
             ],
           const SizedBox(height: 8),
@@ -97,11 +99,11 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     );
   }
 
-  Widget _filterSection() {
+  Widget _filterSection(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('RISK LEVEL',
+        Text(t.elderRiskLevel,
             style: body(11,
                 weight: FontWeight.w700,
                 color: AppColors.gold700,
@@ -113,14 +115,14 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           children: [
             for (final r in const ['All', 'low', 'medium', 'high'])
               _chip(
-                r == 'All' ? 'All' : _riskLabel(r),
+                r == 'All' ? t.elderAll : _riskLabel(r, t),
                 selected: _riskFilter == r,
                 onTap: () => setState(() => _riskFilter = r),
               ),
           ],
         ),
         const SizedBox(height: 14),
-        Text('AADHAAR STATUS',
+        Text(t.elderAadhaarStatus,
             style: body(11,
                 weight: FontWeight.w700,
                 color: AppColors.gold700,
@@ -166,14 +168,14 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     );
   }
 
-  Widget _requestCard(Map<String, dynamic> r) {
+  Widget _requestCard(Map<String, dynamic> r, AppLocalizations t) {
     final risk = r['riskLevel'] as String;
     final riskColor = _riskColor(risk);
     final aadhaar = r['aadhaarStatus'] as String;
     final aadhaarColor = _aadhaarColor(aadhaar);
     final vouches = (r['vouches'] as int?) ?? 0;
     final required = (r['vouchesRequired'] as int?) ?? 1;
-    final genderLabel = r['gender'] == 'M' ? 'Male' : 'Female';
+    final genderLabel = r['gender'] == 'M' ? t.elderMale : t.elderFemale;
 
     return AppCard(
       onTap: () => context.push('/elder/verifications/${r['id']}'),
@@ -203,13 +205,14 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                           child: Text(r['name'] as String,
                               style: display(16, color: AppColors.forest900)),
                         ),
-                        Pill(_riskLabel(risk),
+                        Pill(_riskLabel(risk, t),
                             bg: riskColor.withValues(alpha: 0.14),
                             fg: riskColor),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text('Age: ${r['age']} · $genderLabel · ${r['gotra']} Gotra',
+                    Text(t.elderAgeGenderGotra(
+                        '${r['age']}', genderLabel, r['gotra'] as String),
                         style: body(12, color: AppColors.textMuted)),
                   ],
                 ),
@@ -217,17 +220,17 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _kv('Lineage Node', r['claimingFrom'] as String),
+          _kv(t.elderLineageNode, r['claimingFrom'] as String),
           const SizedBox(height: 6),
-          _kv('Relation', r['relation'] as String),
+          _kv(t.elderRelation, r['relation'] as String),
           const SizedBox(height: 12),
           Row(
             children: [
-              Text('Vouches',
+              Text(t.elderVouchesLabel,
                   style: body(11,
                       weight: FontWeight.w600, color: AppColors.textMuted)),
               const Spacer(),
-              Text('$vouches / $required',
+              Text(t.elderVouchesOfRequired(vouches, required),
                   style: body(11,
                       weight: FontWeight.w700, color: AppColors.forest700)),
             ],
@@ -237,10 +240,10 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Pill('Aadhaar: $aadhaar',
+              Pill(t.elderAadhaarPrefix(aadhaar),
                   bg: aadhaarColor.withValues(alpha: 0.14), fg: aadhaarColor),
               const Spacer(),
-              Text('Submitted ${r['submittedOn']}',
+              Text(t.elderSubmittedOn('${r['submittedOn']}'),
                   style: body(11, color: AppColors.hint)),
             ],
           ),
@@ -262,14 +265,14 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     );
   }
 
-  Widget _empty() {
+  Widget _empty(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
           const Icon(Icons.schedule_rounded, size: 36, color: AppColors.hint),
           const SizedBox(height: 12),
-          Text('No requests match your filter',
+          Text(t.elderNoRequestsMatchFilter,
               style: body(14, weight: FontWeight.w600, color: AppColors.hint)),
         ],
       ),
