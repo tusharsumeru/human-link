@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'chat_screen.dart';
 
@@ -37,22 +38,23 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     }
   }
 
-  String _name(Map<String, dynamic>? user) {
-    if (user == null) return 'Member';
+  String _name(Map<String, dynamic>? user, AppLocalizations t) {
+    if (user == null) return t.convMemberFallback;
     final n = (user['name'] ?? '').toString().trim();
     if (n.isNotEmpty) return n;
     final u = (user['userName'] ?? '').toString().trim();
-    return u.isEmpty ? 'Member' : u;
+    return u.isEmpty ? t.convMemberFallback : u;
   }
 
   Future<void> _openChat(Map<String, dynamic> convo) async {
+    final t = AppLocalizations.of(context);
     final other = convo['otherUser'] as Map<String, dynamic>?;
     final id = (other?['_id'] ?? '').toString();
     if (id.isEmpty) return;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ChatScreen(
         otherUserId: id,
-        otherName: _name(other),
+        otherName: _name(other, t),
         otherAvatarUrl: (other?['profileUrl'] ?? '').toString(),
       ),
     ));
@@ -61,6 +63,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -69,25 +72,25 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         elevation: 0,
         shape: const Border(bottom: BorderSide(color: AppColors.border)),
         centerTitle: true,
-        title: Text('Messages', style: display(20, color: AppColors.forest700)),
+        title: Text(t.convMessages, style: display(20, color: AppColors.forest700)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _conversations.isEmpty
-              ? _empty()
+              ? _empty(t)
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(
                     itemCount: _conversations.length,
                     separatorBuilder: (_, __) => const Divider(
                         height: 1, indent: 76, color: AppColors.border),
-                    itemBuilder: (_, i) => _row(_conversations[i]),
+                    itemBuilder: (_, i) => _row(_conversations[i], t),
                   ),
                 ),
     );
   }
 
-  Widget _empty() {
+  Widget _empty(AppLocalizations t) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -96,10 +99,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           children: [
             const Icon(Icons.forum_outlined, size: 48, color: AppColors.hint),
             const SizedBox(height: 12),
-            Text('No messages yet',
+            Text(t.convNoMessagesYet,
                 style: display(16, color: AppColors.forest900)),
             const SizedBox(height: 4),
-            Text('Message a member from the directory to start a chat.',
+            Text(t.convStartChatHint,
                 textAlign: TextAlign.center,
                 style: body(13, color: AppColors.hint)),
           ],
@@ -108,16 +111,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     );
   }
 
-  Widget _row(Map<String, dynamic> convo) {
+  Widget _row(Map<String, dynamic> convo, AppLocalizations t) {
     final other = convo['otherUser'] as Map<String, dynamic>?;
-    final name = _name(other);
+    final name = _name(other, t);
     var last = (convo['lastText'] ?? '').toString();
     final lastMediaType = (convo['lastMediaType'] ?? '').toString();
     if (last.isEmpty && lastMediaType.isNotEmpty) {
       last = switch (lastMediaType) {
-        'video' => '🎥 Video',
-        'document' => '📄 Document',
-        _ => '📷 Photo',
+        'video' => t.convVideoLabel,
+        'document' => t.convDocumentLabel,
+        _ => t.convPhotoLabel,
       };
     }
     final unread = (convo['unread'] as num?)?.toInt() ?? 0;
@@ -130,7 +133,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           overflow: TextOverflow.ellipsis,
           style: body(14,
               weight: FontWeight.w700, color: AppColors.forest900)),
-      subtitle: Text(last.isEmpty ? 'Tap to chat' : last,
+      subtitle: Text(last.isEmpty ? t.convTapToChat : last,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: body(12,

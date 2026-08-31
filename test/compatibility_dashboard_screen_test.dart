@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:daivajna_census/data/api_client.dart';
 import 'package:daivajna_census/data/repository.dart';
+import 'package:daivajna_census/l10n/generated/app_localizations.dart';
 import 'package:daivajna_census/screens/compatibility_dashboard_screen.dart';
 import 'package:daivajna_census/screens/compatibility_report_screen.dart';
 import 'package:daivajna_census/services/auth_service.dart';
@@ -120,6 +122,13 @@ Widget _app({
     ChangeNotifierProvider<AuthService>.value(
       value: authService,
       child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: CompatibilityDashboardScreen(
           reportId: reportId,
           otherName: 'Asha',
@@ -369,9 +378,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Could not reach the server'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
 
     expect(attempt, 2);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
@@ -60,19 +61,19 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _back,
         ),
-        title: Text('Conflict Resolution',
+        title: Text(AppLocalizations.of(context).elderConflictResolution,
             style: display(18, color: Colors.white)),
       ),
       body: conflict == null
-          ? _notFound()
+          ? _notFound(AppLocalizations.of(context))
           : ListView(
               padding: const EdgeInsets.all(16),
-              children: _content(conflict),
+              children: _content(conflict, AppLocalizations.of(context)),
             ),
     );
   }
 
-  Widget _notFound() {
+  Widget _notFound(AppLocalizations t) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -80,17 +81,17 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           const Icon(Icons.help_outline_rounded,
               size: 40, color: AppColors.hint),
           const SizedBox(height: 12),
-          Text('Conflict case not found',
+          Text(t.elderConflictNotFound,
               style: body(15,
                   weight: FontWeight.w600, color: AppColors.textMuted)),
           const SizedBox(height: 16),
-          OutlineButtonX(label: 'Back to Overview', onPressed: _back),
+          OutlineButtonX(label: t.elderBackToOverview, onPressed: _back),
         ],
       ),
     );
   }
 
-  List<Widget> _content(Map<String, dynamic> c) {
+  List<Widget> _content(Map<String, dynamic> c, AppLocalizations t) {
     final isDuplicate = c['type'] == 'Duplicate';
     final discussion =
         (c['discussion'] as List).cast<Map<String, dynamic>>();
@@ -133,14 +134,14 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                             Pill(c['type'] as String,
                                 bg: AppColors.forest800.withValues(alpha: 0.10),
                                 fg: AppColors.forest800),
-                            Text('Case #${(c['id'] as String).toUpperCase()}',
+                            Text(t.elderCaseId((c['id'] as String).toUpperCase()),
                                 style: body(11, color: AppColors.hint)),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Text(c['subject'] as String,
                             style: display(22, color: AppColors.forest900)),
-                        Text('${c['born']} - ${c['died']}',
+                        Text(t.elderBornDied('${c['born']}', '${c['died']}'),
                             style: body(13, color: AppColors.textMuted)),
                       ],
                     ),
@@ -192,8 +193,8 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
       const SizedBox(height: 16),
       // Versions (side-by-side wide / stacked mobile)
       LayoutBuilder(builder: (context, constraints) {
-        final a = _versionCard(c['versionA'] as Map<String, dynamic>, 'A');
-        final b = _versionCard(c['versionB'] as Map<String, dynamic>, 'B');
+        final a = _versionCard(c['versionA'] as Map<String, dynamic>, 'A', t);
+        final b = _versionCard(c['versionB'] as Map<String, dynamic>, 'B', t);
         if (constraints.maxWidth >= 720) {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +213,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Resolution',
+            Text(t.elderResolution,
                 style: display(18, color: AppColors.forest900)),
             const SizedBox(height: 12),
             Wrap(
@@ -220,15 +221,13 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
               runSpacing: 10,
               children: [
                 ForestButton(
-                  label: 'Merge & Resolve',
+                  label: t.elderMergeResolve,
                   icon: Icons.merge_rounded,
-                  onPressed: () => _toast(
-                      'Records submitted for merge review'),
+                  onPressed: () => _toast(t.elderMergeSubmitted),
                 ),
                 OutlineButtonX(
-                  label: 'Escalate',
-                  onPressed: () =>
-                      _toast('Case escalated to the elder committee'),
+                  label: t.elderEscalate,
+                  onPressed: () => _toast(t.elderEscalated),
                 ),
               ],
             ),
@@ -238,7 +237,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 const Icon(Icons.shield_outlined,
                     size: 13, color: AppColors.hint),
                 const SizedBox(width: 5),
-                Text('Only verified Elders can resolve conflicts',
+                Text(t.elderOnlyEldersResolve,
                     style: body(11, color: AppColors.hint)),
               ],
             ),
@@ -256,7 +255,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 const Icon(Icons.forum_rounded,
                     size: 16, color: AppColors.gold700),
                 const SizedBox(width: 8),
-                Text('Elder Discussion Thread',
+                Text(t.elderDiscussionThread,
                     style: display(17, color: AppColors.forest900)),
               ],
             ),
@@ -272,7 +271,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     minLines: 1,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: 'Add your committee note…',
+                      hintText: t.elderAddCommitteeNote,
                       hintStyle: body(13, color: AppColors.hint),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
@@ -300,7 +299,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     onTap: () {
                       if (_noteCtrl.text.trim().isEmpty) return;
                       _noteCtrl.clear();
-                      _toast('Note posted to the thread');
+                      _toast(t.elderNotePosted);
                     },
                     child: const Padding(
                       padding: EdgeInsets.all(13),
@@ -318,7 +317,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
     ];
   }
 
-  Widget _versionCard(Map<String, dynamic> v, String letter) {
+  Widget _versionCard(Map<String, dynamic> v, String letter, AppLocalizations t) {
     final backed = v['backed'] as bool;
     final fields = (v['fields'] as List).cast<Map<String, dynamic>>();
     final evidence = (v['evidence'] as List).cast<String>();
@@ -346,7 +345,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                   const Icon(Icons.thumb_up_alt_rounded,
                       size: 12, color: Color(0xFF065F46)),
                   const SizedBox(width: 6),
-                  Text('Backed by records · $votes vouches',
+                  Text(t.elderBackedByRecords(votes),
                       style: body(11,
                           weight: FontWeight.w700,
                           color: const Color(0xFF065F46))),
@@ -401,7 +400,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     ),
                   ),
                 const Divider(height: 20, color: AppColors.border),
-                Text('EVIDENCE',
+                Text(t.elderEvidence,
                     style: body(10,
                         weight: FontWeight.w700,
                         color: AppColors.hint,
@@ -458,7 +457,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                                 style: body(11,
                                     weight: FontWeight.w600,
                                     color: AppColors.forest900)),
-                            Text('Submitted this version',
+                            Text(t.elderSubmittedThisVersion,
                                 style: body(10, color: AppColors.hint)),
                           ],
                         ),
@@ -468,7 +467,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 ),
                 const SizedBox(height: 12),
                 ForestButton(
-                  label: 'Support this version ($votes)',
+                  label: t.elderSupportThisVersion(votes),
                   icon: Icons.thumb_up_alt_outlined,
                   expand: true,
                   gradient: backed ? AppGradients.forest : AppGradients.gold,
@@ -476,7 +475,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                       ? AppShadows.forestGlow
                       : AppShadows.goldGlow,
                   onPressed: () =>
-                      _toast('You supported ${v['label']}'),
+                      _toast(t.elderYouSupported(v['label'] as String)),
                 ),
               ],
             ),

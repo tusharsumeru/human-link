@@ -9,6 +9,7 @@ import '../data/api_client.dart';
 import '../data/avatars.dart';
 import '../data/repository.dart';
 import '../data/saved_store.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
@@ -138,14 +139,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Family member profile ──────────────────────────────────────────────────
   Widget _dbMemberProfile(Map<String, dynamic> m) {
+    final t = AppLocalizations.of(context);
     final isLate = _isLate(m);
     final account = _account ?? const {};
     final rel = _relation ?? const {};
     // The relation label is derived server-side and relative to me, so it is only
     // shown for someone actually connected to my tree.
     final relation = rel['related'] == true
-        ? (rel['relation'] ?? 'Relative').toString()
-        : (m['isPlaceholder'] == true ? 'Pending Invitation' : 'Family Member');
+        ? (rel['relation'] ?? t.profileRelative).toString()
+        : (m['isPlaceholder'] == true
+            ? t.profilePendingInvitation
+            : t.profileFamilyMember);
     final biography = (m['biography'] ?? '').toString().trim();
     final placeOfDeath = (m['placeOfDeath'] ?? '').toString().trim();
 
@@ -164,6 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             photoUrl: (m['profileUrl'] ?? '').toString(),
             isLate: isLate,
             verified: (m['linkedUserId'] ?? '').toString().isNotEmpty,
+            t: t,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
@@ -187,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     isLate ? 'Late' : 'Active'),
                 const SizedBox(height: 24),
                 ForestButton(
-                  label: 'View in Family Tree',
+                  label: t.profileViewInFamilyTree,
                   icon: Icons.account_tree_outlined,
                   expand: true,
                   onPressed: () => context.go('/family-tree'),
@@ -202,6 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Current-user (self) profile ─────────────────────────────────────────────
   Widget _selfProfile() {
+    final t = AppLocalizations.of(context);
     final user = context.watch<AuthService>().user;
     if (user == null) {
       return Scaffold(
@@ -210,11 +216,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Please sign in to view your profile.',
+              Text(t.profilePleaseSignIn,
                   style: body(14, color: AppColors.textMuted)),
               const SizedBox(height: 12),
               ForestButton(
-                  label: 'Go to Login',
+                  label: t.profileGoToLogin,
                   onPressed: () => context.go('/login')),
             ],
           ),
@@ -230,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _Header(
             name: user.name,
-            relation: user.isElder ? 'Elder & Samaj Admin' : 'Samaj Member',
+            relation: user.isElder ? t.profileElderAdmin : t.profileSamajMember,
             gotra: _dash(user.gotra),
             native: _dash(user.native),
             avatarUrl: avatarUrl(user.avatar),
@@ -238,6 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             photoUrl: user.photoUrl,
             isLate: false,
             verified: user.verified,
+            t: t,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
@@ -263,20 +270,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const _SavedCard(),
                 const SizedBox(height: 24),
                 ForestButton(
-                  label: 'Edit Profile',
+                  label: t.profileEditProfile,
                   icon: Icons.edit_outlined,
                   expand: true,
                   onPressed: () => context.push('/profile/edit'),
                 ),
                 const SizedBox(height: 12),
                 OutlineButtonX(
-                  label: 'Matrimonial Details',
+                  label: t.profileMatrimonialDetails,
                   expand: true,
                   onPressed: () => context.push('/matrimonial/edit'),
                 ),
                 const SizedBox(height: 12),
                 OutlineButtonX(
-                  label: 'View in Family Tree',
+                  label: t.profileViewInFamilyTree,
                   expand: true,
                   onPressed: () => context.go('/family-tree'),
                 ),
@@ -284,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // Optional — nothing in the app requires Aadhaar. It only
                 // fills some profile fields in for you.
                 OutlineButtonX(
-                  label: 'Verify Identity (optional)',
+                  label: t.profileVerifyIdentityOptional,
                   expand: true,
                   color: AppColors.gold700,
                   onPressed: () => context.push('/profile/verify'),
@@ -298,6 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _aadhaarVerifiedCard(String maskedAadhaar) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       color: const Color(0xFFF0FBF4),
       border: true,
@@ -319,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Row(
                   children: [
-                    Text('Aadhaar Verified',
+                    Text(t.profileAadhaarVerified,
                         style: display(16, color: AppColors.forest900)),
                     const SizedBox(width: 6),
                     const Icon(Icons.check_circle,
@@ -329,8 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 2),
                 Text(
                   maskedAadhaar.isEmpty
-                      ? 'Verified via DigiLocker'
-                      : 'via DigiLocker · $maskedAadhaar',
+                      ? t.profileVerifiedViaDigilocker
+                      : t.profileViaDigilockerMasked(maskedAadhaar),
                   style: body(12, color: AppColors.forest700),
                 ),
               ],
@@ -343,6 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _aboutCard(String occupation, String birthYear, String status,
       {String samajId = ''}) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               const Icon(Icons.work_outline, size: 18, color: AppColors.gold700),
               const SizedBox(width: 8),
-              Text('About & Occupation',
+              Text(t.profileAboutOccupation,
                   style: display(18, color: AppColors.forest900)),
             ],
           ),
@@ -360,16 +369,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _samajRow(samajId),
             const Divider(height: 22, color: AppColors.creamDark),
           ],
-          _detailRow(Icons.badge_outlined, 'Occupation', occupation),
+          _detailRow(Icons.badge_outlined, t.profileOccupation, occupation),
           const Divider(height: 22, color: AppColors.creamDark),
-          _detailRow(Icons.cake_outlined, 'Birth Year', birthYear),
+          _detailRow(Icons.cake_outlined, t.profileBirthYear, birthYear),
           const Divider(height: 22, color: AppColors.creamDark),
           _detailRow(
             status == 'Late'
                 ? Icons.local_florist_outlined
                 : Icons.verified_user_outlined,
-            'Status',
-            status == 'Late' ? 'In Memoriam' : 'Active Member',
+            t.profileStatus,
+            status == 'Late' ? t.profileInMemoriam : t.profileActiveMember,
           ),
         ],
       ),
@@ -378,6 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// In memoriam details, which only a deceased member record carries.
   Widget _memoriamCard(String dod, String placeOfDeath) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       color: const Color(0xFFF3F4F6),
       border: true,
@@ -389,14 +399,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Icon(Icons.local_florist_rounded,
                   size: 18, color: AppColors.textMuted),
               const SizedBox(width: 8),
-              Text('In Memoriam', style: display(18, color: AppColors.forest900)),
+              Text(t.profileInMemoriam, style: display(18, color: AppColors.forest900)),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             [
-              if (dod != '—') 'Passed away $dod',
-              if (placeOfDeath.isNotEmpty) 'at $placeOfDeath',
+              if (dod != '—') t.profilePassedAway(dod),
+              if (placeOfDeath.isNotEmpty) t.profileAt(placeOfDeath),
             ].join(' '),
             style: body(13, color: AppColors.textMuted, height: 1.5),
           ),
@@ -408,6 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// This member's own immediate family — the seven stored relations, labelled as
   /// the server derives them from *their* viewpoint.
   Widget _lineageCard(List<Map<String, dynamic>> immediate) {
+    final t = AppLocalizations.of(context);
     final hasAny = immediate.isNotEmpty;
     return AppCard(
       child: Column(
@@ -421,13 +432,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Icon(Icons.account_tree_outlined,
                       size: 18, color: AppColors.forest700),
                   const SizedBox(width: 8),
-                  Text('Family Relations',
+                  Text(t.profileFamilyRelations,
                       style: display(18, color: AppColors.forest900)),
                 ],
               ),
               GestureDetector(
                 onTap: () => context.go('/family-tree'),
-                child: Text('Full Tree →',
+                child: Text(t.profileFullTree,
                     style: body(12,
                         weight: FontWeight.w600, color: AppColors.forest800)),
               ),
@@ -437,7 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (!hasAny)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text('No connected relations yet',
+              child: Text(t.profileNoConnectedRelations,
                   style: body(13, color: AppColors.textMuted)),
             ),
           for (final r in immediate) _relationTile(r),
@@ -449,6 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// One tree node from [_immediate]: `id` (not `_id`), the derived `relation`
   /// and `profileUrl`.
   Widget _relationTile(Map<String, dynamic> m) {
+    final t = AppLocalizations.of(context);
     final mid = (m['id'] ?? '').toString();
     final late = _isLate(m);
     final label = (m['relation'] ?? '').toString().trim();
@@ -471,13 +483,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${late ? 'Late ' : ''}${m['name']}',
+                  Text('${late ? "${t.profileLate} " : ""}${m['name']}',
                       style: body(14,
                           weight: FontWeight.w600, color: AppColors.ink)),
                   Text(
                       [
-                        label.isEmpty ? 'Relative' : label,
-                        if (m['isPlaceholder'] == true) 'not joined yet',
+                        label.isEmpty ? t.profileRelative : label,
+                        if (m['isPlaceholder'] == true) t.profileNotJoinedYet,
                       ].join(' · '),
                       style: body(11, color: AppColors.textMuted)),
                 ],
@@ -491,6 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _archiveCard(String archive) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,7 +512,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               const Icon(Icons.star, size: 18, color: AppColors.gold700),
               const SizedBox(width: 8),
-              Text('Life Archive',
+              Text(t.profileLifeArchive,
                   style: display(18, color: AppColors.forest900)),
             ],
           ),
@@ -524,19 +537,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _statsCard(String gotra, String native, String status) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       color: AppColors.cream,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Quick Stats',
+          Text(t.profileQuickStats,
               style: display(16, color: AppColors.forest900)),
           const SizedBox(height: 14),
           Row(
             children: [
-              _stat('Gotra', gotra),
-              _stat('Native', native.split(',').first.trim()),
-              _stat('Standing', status == 'Late' ? 'Ancestor' : 'Member'),
+              _stat(t.profileGotra, gotra),
+              _stat(t.profileNative, native.split(',').first.trim()),
+              _stat(t.profileStanding,
+                  status == 'Late' ? t.profileAncestor : t.profileMember),
             ],
           ),
         ],
@@ -573,6 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Samaj ID row for the About card — like [_detailRow] but with a trailing
   /// one-tap copy, since this is the number relatives search by to connect.
   Widget _samajRow(String samajId) {
+    final t = AppLocalizations.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -582,7 +598,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Samaj ID', style: body(11, color: AppColors.textMuted)),
+              Text(t.profileSamajId, style: body(11, color: AppColors.textMuted)),
               const SizedBox(height: 2),
               Text(samajId,
                   style: body(14,
@@ -596,7 +612,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Clipboard.setData(ClipboardData(text: samajId));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Samaj ID $samajId copied'),
+                content: Text(t.profileSamajIdCopied(samajId)),
                 backgroundColor: AppColors.forest800,
               ),
             );
@@ -645,6 +661,7 @@ class _Header extends StatelessWidget {
     required this.photoUrl,
     required this.isLate,
     required this.verified,
+    required this.t,
   });
 
   final String name;
@@ -656,6 +673,7 @@ class _Header extends StatelessWidget {
   final String photoUrl;
   final bool isLate;
   final bool verified;
+  final AppLocalizations t;
 
   Widget _avatar() {
     // Prefer the uploaded (remote) photo, then a local selfie file, then
@@ -744,11 +762,11 @@ class _Header extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text('In Memoriam',
+              child: Text(t.profileInMemoriam,
                   style: body(11,
                       weight: FontWeight.w600, color: AppColors.forest300)),
             ),
-          Text('${isLate ? 'Late ' : ''}$name',
+          Text('${isLate ? "${t.profileLate} " : ""}$name',
               textAlign: TextAlign.center,
               style: display(24, color: Colors.white)),
           const SizedBox(height: 4),
@@ -768,7 +786,7 @@ class _Header extends StatelessWidget {
                   bg: Colors.white.withValues(alpha: 0.14),
                   fg: Colors.white),
               if (verified)
-                Pill('Verified',
+                Pill(t.profileVerifiedPill,
                     icon: Icons.verified,
                     bg: AppColors.gold500.withValues(alpha: 0.25),
                     fg: AppColors.goldSoft),
@@ -823,7 +841,7 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(e is ApiException
             ? e.message
-            : "Couldn't save that. Check your connection and try again."),
+            : AppLocalizations.of(context).profileCouldNotSave),
       ));
     }
   }
@@ -834,6 +852,7 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
     final user = auth.user;
     if (user == null) return const SizedBox.shrink();
     final on = user.showPhoneToMembers;
+    final t = AppLocalizations.of(context);
 
     return AppCard(
       child: Column(
@@ -843,7 +862,7 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
             children: [
               const Icon(Icons.phone_outlined, size: 18, color: AppColors.gold700),
               const SizedBox(width: 8),
-              Text('Phone Number',
+              Text(t.profilePhoneNumber,
                   style: display(18, color: AppColors.forest900)),
             ],
           ),
@@ -855,14 +874,14 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Share with members',
+                    Text(t.profileShareWithMembers,
                         style: body(14,
                             weight: FontWeight.w600, color: AppColors.ink)),
                     const SizedBox(height: 3),
                     Text(
                       on
-                          ? 'Members who open your profile can see and call your number.'
-                          : 'Your number stays private. Members can still message you in the app.',
+                          ? t.profilePhoneVisibleDesc
+                          : t.profilePhoneHiddenDesc,
                       style: body(12, color: AppColors.textMuted, height: 1.45),
                     ),
                   ],
@@ -908,8 +927,8 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
                 Expanded(
                   child: Text(
                     on
-                        ? (user.phone.isEmpty ? 'Visible to members' : user.phone)
-                        : 'Hidden from other members',
+                        ? (user.phone.isEmpty ? t.profileVisibleToMembers : user.phone)
+                        : t.profileHiddenFromMembers,
                     style: body(13,
                         weight: FontWeight.w600,
                         color: on ? AppColors.forest800 : AppColors.textMuted),
@@ -935,6 +954,7 @@ class _SavedCard extends StatelessWidget {
     return ListenableBuilder(
       listenable: SavedStore.instance,
       builder: (context, _) {
+        final t = AppLocalizations.of(context);
         final items = SavedStore.instance.items;
         return AppCard(
           child: Column(
@@ -945,7 +965,7 @@ class _SavedCard extends StatelessWidget {
                   const Icon(Icons.bookmark_rounded,
                       size: 18, color: AppColors.gold700),
                   const SizedBox(width: 8),
-                  Text('Saved', style: display(18, color: AppColors.forest900)),
+                  Text(t.profileSaved, style: display(18, color: AppColors.forest900)),
                   const Spacer(),
                   if (items.isNotEmpty)
                     Text('${items.length}',
@@ -959,8 +979,7 @@ class _SavedCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'No saved posts yet. Tap the bookmark on any reel or post '
-                    'to keep it here.',
+                    t.profileNoSavedPostsYet,
                     style: body(13, color: AppColors.textMuted, height: 1.4),
                   ),
                 )

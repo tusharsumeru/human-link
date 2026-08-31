@@ -8,6 +8,7 @@ import '../data/gotras.dart';
 import '../data/kuladevatas.dart';
 import '../data/models/parampara.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -209,13 +210,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _lng = addr.longitude;
         _fixIsCurrent = addr.hasLocation;
       });
+      if (!mounted) return;
+      final t = AppLocalizations.of(context);
       _snack(addr.isEmpty
-          ? 'Got your position - fill in the address parts'
-          : 'Address filled in from your location');
+          ? t.editGotPositionFillParts
+          : t.editAddressFilledFromLocation);
     } on LocationFailure catch (e) {
       _snack(e.message);
     } catch (_) {
-      _snack('Could not read your location');
+      if (mounted) _snack(AppLocalizations.of(context).editCouldNotReadLocation);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -230,7 +233,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           await FilePicker.platform.pickFiles(type: FileType.image);
       path = result?.files.single.path;
     } catch (e) {
-      _snack('Could not pick an image: $e');
+      if (mounted) {
+        _snack(AppLocalizations.of(context).editCouldNotPickImage('$e'));
+      }
       return;
     }
     if (path == null) return;
@@ -247,9 +252,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       final auth = context.read<AuthService>();
       final u = auth.user;
       if (u != null) await auth.updateUser(u.copyWith(photoUrl: url));
-      _snack('Photo updated');
+      _snack(AppLocalizations.of(context).editPhotoUpdated);
     } catch (e) {
-      _snack(e is ApiException ? e.message : 'Could not upload the photo');
+      if (mounted) {
+        _snack(e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).editCouldNotUploadPhoto);
+      }
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }
@@ -266,7 +275,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       // matrimonial age check is computed from whatever is chosen here.
       firstDate: DateTime(now.year - 100),
       lastDate: now,
-      helpText: 'Date of birth',
+      helpText: AppLocalizations.of(context).editDobHelpText,
     );
     if (picked != null) setState(() => _dob = picked);
   }
@@ -292,6 +301,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final t = AppLocalizations.of(context);
     setState(() => _saving = true);
     try {
       final updated = await Repository.instance.saveProfile(
@@ -328,10 +338,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         await Repository.instance.saveKuladevata(_kuladevata);
       }
       if (!mounted) return;
-      _snack('Profile saved');
+      _snack(t.editProfileSaved);
       if (context.canPop()) context.pop();
     } catch (e) {
-      _snack(e is ApiException ? e.message : 'Could not save your profile');
+      _snack(e is ApiException ? e.message : t.editCouldNotSaveProfile);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -347,6 +357,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final name = context.watch<AuthService>().user?.name ?? '';
+    final t = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -355,54 +366,54 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Edit Profile', style: display(18, color: Colors.white)),
+        title: Text(t.editProfileTitle, style: display(18, color: Colors.white)),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
           children: [
-            _photoField(name),
+            _photoField(name, t),
             const SizedBox(height: 26),
 
-            _sectionLabel('BASIC DETAILS'),
-            _text(_name, 'Full name',
+            _sectionLabel(t.editSectionBasicDetails),
+            _text(_name, t.editFullName,
                 validator: (v) => (v == null || v.trim().length < 2)
-                    ? 'Name must be at least 2 characters'
+                    ? t.editNameTooShort
                     : null),
-            _genderField(),
-            _dobField(),
-            _gotraField(),
-            _kuladevataField(),
-            _text(_native, 'Native place', hint: 'e.g. Kumta, Karnataka'),
-            _text(_occupation, 'Occupation', hint: 'e.g. Software Engineer'),
+            _genderField(t),
+            _dobField(t),
+            _gotraField(t),
+            _kuladevataField(t),
+            _text(_native, t.editNativePlace, hint: t.editNativePlaceHint),
+            _text(_occupation, t.editOccupation, hint: t.editOccupationHint),
 
             const SizedBox(height: 18),
-            _sectionLabel('CURRENT ADDRESS'),
-            _locationRow(),
-            _text(_country, 'Country', hint: 'e.g. India'),
-            _text(_state, 'State', hint: 'e.g. Karnataka'),
-            _text(_district, 'District', hint: 'e.g. Bangalore Urban'),
-            _text(_taluk, 'Taluk', hint: 'e.g. Bangalore North'),
-            _text(_city, 'City / Town / Village', hint: 'e.g. Bangalore'),
-            _text(_area, 'Area / Locality', hint: 'e.g. Rajajinagar'),
-            _text(_street, 'Street', hint: 'e.g. 3rd Cross, 5th Main'),
-            _text(_landmark, 'Landmark', hint: 'e.g. Opposite Navrang Theatre'),
-            _text(_pincode, 'PIN code',
-                hint: '6 digits',
+            _sectionLabel(t.editSectionCurrentAddress),
+            _locationRow(t),
+            _text(_country, t.editCountry, hint: t.editCountryHint),
+            _text(_state, t.editState, hint: t.editStateHint),
+            _text(_district, t.editDistrict, hint: t.editDistrictHint),
+            _text(_taluk, t.editTaluk, hint: t.editTalukHint),
+            _text(_city, t.editCity, hint: t.editCityHint),
+            _text(_area, t.editArea, hint: t.editAreaHint),
+            _text(_street, t.editStreet, hint: t.editStreetHint),
+            _text(_landmark, t.editLandmark, hint: t.editLandmarkHint),
+            _text(_pincode, t.editPincode,
+                hint: t.editPincodeHint,
                 keyboardType: TextInputType.number,
                 validator: (v) {
                   final s = (v ?? '').trim();
                   if (s.isEmpty) return null;
                   return RegExp(r'^\d{6}$').hasMatch(s)
                       ? null
-                      : 'PIN code must be 6 digits';
+                      : t.editPincodeInvalid;
                 }),
 
             const SizedBox(height: 18),
-            _sectionLabel('ABOUT'),
-            _text(_bio, 'Bio', maxLines: 3, maxLength: 500),
-            _text(_address, 'Address (old, single line)', maxLines: 2),
+            _sectionLabel(t.editSectionAbout),
+            _text(_bio, t.editBio, maxLines: 3, maxLength: 500),
+            _text(_address, t.editAddressOldSingleLine, maxLines: 2),
 
             const SizedBox(height: 26),
             SizedBox(
@@ -414,14 +425,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: _saving ? null : _save,
-                child: Text(_saving ? 'Saving…' : 'Save changes',
+                child: Text(_saving ? t.editSaving : t.editSaveChanges,
                     style: body(15,
                         weight: FontWeight.w700, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              'Aadhaar verification is optional. Every detail here can be entered by hand - verifying only fills some of them in for you.',
+              t.editAadhaarOptionalNote,
               textAlign: TextAlign.center,
               style: body(12, color: AppColors.textMuted, height: 1.4),
             ),
@@ -431,7 +442,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Widget _photoField(String name) {
+  Widget _photoField(String name, AppLocalizations t) {
     return Column(
       children: [
         Stack(
@@ -471,8 +482,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         const SizedBox(height: 10),
         Text(
           _photoUrl.isEmpty
-              ? 'Add a profile photo - required for the matrimonial section'
-              : 'Tap the camera to change your photo',
+              ? t.editAddPhotoRequired
+              : t.editTapCameraToChange,
           textAlign: TextAlign.center,
           style: body(12,
               color: _photoUrl.isEmpty ? AppColors.gold700 : AppColors.textMuted,
@@ -494,14 +505,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   /// "Use my current location", plus what came of it. The coordinates matter
   /// enough to show: they are what the navigation feature routes to, and a
   /// member should be able to see whether their address has them.
-  Widget _locationRow() {
+  Widget _locationRow(AppLocalizations t) {
     final saved = context.read<AuthService>().user?.currentAddress;
     final hasSavedFix = saved?.hasLocation ?? false;
     final status = _fixIsCurrent && _lat != null && _lng != null
-        ? 'Pinned at ${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)}'
+        ? t.editPinnedAt(_lat!.toStringAsFixed(4), _lng!.toStringAsFixed(4))
         : hasSavedFix
-            ? 'Already on the map. Editing the address re-pins it when you save.'
-            : 'Coordinates are worked out from the address when you save.';
+            ? t.editAlreadyOnMap
+            : t.editCoordinatesFromAddress;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -517,7 +528,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location_rounded, size: 18),
-            label: Text(_locating ? 'Locating…' : 'Use my current location',
+            label: Text(_locating ? t.editLocating : t.editUseCurrentLocation,
                 style: body(13, weight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.forest800,
@@ -570,7 +581,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Widget _gotraField() {
+  Widget _gotraField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<String>(
@@ -579,8 +590,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
         style: body(14, color: AppColors.ink),
         decoration: InputDecoration(
-          labelText: 'Gotra',
-          hintText: 'Select your gotra',
+          labelText: t.editGotra,
+          hintText: t.editSelectGotra,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -602,7 +613,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   static const _kuladevataNotSet = '';
 
-  Widget _kuladevataField() {
+  Widget _kuladevataField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<String>(
@@ -611,8 +622,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
         style: body(14, color: AppColors.ink),
         decoration: InputDecoration(
-          labelText: 'Kuladevata',
-          hintText: 'Select your Kuladevata',
+          labelText: t.editKuladevata,
+          hintText: t.editSelectKuladevata,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -627,7 +638,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         items: [
           DropdownMenuItem(
             value: _kuladevataNotSet,
-            child: Text('Not set', style: body(14, color: AppColors.hint)),
+            child: Text(t.editNotSet, style: body(14, color: AppColors.hint)),
           ),
           for (final k in _kuladevataOptions) DropdownMenuItem(value: k, child: Text(k)),
         ],
@@ -637,14 +648,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Widget _genderField() {
+  Widget _genderField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Text('Gender', style: body(14, color: AppColors.label)),
+          Text(t.editGender, style: body(14, color: AppColors.label)),
           const SizedBox(width: 16),
-          for (final (value, label) in [('M', 'Male'), ('F', 'Female')])
+          for (final (value, label) in [('M', t.editMale), ('F', t.editFemale)])
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
@@ -659,7 +670,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Widget _dobField() {
+  Widget _dobField(AppLocalizations t) {
     final age = _age;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -668,7 +679,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         borderRadius: BorderRadius.circular(12),
         child: InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Date of birth',
+            labelText: t.editDobHelpText,
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -682,14 +693,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
           child: Row(
             children: [
-              Text(_dobIso.isEmpty ? 'Not set' : _dobIso,
+              Text(_dobIso.isEmpty ? t.editNotSet : _dobIso,
                   style: body(14,
                       color: _dobIso.isEmpty
                           ? AppColors.hint
                           : AppColors.ink)),
               const Spacer(),
               if (age != null)
-                Text('$age years',
+                Text(t.editAgeYears(age),
                     style: body(12,
                         weight: FontWeight.w600, color: AppColors.textMuted)),
               const SizedBox(width: 8),

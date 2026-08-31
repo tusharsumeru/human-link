@@ -6,6 +6,7 @@ import '../data/api_client.dart';
 import '../data/models/compatibility_models.dart';
 import '../data/models/compatibility_prerequisites.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
@@ -95,8 +96,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error =
-            e is ApiException ? e.message : 'Could not check compatibility readiness';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).compCheckReadinessError;
         _loading = false;
       });
     }
@@ -112,6 +114,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
 
     final prereqs = _prereqs;
     if (prereqs == null) return;
+    final t = AppLocalizations.of(context);
 
     final myRole =
         TraditionalRole.forGender(context.read<AuthService>().user?.gender ?? '');
@@ -122,10 +125,8 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         _calcError = CompatibilityRequestError(
           reason: CompatibilityErrorReason.missingRole,
           message: myRole == null
-              ? 'Add your gender in Profile → Edit first - it decides your '
-                  'traditional bride/groom role.'
-              : "This member's profile doesn't have a gender on file, so "
-                  "their traditional role can't be determined.",
+              ? t.compErrorGenericMissingRoleMine
+              : t.compErrorGenericMissingRoleTheirs,
           profile:
               myRole == null ? CompatibilityErrorProfile.a : CompatibilityErrorProfile.b,
         );
@@ -163,9 +164,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       if (response.reportId.trim().isEmpty) {
         setState(() {
           _calculating = false;
-          _calcError = const CompatibilityRequestError(
+          _calcError = CompatibilityRequestError(
             reason: CompatibilityErrorReason.apiError,
-            message: 'Could not calculate compatibility right now.',
+            message: t.compErrorCalcFailed,
           );
         });
         return;
@@ -194,9 +195,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       if (!mounted) return;
       setState(() {
         _calculating = false;
-        _calcError = const CompatibilityRequestError(
+        _calcError = CompatibilityRequestError(
           reason: CompatibilityErrorReason.apiError,
-          message: 'Could not calculate compatibility right now.',
+          message: t.compErrorCalcFailed,
         );
       });
     }
@@ -214,6 +215,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
 
     final prereqs = _prereqs;
     if (prereqs == null || !prereqs.jataka.isReady) return;
+    final t = AppLocalizations.of(context);
 
     final myRole =
         TraditionalRole.forGender(context.read<AuthService>().user?.gender ?? '');
@@ -224,10 +226,8 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         _jatakaCalcError = CompatibilityRequestError(
           reason: CompatibilityErrorReason.missingRole,
           message: myRole == null
-              ? 'Add your gender in Profile → Edit first - it decides your '
-                  'traditional bride/groom role.'
-              : "This member's profile doesn't have a gender on file, so "
-                  "their traditional role can't be determined.",
+              ? t.compErrorGenericMissingRoleMine
+              : t.compErrorGenericMissingRoleTheirs,
           profile:
               myRole == null ? CompatibilityErrorProfile.a : CompatibilityErrorProfile.b,
         );
@@ -256,9 +256,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       if (response.reportId.trim().isEmpty) {
         setState(() {
           _jatakaCalculating = false;
-          _jatakaCalcError = const CompatibilityRequestError(
+          _jatakaCalcError = CompatibilityRequestError(
             reason: CompatibilityErrorReason.apiError,
-            message: 'Could not calculate compatibility right now.',
+            message: t.compErrorCalcFailed,
           );
         });
         return;
@@ -280,9 +280,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       if (!mounted) return;
       setState(() {
         _jatakaCalculating = false;
-        _jatakaCalcError = const CompatibilityRequestError(
+        _jatakaCalcError = CompatibilityRequestError(
           reason: CompatibilityErrorReason.apiError,
-          message: 'Could not calculate compatibility right now.',
+          message: t.compErrorCalcFailed,
         );
       });
     }
@@ -290,6 +290,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -297,17 +298,17 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Check Compatibility', style: display(18, color: Colors.white)),
+        title: Text(t.compCheckCompatibilityTitle, style: display(18, color: Colors.white)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _errorState(_error!)
-              : _content(_prereqs!),
+              ? _errorState(_error!, t)
+              : _content(_prereqs!, t),
     );
   }
 
-  Widget _errorState(String message) {
+  Widget _errorState(String message, AppLocalizations t) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -320,14 +321,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
                 textAlign: TextAlign.center,
                 style: body(14, color: AppColors.textMuted)),
             const SizedBox(height: 14),
-            OutlineButtonX(label: 'Try again', onPressed: _load),
+            OutlineButtonX(label: t.commonRetry, onPressed: _load),
           ],
         ),
       ),
     );
   }
 
-  Widget _content(CompatibilityPrerequisites p) {
+  Widget _content(CompatibilityPrerequisites p, AppLocalizations t) {
     final canContinue = p.overallStatus.hasAnyReadyModule && !_calculating;
 
     return Stack(
@@ -335,21 +336,22 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 150),
           children: [
-            Text('You × ${widget.candidateName}',
+            Text(t.compYouAnd(widget.candidateName),
                 style: display(18, color: AppColors.forest900)),
             const SizedBox(height: 6),
             Text(
-              'See your Jataka and profile compatibility.',
+              t.compSeeJatakaProfile,
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 16),
-            _moduleCard(context, 'Profile Compatibility', p.profileCompatibility),
+            _moduleCard(context, t.compProfileCompatibility, p.profileCompatibility, t),
             const SizedBox(height: 10),
             _moduleCard(
               context,
-              'South Indian Jataka',
+              t.compSouthIndianJataka,
               p.jataka,
-              readyExtra: p.jataka.isReady ? _jatakaReadyAction() : null,
+              t,
+              readyExtra: p.jataka.isReady ? _jatakaReadyAction(t) : null,
             ),
           ],
         ),
@@ -357,13 +359,13 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           left: 0,
           right: 0,
           bottom: 0,
-          child: _continueBar(canContinue, p.overallStatus),
+          child: _continueBar(canContinue, p.overallStatus, t),
         ),
       ],
     );
   }
 
-  Widget _continueBar(bool canTap, OverallReadinessStatus overallStatus) {
+  Widget _continueBar(bool canTap, OverallReadinessStatus overallStatus, AppLocalizations t) {
     // "Nothing is ready at all" (dim the button) is a different state from
     // "a request is in flight" (spinner, but still a normal-looking button)
     // — [canTap] already folds in `!_calculating`, so recover the former on
@@ -373,7 +375,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     final button = SizedBox(
       height: 48,
       child: ForestButton(
-        label: 'Check Compatibility',
+        label: t.compCheckCompatibilityTitle,
         icon: Icons.favorite_rounded,
         expand: true,
         loading: _calculating,
@@ -393,18 +395,18 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_calculating) ...[
-              Text('Checking Compatibility...',
+              Text(t.compChecking,
                   textAlign: TextAlign.center,
                   style: body(12, weight: FontWeight.w600, color: AppColors.forest700)),
               const SizedBox(height: 8),
             ] else if (_calcError != null) ...[
-              _calcErrorBanner(_calcError!),
+              _calcErrorBanner(_calcError!, t),
               const SizedBox(height: 8),
             ] else if (!hasReadyModules) ...[
               Text(
                 overallStatus == OverallReadinessStatus.actionRequired
-                    ? 'Complete the highlighted sections above to check compatibility.'
-                    : "Compatibility can't be checked with this profile yet.",
+                    ? t.compCompleteHighlighted
+                    : t.compCantCheckYet,
                 textAlign: TextAlign.center,
                 style: body(12, color: AppColors.textMuted),
               ),
@@ -424,21 +426,21 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   /// Only offers an action when the gap is the signed-in member's own
   /// ([CompatibilityErrorProfile.a]) and Flutter has a screen for it —
   /// mirrors [_actionFor]'s "only actionable, only real screens" rule.
-  Widget _calcErrorBanner(CompatibilityRequestError error) {
+  Widget _calcErrorBanner(CompatibilityRequestError error, AppLocalizations t) {
     final mine = error.profile == CompatibilityErrorProfile.a;
     final (String? actionLabel, VoidCallback? onAction) = !mine
         ? (null, null)
         : switch (error.reason) {
             CompatibilityErrorReason.missingRole => (
-                'Go to Profile',
+                t.compGoToProfile,
                 () => context.push('/profile/edit'),
               ),
             CompatibilityErrorReason.missingBirthData => (
-                'Add Birth Details',
+                t.compAddBirthDetailsBtn,
                 () => context.push('/matrimonial/birth-details'),
               ),
             CompatibilityErrorReason.missingConsent => (
-                'Manage Consent',
+                t.compManageConsent,
                 () async {
                   await context.push('/matrimonial/compatibility-consent');
                   if (mounted) _load();
@@ -490,14 +492,15 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   Widget _moduleCard(
     BuildContext context,
     String title,
-    ModuleReadiness readiness, {
-    String readyLabel = 'Ready',
+    ModuleReadiness readiness,
+    AppLocalizations t, {
+    String? readyLabel,
     Widget? readyExtra,
   }) {
-    final visual = _statusVisual(readiness.status, readyLabel: readyLabel);
+    final visual = _statusVisual(readiness.status, readyLabel: readyLabel ?? t.compReady, t: t);
     final action = (readiness.status == ReadinessStatus.actionRequired &&
             readiness.reason.isActionableByViewer)
-        ? _actionFor(context, readiness.reason)
+        ? _actionFor(context, readiness.reason, t)
         : null;
 
     return AppCard(
@@ -531,13 +534,13 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           ] else if (readiness.status == ReadinessStatus.actionRequired &&
               readiness.reason == PrerequisiteReason.yourVerificationIncomplete) ...[
             const SizedBox(height: 6),
-            Text('Verification required.', style: body(12, color: AppColors.textMuted)),
+            Text(t.compVerificationRequired, style: body(12, color: AppColors.textMuted)),
           ] else if (readiness.status == ReadinessStatus.unavailable) ...[
             const SizedBox(height: 6),
             // Deliberately generic — never names what specifically the
             // candidate is missing, whether it's their data or their
             // consent (§5/§6 of the spec).
-            Text('Compatibility data is not available for this section yet.',
+            Text(t.compDataNotAvailableYet,
                 style: body(12, color: AppColors.textMuted)),
           ],
           if (readiness.status == ReadinessStatus.ready && readyExtra != null) ...[
@@ -551,7 +554,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
 
   /// STEP F1 — the South Indian Jataka module card's own scoped action:
   /// button → loading → inline error, independent of the bulk Continue bar.
-  Widget _jatakaReadyAction() {
+  Widget _jatakaReadyAction(AppLocalizations t) {
     if (_jatakaCalculating) {
       return Row(
         children: [
@@ -561,7 +564,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 8),
-          Text('Checking compatibility...',
+          Text(t.compCheckingEllipsis,
               style: body(12, weight: FontWeight.w600, color: AppColors.forest700)),
         ],
       );
@@ -570,10 +573,10 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_jatakaCalcError != null) ...[
-          _calcErrorBanner(_jatakaCalcError!),
+          _calcErrorBanner(_jatakaCalcError!, t),
           const SizedBox(height: 8),
         ],
-        OutlineButtonX(label: 'Check Compatibility', onPressed: _checkJataka),
+        OutlineButtonX(label: t.compCheckCompatibilityTitle, onPressed: _checkJataka),
       ],
     );
   }
@@ -581,6 +584,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   ({IconData icon, Color color, String label}) _statusVisual(
     ReadinessStatus status, {
     required String readyLabel,
+    required AppLocalizations t,
   }) {
     switch (status) {
       case ReadinessStatus.ready:
@@ -589,14 +593,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         return (
           icon: Icons.error_outline_rounded,
           color: AppColors.gold500,
-          label: 'More information needed',
+          label: t.compMoreInfoNeeded,
         );
       case ReadinessStatus.unavailable:
       case ReadinessStatus.unknown:
         return (
           icon: Icons.remove_circle_outline_rounded,
           color: AppColors.hint,
-          label: 'Not available yet',
+          label: t.compNotAvailableYet,
         );
     }
   }
@@ -607,18 +611,19 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   ({String description, String actionLabel, VoidCallback onTap})? _actionFor(
     BuildContext context,
     PrerequisiteReason reason,
+    AppLocalizations t,
   ) {
     switch (reason) {
       case PrerequisiteReason.yourBirthDetailsMissing:
         return (
-          description: 'Birth details required.',
-          actionLabel: 'Add Birth Details',
+          description: t.compBirthDetailsRequired,
+          actionLabel: t.compAddBirthDetailsBtn,
           onTap: () => context.push('/matrimonial/birth-details'),
         );
       case PrerequisiteReason.yourConsentRequired:
         return (
-          description: 'Compatibility permission required.',
-          actionLabel: 'Manage Consent',
+          description: t.compPermissionRequired,
+          actionLabel: t.compManageConsent,
           // Re-fetch readiness on return: a module's Ready/Action Required
           // status depends on this consent, so a toggle flipped on that
           // screen must be reflected here immediately, not left stale.
@@ -629,14 +634,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         );
       case PrerequisiteReason.insufficientProfileData:
         return (
-          description: 'Complete a few compatibility questions.',
-          actionLabel: 'Complete Questions',
+          description: t.compCompleteAFewQuestions,
+          actionLabel: t.compCompleteQuestions,
           onTap: () => context.push('/matrimonial/edit'),
         );
       case PrerequisiteReason.yourFamilyTreeIncomplete:
         return (
-          description: 'Add a few more family relationships to enable this.',
-          actionLabel: 'Update Family Tree',
+          description: t.compFamilyTreeIncompleteBody,
+          actionLabel: t.compUpdateFamilyTree,
           onTap: () => context.push('/family-tree'),
         );
       default:

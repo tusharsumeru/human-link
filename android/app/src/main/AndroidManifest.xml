@@ -4,6 +4,23 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Android 13+ (API 33) split "storage" into per-media-type read
+         permissions; below that, READ_EXTERNAL_STORAGE (capped at API 32)
+         covers the same ground. image_picker/file_picker mostly avoid
+         needing these via the system Photo Picker, but the upfront
+         permissions screen still asks for them explicitly. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Only used by file_saver on Android 9 (API 28) and below when saving
+         the compatibility PDF into the public Downloads folder — API 29+
+         writes there through MediaStore instead, which needs no permission. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <!-- Android 13+ (API 33) requires this to show any notification at all,
+         even a locally-triggered one — declared now so the upfront
+         permissions screen can ask for it; no notification feature sends
+         anything yet. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="Human-Link"

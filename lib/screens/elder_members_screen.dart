@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
@@ -75,20 +76,21 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
     final verified = _all.where((m) => m['verified'] as bool).length;
     final pending = total - verified;
 
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Community',
+      title: t.elderCommunity,
       currentRoute: '/elder/members',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _statsBanner(filtered.length, total, verified, pending),
+          _statsBanner(filtered.length, total, verified, pending, t),
           const SizedBox(height: 16),
           // Search
           TextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _search = v),
             decoration: InputDecoration(
-              hintText: 'Search by name, gotra, occupation…',
+              hintText: t.elderSearchByNameGotraOcc,
               hintStyle: body(13, color: AppColors.hint),
               prefixIcon: const Icon(Icons.search_rounded,
                   size: 18, color: AppColors.hint),
@@ -130,26 +132,26 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                 onChanged: (v) => setState(() => _verifiedOnly = v),
               ),
               const SizedBox(width: 4),
-              Text('Verified members only',
+              Text(t.elderVerifiedMembersOnly,
                   style: body(13,
                       weight: FontWeight.w600, color: AppColors.label)),
               const Spacer(),
-              Text('${filtered.length} shown',
+              Text(t.elderShownCount(filtered.length),
                   style: body(12, color: AppColors.textMuted)),
             ],
           ),
           const SizedBox(height: 12),
           if (filtered.isEmpty)
-            _emptyState()
+            _emptyState(t)
           else
-            ...filtered.map(_memberRow),
+            ...filtered.map((m) => _memberRow(m, t)),
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _statsBanner(int shown, int total, int verified, int pending) {
+  Widget _statsBanner(int shown, int total, int verified, int pending, AppLocalizations t) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -160,26 +162,26 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('DAIVAJNA SAMAJA BANGALORE',
+          Text(t.elderRegistryKicker,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.forest300,
                   letterSpacing: 1.6)),
           const SizedBox(height: 6),
-          Text('Community Member Registry',
+          Text(t.elderCommunityMemberRegistry,
               style: display(22, color: Colors.white)),
           const SizedBox(height: 4),
-          Text('Showing $shown of 1,428 registered members',
+          Text(t.elderShowingOfTotal(shown),
               style: body(13, color: AppColors.forest300)),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
-              _stat('$total', 'Total'),
-              _stat('$verified', 'Verified'),
-              _stat('$pending', 'Pending'),
-              _stat('6', 'Branches'),
+              _stat('$total', t.elderStatTotal),
+              _stat('$verified', t.elderStatVerified),
+              _stat('$pending', t.elderStatPending),
+              _stat('6', t.elderStatBranches),
             ],
           ),
         ],
@@ -224,7 +226,7 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
     );
   }
 
-  Widget _memberRow(Map<String, dynamic> m) {
+  Widget _memberRow(Map<String, dynamic> m, AppLocalizations t) {
     final verified = m['verified'] as bool;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -252,15 +254,16 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                         const Icon(Icons.verified,
                             size: 18, color: AppColors.gold500)
                       else
-                        const Pill('Unverified',
-                            bg: Color(0xFFFEF3C7),
-                            fg: Color(0xFFD97706),
+                        Pill(t.elderUnverified,
+                            bg: const Color(0xFFFEF3C7),
+                            fg: const Color(0xFFD97706),
                             icon: Icons.error_outline_rounded),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                      '${m['age']} yrs · ${m['gender'] == 'M' ? 'Male' : 'Female'}',
+                      t.elderYrsGender('${m['age']}',
+                          m['gender'] == 'M' ? t.elderMale : t.elderFemale),
                       style: body(12, color: AppColors.textMuted)),
                   const SizedBox(height: 4),
                   Text(m['occupation'] as String,
@@ -283,12 +286,12 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      Pill('${m['branch']} Branch',
+                      Pill(t.elderBranchSuffix(m['branch'] as String),
                           bg: const Color(0xFFF0FBF4),
                           fg: AppColors.forest800),
-                      Pill('${m['gotra']} Gotra',
+                      Pill(t.elderGotraSuffix(m['gotra'] as String),
                           bg: const Color(0xFFF7F0E8), fg: AppColors.gold700),
-                      Pill('Since ${m['joinedYear']}',
+                      Pill(t.elderSinceYear('${m['joinedYear']}'),
                           bg: AppColors.creamDark, fg: AppColors.gold700),
                     ],
                   ),
@@ -299,13 +302,15 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
               icon: const Icon(Icons.more_vert_rounded,
                   size: 20, color: AppColors.hint),
               onSelected: (v) => _toast('$v · ${m['name']}'),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'View profile', child: Text('View profile')),
+              itemBuilder: (_) => [
                 PopupMenuItem(
-                    value: 'Promote to Elder',
-                    child: Text('Promote to Elder')),
+                    value: t.elderViewProfile, child: Text(t.elderViewProfile)),
                 PopupMenuItem(
-                    value: 'Suspend member', child: Text('Suspend member')),
+                    value: t.elderPromoteToElder,
+                    child: Text(t.elderPromoteToElder)),
+                PopupMenuItem(
+                    value: t.elderSuspendMember,
+                    child: Text(t.elderSuspendMember)),
               ],
             ),
           ],
@@ -314,7 +319,7 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
     );
   }
 
-  Widget _emptyState() {
+  Widget _emptyState(AppLocalizations t) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -324,7 +329,7 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
           const Icon(Icons.error_outline_rounded,
               size: 32, color: AppColors.hint),
           const SizedBox(height: 10),
-          Text('No members match your filter',
+          Text(t.elderNoMembersMatchFilter,
               style: body(14,
                   weight: FontWeight.w600, color: AppColors.textMuted)),
         ],

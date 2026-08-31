@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
@@ -40,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// backend accepts the fixed demo OTP (matches the web login flow).
   void _handlePhoneNext() {
     if (_phoneCtrl.text.length < 10) {
-      setState(() => _error = 'Enter a valid 10-digit phone number');
+      setState(() => _error = AppLocalizations.of(context).loginErrorInvalidPhone);
       return;
     }
     setState(() {
@@ -53,8 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Server fields (name/gotra/native/bio/…) come from MongoDB; local-only
   /// fields (photo/gender/address) are preserved from the existing session.
   Future<void> _handleOtpVerify() async {
+    final t = AppLocalizations.of(context);
     if (_otpCtrl.text.length != 6) {
-      setState(() => _error = 'Enter the 6-digit OTP');
+      setState(() => _error = t.loginErrorInvalidOtp);
       return;
     }
     setState(() {
@@ -79,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
-            ? "This number isn't registered. Please create an account first."
+            ? t.loginErrorNotRegistered
             : e.message;
         _loading = false;
       });
@@ -93,9 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 e is TimeoutException ||
                 e is HttpException ||
                 e is ClientException)
-            ? "Can't reach the server at ${ApiConfig.baseUrl}. "
-                'Check that the backend is running.'
-            : 'Network error. Please try again.';
+            ? t.loginErrorServerUnreachable(ApiConfig.baseUrl)
+            : t.loginErrorNetwork;
         _loading = false;
       });
     }
@@ -103,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.forest900,
       body: SafeArea(
@@ -113,14 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               _HeaderCard(onLogoTap: () => context.go('/')),
               const SizedBox(height: 16),
-              _FormCard(child: _buildForm()),
+              _FormCard(child: _buildForm(t)),
               const SizedBox(height: 16),
               // Read about the community (the landing/about page). Opens on top
               // of login so the back button returns here.
               OutlinedButton.icon(
                 onPressed: () => context.push('/'),
                 icon: const Icon(Icons.auto_stories_rounded, size: 16),
-                label: Text('About the Daivajna Samaja',
+                label: Text(t.loginAboutCommunity,
                     style: body(14, weight: FontWeight.w600, color: AppColors.gold500)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.gold500,
@@ -135,11 +137,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   children: [
-                    Text('New member?  ',
+                    Text(t.loginNewMember,
                         style: body(13, color: AppColors.forest300)),
                     GestureDetector(
                       onTap: () => context.go('/register'),
-                      child: Text('Create an account',
+                      child: Text(t.loginCreateAccount,
                           style: body(13,
                               weight: FontWeight.w700,
                               color: AppColors.gold500)),
@@ -155,24 +157,20 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Access the Portal',
-            style: display(26, color: AppColors.forest900)),
+        Text(t.loginTitle, style: display(26, color: AppColors.forest900)),
         const SizedBox(height: 6),
-        Text(
-          'Login with your registered mobile number.',
-          style: body(13, color: AppColors.textMuted),
-        ),
+        Text(t.loginSubtitle, style: body(13, color: AppColors.textMuted)),
         const SizedBox(height: 18),
-        _buildPhone(),
+        _buildPhone(t),
       ],
     );
   }
 
-  Widget _buildPhone() {
+  Widget _buildPhone(AppLocalizations t) {
     if (_phoneStep == 'phone') {
       return Container(
         decoration: BoxDecoration(
@@ -184,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Registered Mobile Number',
+            Text(t.loginPhoneLabel,
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800)),
             const SizedBox(height: 8),
@@ -204,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             const SizedBox(height: 14),
             ForestButton(
-              label: 'Send OTP',
+              label: t.loginSendOtp,
               icon: Icons.arrow_forward_rounded,
               expand: true,
               onPressed: _handlePhoneNext,
@@ -223,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('OTP sent to ${_phoneCtrl.text}',
+          Text(t.loginOtpSentTo(_phoneCtrl.text),
               style: body(13, color: AppColors.textMuted)),
           const SizedBox(height: 8),
           Container(
@@ -232,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: const Color(0xFFEAF7EE),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
+            child: Text(t.loginOtpHint,
                 style: body(12,
                     weight: FontWeight.w600, color: AppColors.forest700)),
           ),
@@ -255,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
           const SizedBox(height: 14),
           ForestButton(
-            label: 'Login',
+            label: t.loginButton,
             icon: Icons.check_circle_outline_rounded,
             expand: true,
             loading: _loading,
@@ -269,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _error = '';
                 _otpCtrl.clear();
               }),
-              child: Text('← Change number',
+              child: Text(t.loginChangeNumber,
                   style: body(13, color: AppColors.textMuted)),
             ),
           ),
@@ -303,6 +301,7 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -337,9 +336,8 @@ class _HeaderCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Daivajna Samaja',
-                        style: display(16, color: Colors.white)),
-                    Text('Heritage Portal · Bangalore',
+                    Text(t.appName, style: display(16, color: Colors.white)),
+                    Text(t.appTagline,
                         style: body(11, color: AppColors.forest500)),
                   ],
                 ),
@@ -347,14 +345,11 @@ class _HeaderCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Text('Your lineage.\nYour legacy. One portal.',
+          Text(t.loginHeroHeadline,
               style: display(24, color: Colors.white, height: 1.25)),
           const SizedBox(height: 10),
-          Text(
-            'Connect with 1,428 families, trace your ancestral roots, and '
-            'contribute to community welfare.',
-            style: body(13, color: AppColors.forest300, height: 1.5),
-          ),
+          Text(t.loginHeroBody,
+              style: body(13, color: AppColors.forest300, height: 1.5)),
         ],
       ),
     );

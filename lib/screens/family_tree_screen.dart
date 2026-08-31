@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/ui_kit.dart';
@@ -55,21 +56,22 @@ const FamilyTreeMetrics _metrics = FamilyTreeMetrics(
 );
 
 // The seven immediate relations the backend accepts, in display order.
-const List<(String, String)> _relations = [
-  ('father', 'Father'),
-  ('mother', 'Mother'),
-  ('spouse', 'Spouse'),
-  ('brother', 'Brother'),
-  ('sister', 'Sister'),
-  ('son', 'Son'),
-  ('daughter', 'Daughter'),
-];
+List<(String, String)> _relationsOf(AppLocalizations t) => [
+      ('father', t.ftRelationFather),
+      ('mother', t.ftRelationMother),
+      ('spouse', t.ftRelationSpouse),
+      ('brother', t.ftRelationBrother),
+      ('sister', t.ftRelationSister),
+      ('son', t.ftRelationSon),
+      ('daughter', t.ftRelationDaughter),
+    ];
 
 class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   List<Map<String, dynamic>> _nodes = const [];
   List<Map<String, dynamic>> _requests = const [];
   List<Map<String, dynamic>> _invites = const [];
   int _unread = 0;
+  List<Map<String, dynamic>> _links = const [];
   bool _truncated = false;
   bool _loading = true;
   String _error = '';
@@ -120,6 +122,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       try {
         unread = await Repository.instance.familyUnreadCount();
       } catch (_) {/* best-effort */}
+      List<Map<String, dynamic>> links = const [];
+      try {
+        links = await Repository.instance.familyRelationships();
+      } catch (_) {/* best-effort */}
       if (!mounted) return;
       final nodes = _asList(graph['nodes']);
       final edges = _asList(graph['edges']);
@@ -138,6 +144,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         _requests = requests;
         _invites = invites;
         _unread = unread;
+        _links = links;
         _loading = false;
         _didFit = false; // refit to the new tree size
       });
@@ -150,7 +157,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load the family tree. Check your connection.';
+        _error = AppLocalizations.of(context).ftLoadError;
         _loading = false;
       });
     }
@@ -169,12 +176,13 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   /// Which row this person sits on, phrased relative to the viewer. Taken from
   /// the structural generation the layout derived, not from the payload field.
   String _generationLabel(String id) {
+    final t = AppLocalizations.of(context);
     final gen = _graph?.generationOf[id] ?? 0;
-    if (gen == 0) return 'Your generation';
+    if (gen == 0) return t.ftYourGeneration;
     final steps = gen.abs();
     final word = gen < 0
-        ? (steps == 1 ? 'One generation above' : '$steps generations above')
-        : (steps == 1 ? 'One generation below' : '$steps generations below');
+        ? (steps == 1 ? t.ftOneGenAbove : t.ftGenerationsAbove(steps))
+        : (steps == 1 ? t.ftOneGenBelow : t.ftGenerationsBelow(steps));
     return word;
   }
 
@@ -186,9 +194,9 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   /// The server-derived, viewer-relative label ("Grandfather", "Sister-in-law",
   /// or "Relative" when the path runs past what kinship words cover). Never
   /// cached beyond this render — it is only valid for this tree's `rootId`.
-  static String _relationOf(Map<String, dynamic> m) {
+  static String _relationOf(Map<String, dynamic> m, AppLocalizations t) {
     final r = (m['relation'] ?? '').toString().trim();
-    return r.isEmpty ? 'Relative' : r;
+    return r.isEmpty ? t.ftRelative : r;
   }
 
   static String _photoOf(Map<String, dynamic> m) =>
@@ -266,14 +274,15 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     if (result != null && result['ok'] == true) {
       await _load();
       if (!mounted) return;
+      final t = AppLocalizations.of(context);
       final invite = result['whatsappUrl']?.toString() ?? '';
       if (invite.isNotEmpty) {
         _showInviteDialog(
-          result['name']?.toString() ?? 'Your relative',
+          result['name']?.toString() ?? t.ftYourRelative,
           result['inviteLink']?.toString() ?? '',
         );
       } else {
-        _toast(result['message']?.toString() ?? 'Member added');
+        _toast(result['message']?.toString() ?? t.ftMemberAdded);
       }
     }
   }
@@ -320,20 +329,21 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   void _showInviteDialog(String name, String link) {
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Invite $name', style: display(18, color: AppColors.forest900)),
+        title: Text(t.ftInviteDialogTitle(name),
+            style: display(18, color: AppColors.forest900)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'A placeholder was added and the relationship is pending. Share '
-              'this invite so they can join and connect back to you.',
+              t.ftInviteDialogBody,
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
             const SizedBox(height: 12),
@@ -352,15 +362,15 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: body(13, color: AppColors.textMuted)),
+            child: Text(t.ftClose, style: body(13, color: AppColors.textMuted)),
           ),
           ForestButton(
-            label: 'Copy link',
+            label: t.ftCopyLink,
             icon: Icons.copy_rounded,
             onPressed: () {
               Clipboard.setData(ClipboardData(text: link));
               Navigator.pop(ctx);
-              _toast('Invite link copied');
+              _toast(t.ftInviteLinkCopied);
             },
           ),
         ],
@@ -374,7 +384,119 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     );
   }
 
+  /// The direct link between me and [memberId], if there is one. Only my own
+  /// seven immediate relations have one — everyone further out is *derived*
+  /// from a chain of links and cannot be removed from their node.
+  Map<String, dynamic>? _linkFor(String memberId) {
+    if (memberId.isEmpty) return null;
+    for (final l in _links) {
+      final m = l['member'];
+      if (m is Map && m['_id']?.toString() == memberId) return l;
+    }
+    return null;
+  }
+
+  Future<void> _openLinks() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _LinksSheet(
+        links: _links,
+        onRemove: (link) {
+          Navigator.pop(ctx);
+          _removeLink(link);
+        },
+      ),
+    );
+  }
+
+  /// Confirms, then takes the link down. Wording follows who owns it: a link I
+  /// added that is still pending is a request I withdraw; anything else is a
+  /// link both sides lose.
+  Future<void> _removeLink(Map<String, dynamic> link) async {
+    final t = AppLocalizations.of(context);
+    final id = link['_id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    final name = _nameOf(link['member'], t);
+    final relation = (link['relation'] ?? '').toString();
+    final relOrDefault = relation.isEmpty ? t.ftRelative : relation;
+    final pendingMine = link['status'] == 'pending' && link['addedByMe'] == true;
+    final noteCtl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(pendingMine ? t.ftWithdrawRequestTitle : t.ftRemoveLinkTitle,
+            style: display(18, color: AppColors.forest900)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              pendingMine
+                  ? t.ftWithdrawRequestBody(name, relOrDefault)
+                  : t.ftRemoveLinkBody(name, relOrDefault),
+              style: body(13, color: AppColors.textMuted, height: 1.5),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: noteCtl,
+              maxLength: 280,
+              maxLines: 2,
+              style: body(13, color: AppColors.forest900),
+              decoration: InputDecoration(
+                hintText: t.ftOptionalNoteHint,
+                hintStyle: body(12, color: AppColors.hint),
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.commonKeep,
+                style: body(13,
+                    weight: FontWeight.w600, color: AppColors.forest800)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(pendingMine ? t.ftWithdraw : t.commonRemove,
+                style: body(13,
+                    weight: FontWeight.w700, color: const Color(0xFFB91C1C))),
+          ),
+        ],
+      ),
+    );
+    final note = noteCtl.text.trim();
+    noteCtl.dispose();
+    if (ok != true || !mounted) return;
+    try {
+      await Repository.instance
+          .removeFamilyRelationship(id, note: note.isEmpty ? null : note);
+      if (!mounted) return;
+      _toast(pendingMine ? t.ftRequestWithdrawn : t.ftRelationshipRemoved);
+      // One edge gone can relabel or hide many nodes — rebuild from the server.
+      await _load();
+    } on ApiException catch (e) {
+      if (mounted) _toast(e.message);
+    } catch (_) {
+      if (mounted) _toast(t.ftCouldNotRemoveRelationship);
+    }
+  }
+
   void _openMember(Map<String, dynamic> m) {
+    final t = AppLocalizations.of(context);
     final deceased = _isDeceased(m);
     final placeholder = _isPlaceholder(m);
     final self = _isSelf(m);
@@ -385,6 +507,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         ? (m['path'] as List).map((e) => e.toString()).toList()
         : const <String>[];
     final hiddenBehind = _graph?.hiddenCount(memberId, _expanded) ?? 0;
+    final link = self ? null : _linkFor(memberId);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -419,14 +542,14 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${deceased ? "Late " : ""}${m['name']}',
+                        '${deceased ? t.ftLatePrefix : ""}${m['name']}',
                         style: display(20, color: AppColors.forest900),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         self
-                            ? 'You'
-                            : '${_relationOf(m)} · ${_generationLabel(memberId)}',
+                            ? t.ftYou
+                            : '${_relationOf(m, t)} · ${_generationLabel(memberId)}',
                         style: body(13,
                             weight: FontWeight.w600,
                             color: AppColors.forest700),
@@ -442,7 +565,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             _statusCard(deceased, placeholder),
             if (!self && path.length > 1) ...[
               const SizedBox(height: 10),
-              Text('Derived from: your ${path.join(" → ")}',
+              Text(t.ftDerivedFrom(path.join(" → ")),
                   style: body(11, color: AppColors.hint, height: 1.4)),
             ],
             const SizedBox(height: 14),
@@ -450,8 +573,8 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                 (_graph?.hasBranch(memberId) ?? false)) ...[
               OutlineButtonX(
                 label: hiddenBehind > 0
-                    ? 'Show their family ($hiddenBehind)'
-                    : 'Hide their family',
+                    ? t.ftShowTheirFamily(hiddenBehind)
+                    : t.ftHideTheirFamily,
                 expand: true,
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -462,7 +585,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             ],
             if (memberId.isNotEmpty)
               ForestButton(
-                label: 'View Profile',
+                label: t.ftViewProfile,
                 icon: Icons.arrow_forward_rounded,
                 expand: true,
                 onPressed: () {
@@ -470,6 +593,20 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                   context.push(self ? '/profile/me' : '/profile/$memberId');
                 },
               ),
+            if (link != null) ...[
+              const SizedBox(height: 10),
+              OutlineButtonX(
+                label: link['status'] == 'pending' && link['addedByMe'] == true
+                    ? t.ftWithdrawThisRequest
+                    : t.ftRemoveThisRelationship,
+                expand: true,
+                color: const Color(0xFFB91C1C),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _removeLink(link);
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -477,13 +614,12 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Widget _statusCard(bool deceased, bool placeholder) {
+    final t = AppLocalizations.of(context);
     final (String title, String body_) = deceased
-        ? ('Verified Deceased', 'Added directly to the tree - no approval needed.')
+        ? (t.ftVerifiedDeceased, t.ftVerifiedDeceasedDesc)
         : placeholder
-            ? ('Pending Invitation',
-                'This person has not joined yet. The relationship activates when '
-                    'they register and accept.')
-            : ('Active Member', 'Linked to a verified member account.');
+            ? (t.ftPendingInvitation, t.ftPendingInvitationDesc)
+            : (t.ftActiveMember, t.ftActiveMemberDesc);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -504,13 +640,14 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Widget _statusBadge(bool deceased, bool placeholder) {
+    final t = AppLocalizations.of(context);
     final (String label, Color bg, Color fg, IconData icon) = deceased
-        ? ('In Memoriam', const Color(0xFFE5E7EB), AppColors.textMuted,
+        ? (t.ftInMemoriam, const Color(0xFFE5E7EB), AppColors.textMuted,
             Icons.local_florist_rounded)
         : placeholder
-            ? ('Pending Invitation', const Color(0xFFFEF3C7),
+            ? (t.ftPendingInvitation, const Color(0xFFFEF3C7),
                 const Color(0xFFD97706), Icons.schedule_rounded)
-            : ('Active Member', const Color(0xFFD1FAE5),
+            : (t.ftActiveMember, const Color(0xFFD1FAE5),
                 const Color(0xFF065F46), Icons.check_circle_rounded);
     return Pill(label, bg: bg, fg: fg, icon: icon, fontSize: 10);
   }
@@ -518,7 +655,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Family Tree',
+      title: AppLocalizations.of(context).ftTitle,
       currentRoute: '/family-tree',
       scrollable: false,
       padding: EdgeInsets.zero,
@@ -535,24 +672,24 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Widget _body() {
+    final t = AppLocalizations.of(context);
     if (_loading) {
       return const Center(
           child: CircularProgressIndicator(color: AppColors.forest700));
     }
     if (_error.isNotEmpty) {
-      return _message(Icons.cloud_off_rounded, 'Unable to load', _error,
-          action: OutlineButtonX(label: 'Retry', onPressed: _load));
+      return _message(Icons.cloud_off_rounded, t.ftUnableToLoad, _error,
+          action: OutlineButtonX(label: t.commonRetry, onPressed: _load));
     }
     // The first call to the tree lazily creates my own member node, so "empty"
     // means me and nobody else — not zero nodes.
     if (_nodes.isEmpty || (_nodes.length == 1 && _isSelf(_nodes.first))) {
       return _message(
         Icons.account_tree_outlined,
-        'Your family tree is empty',
-        'Add your immediate family - father, mother, spouse, siblings, children. '
-            'Their trees connect to yours as they join.',
+        t.ftEmptyTitle,
+        t.ftEmptyBody,
         action: ForestButton(
-          label: 'Add Family Member',
+          label: t.ftAddFamilyMember,
           icon: Icons.add_rounded,
           onPressed: _openAddSheet,
         ),
@@ -608,7 +745,9 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                           left: 8,
                           top: layout.rowY(layout.generations[row]) - 9,
                           child: Text(
-                              'GEN ${row < _genRoman.length ? _genRoman[row] : (row + 1)}',
+                              AppLocalizations.of(context).ftGenRow(row < _genRoman.length
+                                  ? _genRoman[row]
+                                  : '${row + 1}'),
                               style: body(11,
                                   weight: FontWeight.w700,
                                   color: AppColors.gold700,
@@ -704,8 +843,9 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Widget _inviteBanner() {
+    final t = AppLocalizations.of(context);
     final first = _invites.first;
-    final msg = (first['message'] ?? 'You have a pending invitation.').toString();
+    final msg = (first['message'] ?? t.ftDefaultInviteMessage).toString();
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       color: const Color(0xFFFEF9EC),
@@ -717,7 +857,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
           Expanded(
             child: Text(
               _invites.length > 1
-                  ? '$msg  (+${_invites.length - 1} more)'
+                  ? '$msg${t.ftMoreCount(_invites.length - 1)}'
                   : msg,
               style: body(12,
                   weight: FontWeight.w600, color: AppColors.forest900),
@@ -726,7 +866,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          GoldButton(label: 'Review', onPressed: _openInvites),
+          GoldButton(label: t.ftReview, onPressed: _openInvites),
         ],
       ),
     );
@@ -744,7 +884,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Showing part of the tree — it has more relatives than one view can hold.',
+              AppLocalizations.of(context).ftTruncatedBanner,
               style: body(11, color: AppColors.textMuted, height: 1.4),
             ),
           ),
@@ -754,6 +894,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   }
 
   Widget _controlRow() {
+    final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
@@ -770,19 +911,19 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('DAIVAJNA SAMAJA · LINEAGE',
+                    Text(t.ftHeaderKicker,
                         style: body(11,
                             weight: FontWeight.w700,
                             color: AppColors.gold700,
                             letterSpacing: 2)),
                     const SizedBox(height: 4),
-                    Text('Vamsha Vruksha',
+                    Text(t.ftHeaderTitle,
                         style: display(22, color: AppColors.forest900)),
                   ],
                 ),
               ),
               ForestButton(
-                label: 'Add Member',
+                label: t.ftAddMember,
                 icon: Icons.person_add_alt_1_rounded,
                 onPressed: _openAddSheet,
               ),
@@ -793,21 +934,26 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _actionChip(Icons.inbox_rounded, 'Requests', _requests.length,
+                _actionChip(Icons.inbox_rounded, t.ftRequests, _requests.length,
                     _openRequests),
                 const SizedBox(width: 8),
-                _actionChip(Icons.mark_email_unread_rounded, 'Invites',
+                _actionChip(Icons.mark_email_unread_rounded, t.ftInvites,
                     _invites.length, _openInvites),
                 const SizedBox(width: 8),
-                _actionChip(Icons.notifications_none_rounded, 'Alerts', _unread,
+                _actionChip(Icons.notifications_none_rounded, t.ftAlerts, _unread,
                     _openNotifications),
+                if (_links.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _actionChip(Icons.link_off_rounded, t.ftManageLinks, 0,
+                      _openLinks),
+                ],
                 if (_graph?.branchOwners.isNotEmpty ?? false) ...[
                   const SizedBox(width: 8),
                   _actionChip(
                     _allExpanded
                         ? Icons.unfold_less_rounded
                         : Icons.unfold_more_rounded,
-                    _allExpanded ? 'Compact view' : 'Expand all',
+                    _allExpanded ? t.ftCompactView : t.ftExpandAll,
                     0,
                     _toggleAllBranches,
                   ),
@@ -949,8 +1095,9 @@ class _NodeWithLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final self = _FamilyTreeScreenState._isSelf(member);
-    final rel = self ? 'You' : _FamilyTreeScreenState._relationOf(member);
+    final rel = self ? t.ftYou : _FamilyTreeScreenState._relationOf(member, t);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -1211,7 +1358,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _err = 'Search failed. Check your connection.';
+        _err = AppLocalizations.of(context).ftSearchFailed;
         _searching = false;
       });
     }
@@ -1231,11 +1378,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   }
 
   Future<void> _save() async {
+    final t = AppLocalizations.of(context);
     // Mode: connect to an existing account.
     if (_mode == _AddMode.account) {
       final target = _selected;
       if (target == null) {
-        setState(() => _err = 'Select the person to send a request to');
+        setState(() => _err = t.ftSelectPersonToRequest);
         return;
       }
       await _submit(targetUserId: target['_id']?.toString());
@@ -1246,17 +1394,18 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     // a date of birth in both cases.
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _err = 'Name is required');
+      setState(() => _err = t.ftNameRequired);
       return;
     }
     if (_dob.isEmpty) {
-      setState(() => _err = 'Date of birth is required');
+      setState(() => _err = t.ftDobRequired);
       return;
     }
     await _submit(name: name);
   }
 
   Future<void> _submit({String? targetUserId, String? name}) async {
+    final t = AppLocalizations.of(context);
     setState(() {
       _saving = true;
       _err = '';
@@ -1278,8 +1427,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       final mode = (res['mode'] ?? '').toString();
       final member = res['member'];
       final personName = member is Map
-          ? (member['name'] ?? name ?? 'Member').toString()
-          : (name ?? 'Member');
+          ? (member['name'] ?? name ?? t.ftDefaultMemberName).toString()
+          : (name ?? t.ftDefaultMemberName);
       // Adding a relation that already exists is idempotent server-side — the
       // existing edge comes back, so an accepted status means we did not just
       // send a new request.
@@ -1292,12 +1441,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         'inviteLink': res['inviteLink']?.toString() ?? '',
         'whatsappUrl': res['whatsappUrl']?.toString() ?? '',
         'message': switch (mode) {
-          'request' when already => 'You are already connected to $personName.',
-          'request' =>
-            'Request sent to $personName - they’ll appear once they accept.',
-          'invitation' => '$personName invited - share the link so they can join.',
-          'deceased' => '$personName added to the family tree.',
-          _ => '$personName added.',
+          'request' when already => t.ftAlreadyConnected(personName),
+          'request' => t.ftRequestSent(personName),
+          'invitation' => t.ftInvited(personName),
+          'deceased' => t.ftAddedToTree(personName),
+          _ => t.ftAdded(personName),
         },
       });
     } on ApiException catch (e) {
@@ -1307,7 +1455,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       });
     } catch (_) {
       setState(() {
-        _err = 'Could not add the member. Check your connection.';
+        _err = t.ftCouldNotAddMember;
         _saving = false;
       });
     }
@@ -1315,6 +1463,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -1339,7 +1488,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('Add Family Member',
+                    child: Text(t.ftAddFamilyMember,
                         style: display(20, color: AppColors.forest900)),
                   ),
                   IconButton(
@@ -1355,11 +1504,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 controller: scroll,
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 children: [
-                  _label('Relationship to you *'),
+                  _label(t.ftRelationshipToYou),
                   _dropdown<String>(
                     value: _relation,
                     items: [
-                      for (final r in _relations)
+                      for (final r in _relationsOf(t))
                         DropdownMenuItem(value: r.$1, child: Text(r.$2)),
                     ],
                     onChanged: (v) => setState(() {
@@ -1377,12 +1526,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  _modeToggle(),
+                  _modeToggle(t),
                   const SizedBox(height: 16),
                   if (_mode == _AddMode.account)
-                    _accountSection()
+                    _accountSection(t)
                   else
-                    _profileSection(),
+                    _profileSection(t),
                   if (_err.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Container(
@@ -1399,10 +1548,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                   const SizedBox(height: 18),
                   ForestButton(
                     label: _mode == _AddMode.account
-                        ? 'Send Request'
+                        ? t.ftSendRequest
                         : _isDeceased
-                            ? 'Add to Family Tree'
-                            : 'Create & Invite',
+                            ? t.ftAddToFamilyTree
+                            : t.ftCreateAndInvite,
                     icon: Icons.check_rounded,
                     expand: true,
                     loading: _saving,
@@ -1418,12 +1567,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     );
   }
 
-  Widget _modeToggle() {
+  Widget _modeToggle(AppLocalizations t) {
     return Row(
       children: [
-        _modeChip(_AddMode.account, 'Has an account', Icons.badge_outlined),
+        _modeChip(_AddMode.account, t.ftHasAccount, Icons.badge_outlined),
         const SizedBox(width: 10),
-        _modeChip(_AddMode.profile, 'New profile', Icons.person_outline_rounded),
+        _modeChip(_AddMode.profile, t.ftNewProfile, Icons.person_outline_rounded),
       ],
     );
   }
@@ -1464,11 +1613,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     );
   }
 
-  Widget _accountSection() {
+  Widget _accountSection(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Find them by name, phone or Samaj ID'),
+        _label(t.ftFindByNamePhone),
         Row(
           children: [
             Expanded(
@@ -1476,17 +1625,16 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 controller: _search,
                 onSubmitted: (_) => _runSearch(),
                 style: body(14, color: AppColors.ink),
-                decoration: _inputDecoration('e.g. 9876543210 or Ramesh'),
+                decoration: _inputDecoration(t.ftSearchHint),
               ),
             ),
             const SizedBox(width: 8),
-            OutlineButtonX(label: 'Search', onPressed: _runSearch),
+            OutlineButtonX(label: t.ftSearch, onPressed: _runSearch),
           ],
         ),
         const SizedBox(height: 4),
         Text(
-          'A living member with an account must accept your request before the '
-          'relationship shows in both trees.',
+          t.ftAccountRequestNote,
           style: body(11, color: AppColors.hint, height: 1.4),
         ),
         const SizedBox(height: 12),
@@ -1562,62 +1710,60 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     );
   }
 
-  Widget _profileSection() {
+  Widget _profileSection(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _field('Full Name *', _name, hint: 'e.g. Ramesh Haldankar'),
+        _field(t.ftFullName, _name, hint: t.ftFullNameHint),
         const SizedBox(height: 14),
-        _label('Gender'),
+        _label(t.ftGender),
         Row(
           children: [
-            _genderChip('M', 'Male'),
+            _genderChip('M', t.ftMale),
             const SizedBox(width: 10),
-            _genderChip('F', 'Female'),
+            _genderChip('F', t.ftFemale),
           ],
         ),
         const SizedBox(height: 14),
-        _label('Status'),
+        _label(t.ftStatus),
         Row(
           children: [
-            _statusChip('alive', 'Alive'),
+            _statusChip('alive', t.ftAlive),
             const SizedBox(width: 10),
-            _statusChip('deceased', 'Deceased'),
+            _statusChip('deceased', t.ftDeceased),
           ],
         ),
         const SizedBox(height: 4),
         Text(
-          _isDeceased
-              ? 'A deceased person is added immediately - no invitation or approval.'
-              : 'A living person is invited: they join and confirm the relationship.',
+          _isDeceased ? t.ftDeceasedNote : t.ftAliveNote,
           style: body(11, color: AppColors.hint, height: 1.4),
         ),
         const SizedBox(height: 14),
         if (!_isDeceased) ...[
-          _field('Phone (optional)', _phone,
+          _field(t.ftPhoneOptional, _phone,
               hint: '9876543210', keyboard: TextInputType.phone),
           const SizedBox(height: 4),
-          Text('Used to link their account when they register.',
+          Text(t.ftPhoneLinkNote,
               style: body(11, color: AppColors.hint, height: 1.4)),
           const SizedBox(height: 14),
-          _dateField('Date of Birth *', _dob, () => _pickDate(true)),
+          _dateField(t.ftDateOfBirth, _dob, () => _pickDate(true), t),
         ] else ...[
           Row(
             children: [
               Expanded(
-                  child:
-                      _dateField('Date of Birth *', _dob, () => _pickDate(true))),
+                  child: _dateField(
+                      t.ftDateOfBirth, _dob, () => _pickDate(true), t)),
               const SizedBox(width: 12),
               Expanded(
-                  child:
-                      _dateField('Date of Death', _dod, () => _pickDate(false))),
+                  child: _dateField(
+                      t.ftDateOfDeath, _dod, () => _pickDate(false), t)),
             ],
           ),
           const SizedBox(height: 14),
-          _field('Place of Death', _placeOfDeath, hint: 'e.g. Kundapura'),
+          _field(t.ftPlaceOfDeath, _placeOfDeath, hint: t.ftPlaceOfDeathHint),
           const SizedBox(height: 14),
-          _field('Biography', _biography,
-              hint: 'A few words about their life…', maxLines: 3),
+          _field(t.ftBiography, _biography,
+              hint: t.ftBiographyHint, maxLines: 3),
         ],
       ],
     );
@@ -1649,7 +1795,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     );
   }
 
-  Widget _dateField(String label, String value, VoidCallback onTap) {
+  Widget _dateField(
+      String label, String value, VoidCallback onTap, AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1668,7 +1815,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 const Icon(Icons.calendar_today_rounded,
                     size: 15, color: AppColors.gold700),
                 const SizedBox(width: 8),
-                Text(value.isEmpty ? 'Select' : value,
+                Text(value.isEmpty ? t.ftSelect : value,
                     style: body(14,
                         color: value.isEmpty ? AppColors.hint : AppColors.ink)),
               ],
@@ -1808,7 +1955,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not withdraw the request')),
+        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotWithdrawRequest)),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(id));
@@ -1830,7 +1977,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update the request')),
+        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest)),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(id));
@@ -1839,18 +1986,19 @@ class _RequestsSheetState extends State<_RequestsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return _SheetScaffold(
-      title: 'Relationship Requests',
+      title: t.ftRelationshipRequests,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_items.isEmpty)
-            _emptyState('No pending requests',
-                'When a relative asks to connect with you, it shows up here.')
+            _emptyState(t.ftNoPendingRequests, t.ftNoPendingRequestsDesc)
           else
             for (final r in _items)
               _requestTile(
-                name: _nameOf(r['requester']),
+                t: t,
+                name: _nameOf(r['requester'], t),
                 message: (r['message'] ?? '').toString(),
                 busy: _busy.contains(r['_id']?.toString()),
                 onAccept: () => _respond(r, true),
@@ -1858,27 +2006,27 @@ class _RequestsSheetState extends State<_RequestsSheet> {
               ),
           if (_sent.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text('Waiting on them',
+            Text(t.ftWaitingOnThem,
                 style: body(12,
                     weight: FontWeight.w700, color: AppColors.forest800)),
             const SizedBox(height: 4),
             Text(
-              'These stay out of the tree until the other person accepts.',
+              t.ftWaitingOnThemDesc,
               style: body(11, color: AppColors.hint, height: 1.4),
             ),
             const SizedBox(height: 10),
-            for (final r in _sent) _sentTile(r),
+            for (final r in _sent) _sentTile(r, t),
           ],
         ],
       ),
     );
   }
 
-  Widget _sentTile(Map<String, dynamic> r) {
+  Widget _sentTile(Map<String, dynamic> r, AppLocalizations t) {
     final id = r['_id']?.toString() ?? '';
     final busy = _busy.contains(id);
     final inviteLink = (r['inviteLink'] ?? '').toString();
-    final name = _nameOf(r['relative']);
+    final name = _nameOf(r['relative'], t);
     final relation = (r['relation'] ?? '').toString();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1896,7 +2044,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
                   weight: FontWeight.w700, color: AppColors.forest900)),
           if (relation.isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text('Added as your $relation',
+            Text(t.ftAddedAsYourRelation(relation),
                 style: body(11, color: AppColors.textMuted)),
           ],
           const SizedBox(height: 10),
@@ -1905,12 +2053,12 @@ class _RequestsSheetState extends State<_RequestsSheet> {
               if (inviteLink.isNotEmpty) ...[
                 Expanded(
                   child: OutlineButtonX(
-                    label: 'Copy invite',
+                    label: t.ftCopyInvite,
                     expand: true,
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: inviteLink));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Invite link copied')),
+                        SnackBar(content: Text(t.ftInviteLinkCopied)),
                       );
                     },
                   ),
@@ -1919,7 +2067,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
               ],
               Expanded(
                 child: OutlineButtonX(
-                  label: 'Withdraw',
+                  label: t.ftWithdraw,
                   expand: true,
                   color: const Color(0xFFB91C1C),
                   onPressed: busy ? null : () => _cancel(r),
@@ -1948,6 +2096,7 @@ class _InvitesSheetState extends State<_InvitesSheet> {
   String _done = '';
 
   Future<void> _respond(bool accept) async {
+    final t = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
       if (accept) {
@@ -1955,16 +2104,16 @@ class _InvitesSheetState extends State<_InvitesSheet> {
         final merged = ((res['merged'] ?? 0) as num).toInt();
         if (!mounted) return;
         setState(() => _done =
-            merged > 0 ? 'Connected - your trees are now merged.' : 'Done.');
+            merged > 0 ? t.ftConnectedTreesMerged : t.ftDone);
       } else {
         await Repository.instance.declineFamilyInvites();
         if (!mounted) return;
-        setState(() => _done = 'Invitations declined.');
+        setState(() => _done = t.ftInvitationsDeclined);
       }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update the invitations')),
+        SnackBar(content: Text(t.ftCouldNotUpdateInvitations)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -1973,13 +2122,13 @@ class _InvitesSheetState extends State<_InvitesSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return _SheetScaffold(
-      title: 'Your Invitations',
+      title: t.ftYourInvitations,
       child: _done.isNotEmpty
-          ? _emptyState('All set', _done)
+          ? _emptyState(t.ftAllSet, _done)
           : widget.invites.isEmpty
-              ? _emptyState('No invitations',
-                  'Invitations others send to your number will appear here.')
+              ? _emptyState(t.ftNoInvitations, t.ftNoInvitationsDesc)
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1999,13 +2148,12 @@ class _InvitesSheetState extends State<_InvitesSheet> {
                       ),
                     const SizedBox(height: 6),
                     Text(
-                      'Accepting confirms these people are your family and merges '
-                      'their placeholder profiles into your account.',
+                      t.ftAcceptingMergesNote,
                       style: body(11, color: AppColors.hint, height: 1.4),
                     ),
                     const SizedBox(height: 14),
                     ForestButton(
-                      label: 'Accept & Connect',
+                      label: t.ftAcceptAndConnect,
                       icon: Icons.link_rounded,
                       expand: true,
                       loading: _busy,
@@ -2013,7 +2161,7 @@ class _InvitesSheetState extends State<_InvitesSheet> {
                     ),
                     const SizedBox(height: 8),
                     OutlineButtonX(
-                      label: 'Decline',
+                      label: t.ftDecline,
                       expand: true,
                       onPressed: _busy ? null : () => _respond(false),
                     ),
@@ -2099,7 +2247,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update the request')),
+        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest)),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(rid));
@@ -2108,13 +2256,14 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final hasUnread = _items.any((n) => n['read'] != true);
     return _SheetScaffold(
-      title: 'Notifications',
+      title: t.ftNotifications,
       action: hasUnread
           ? TextButton(
               onPressed: _markAllRead,
-              child: Text('Mark all read',
+              child: Text(t.ftMarkAllRead,
                   style: body(12,
                       weight: FontWeight.w700, color: AppColors.forest700)),
             )
@@ -2127,17 +2276,16 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                       CircularProgressIndicator(color: AppColors.forest700)),
             )
           : _items.isEmpty
-              ? _emptyState('No notifications',
-                  'Relationship activity - requests, joins, merges - appears here.')
+              ? _emptyState(t.ftNoNotifications, t.ftNoNotificationsDesc)
               : Column(
                   children: [
-                    for (final n in _items) _notificationTile(n),
+                    for (final n in _items) _notificationTile(n, t),
                   ],
                 ),
     );
   }
 
-  Widget _notificationTile(Map<String, dynamic> n) {
+  Widget _notificationTile(Map<String, dynamic> n, AppLocalizations t) {
     final read = n['read'] == true;
     final rid = (n['relationshipId'] ?? '').toString();
     final answered = (n['answered'] ?? '').toString();
@@ -2181,7 +2329,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
             if (answered.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                answered == 'accepted' ? 'Accepted' : 'Declined',
+                answered == 'accepted' ? t.ftAccepted : t.ftDeclined,
                 style: body(11,
                     weight: FontWeight.w700, color: AppColors.forest700),
               ),
@@ -2192,7 +2340,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                 children: [
                   Expanded(
                     child: OutlineButtonX(
-                      label: 'Decline',
+                      label: t.ftDecline,
                       expand: true,
                       onPressed: _busy.contains(rid)
                           ? null
@@ -2202,7 +2350,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ForestButton(
-                      label: 'Accept',
+                      label: t.ftAccept,
                       expand: true,
                       loading: _busy.contains(rid),
                       onPressed: () => _respond(n, true),
@@ -2219,6 +2367,95 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
 }
 
 // ── Shared sheet chrome + helpers (top-level so every sheet can use them) ──────
+
+/// My direct links — the seven immediate relations I added, or that a relative
+/// added naming me — each removable from either side and at any stage. Everyone
+/// else in the tree is derived from these, so this list is the only place a
+/// wrong relation can be undone.
+class _LinksSheet extends StatelessWidget {
+  const _LinksSheet({required this.links, required this.onRemove});
+
+  final List<Map<String, dynamic>> links;
+  final void Function(Map<String, dynamic> link) onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final accepted =
+        links.where((l) => l['status'] != 'pending').toList(growable: false);
+    final pending =
+        links.where((l) => l['status'] == 'pending').toList(growable: false);
+    return _SheetScaffold(
+      title: t.ftManageRelationships,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (links.isEmpty)
+            _emptyState(t.ftNoRelationshipsYet, t.ftNoRelationshipsYetDesc)
+          else ...[
+            Text(
+              t.ftRemovingLinkNote,
+              style: body(12, color: AppColors.hint, height: 1.5),
+            ),
+            const SizedBox(height: 14),
+            for (final l in accepted) _linkTile(l, t),
+            if (pending.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(t.ftNotAcceptedYet,
+                  style: body(12,
+                      weight: FontWeight.w700, color: AppColors.forest800)),
+              const SizedBox(height: 8),
+              for (final l in pending) _linkTile(l, t),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _linkTile(Map<String, dynamic> l, AppLocalizations t) {
+    final name = _nameOf(l['member'], t);
+    final relation = (l['relation'] ?? '').toString();
+    final pendingMine = l['status'] == 'pending' && l['addedByMe'] == true;
+    final message = (l['message'] ?? '').toString();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: body(13,
+                        weight: FontWeight.w700, color: AppColors.forest900)),
+                const SizedBox(height: 2),
+                Text(
+                  message.isNotEmpty
+                      ? message
+                      : t.ftYourRelation(relation.isEmpty ? t.ftRelative : relation),
+                  style: body(11, color: AppColors.textMuted, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          OutlineButtonX(
+            label: pendingMine ? t.ftWithdraw : t.commonRemove,
+            color: const Color(0xFFB91C1C),
+            onPressed: () => onRemove(l),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SheetScaffold extends StatelessWidget {
   const _SheetScaffold({required this.title, required this.child, this.action});
@@ -2277,6 +2514,7 @@ class _SheetScaffold extends StatelessWidget {
 }
 
 Widget _requestTile({
+  required AppLocalizations t,
   required String name,
   required String message,
   required bool busy,
@@ -2294,14 +2532,14 @@ Widget _requestTile({
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(message.isNotEmpty ? message : '$name wants to connect.',
+        Text(message.isNotEmpty ? message : t.ftWantsToConnect(name),
             style: body(13, color: AppColors.forest900, height: 1.4)),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: OutlineButtonX(
-                label: 'Decline',
+                label: t.ftDecline,
                 expand: true,
                 onPressed: busy ? null : onDecline,
               ),
@@ -2309,7 +2547,7 @@ Widget _requestTile({
             const SizedBox(width: 10),
             Expanded(
               child: ForestButton(
-                label: 'Accept',
+                label: t.ftAccept,
                 expand: true,
                 loading: busy,
                 onPressed: onAccept,
@@ -2341,9 +2579,9 @@ Widget _emptyState(String title, String subtitle) {
   );
 }
 
-String _nameOf(Object? requester) {
+String _nameOf(Object? requester, AppLocalizations t) {
   if (requester is Map && requester['name'] != null) {
     return requester['name'].toString();
   }
-  return 'Someone';
+  return t.ftSomeone;
 }

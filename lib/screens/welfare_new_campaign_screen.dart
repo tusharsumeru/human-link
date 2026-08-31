@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
@@ -15,20 +16,31 @@ class NewCampaignScreen extends StatefulWidget {
 }
 
 class _NewCampaignScreenState extends State<NewCampaignScreen> {
-  static const _categories = [
-    'Infrastructure',
-    'Cultural Heritage',
-    'Education',
-    'Emergency',
-    'Healthcare',
+  // Wire key → localized label, same pattern as the matrimonial edit form's
+  // enum chips: `_category` stores the key (stable across languages), never
+  // the display label.
+  static const _categoryKeys = [
+    'infrastructure',
+    'culturalHeritage',
+    'education',
+    'emergency',
+    'healthcare',
   ];
+  static String _categoryLabel(String key, AppLocalizations t) => switch (key) {
+        'infrastructure' => t.welfareCategoryInfrastructure,
+        'culturalHeritage' => t.welfareCategoryCulturalHeritage,
+        'education' => t.welfareCategoryEducation,
+        'emergency' => t.welfareCategoryEmergency,
+        'healthcare' => t.welfareCategoryHealthcare,
+        _ => key,
+      };
   static const _emojis = ['🏛️', '🪔', '🎓', '❤️', '🏥'];
 
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _goalCtrl = TextEditingController();
 
-  String _category = 'Infrastructure';
+  String _category = 'infrastructure';
   double _duration = 30;
   String _emoji = '🏛️';
 
@@ -49,6 +61,7 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
   }
 
   void _submit() {
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -67,18 +80,18 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('Campaign Submitted!',
+              child: Text(t.welfareCampaignSubmitted,
                   style: display(20, color: AppColors.forest900)),
             ),
           ],
         ),
         content: Text(
-          'Your campaign will be reviewed by the Elder Committee. You’ll receive a notification within 48 hours.',
+          t.welfareCampaignReviewNote,
           style: body(14, color: AppColors.textMuted, height: 1.5),
         ),
         actions: [
           ForestButton(
-            label: 'Back to Welfare',
+            label: t.welfareBackToWelfare,
             onPressed: () {
               Navigator.of(ctx).pop();
               context.go('/welfare');
@@ -91,6 +104,7 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -102,7 +116,7 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text('Launch a New Campaign',
+        title: Text(t.welfareLaunchNewCampaign,
             style: display(18, color: Colors.white)),
       ),
       body: ListView(
@@ -125,13 +139,13 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('A Note on Transparency',
+                      Text(t.welfareTransparencyNoteTitle,
                           style: body(13,
                               weight: FontWeight.w700,
                               color: const Color(0xFF92400E))),
                       const SizedBox(height: 4),
                       Text(
-                          'Each campaign is vetted by the Elder sub-committee to ensure heritage alignment and financial integrity.',
+                          t.welfareTransparencyNoteBody,
                           style: body(12,
                               color: const Color(0xFFB45309), height: 1.5)),
                     ],
@@ -142,50 +156,50 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           ),
           const SizedBox(height: 18),
 
-          _label('Campaign Title'),
+          _label(t.welfareCampaignTitle),
           const SizedBox(height: 8),
           TextField(
             controller: _titleCtrl,
             decoration:
-                _dec('e.g. Restoration of Heritage Library'),
+                _dec(t.welfareCampaignTitleHint),
           ),
           const SizedBox(height: 16),
 
-          _label('Category'),
+          _label(t.welfareCategory),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _category,
             decoration: _dec(''),
             items: [
-              for (final c in _categories)
+              for (final c in _categoryKeys)
                 DropdownMenuItem(
                     value: c,
-                    child: Text(c, style: body(14, color: AppColors.label))),
+                    child: Text(_categoryLabel(c, t),
+                        style: body(14, color: AppColors.label))),
             ],
             onChanged: (v) => setState(() => _category = v ?? _category),
           ),
           const SizedBox(height: 16),
 
-          _label('Campaign Story'),
+          _label(t.welfareCampaignStory),
           const SizedBox(height: 8),
           TextField(
             controller: _descCtrl,
             maxLines: 4,
-            decoration: _dec(
-                'Describe the history, the need, and the impact on our community…'),
+            decoration: _dec(t.welfareCampaignStoryHint),
           ),
           const SizedBox(height: 16),
 
-          _label('Fundraising Goal (₹)'),
+          _label(t.welfareFundraisingGoal),
           const SizedBox(height: 8),
           TextField(
             controller: _goalCtrl,
             keyboardType: TextInputType.number,
-            decoration: _dec('e.g. 500000'),
+            decoration: _dec(t.welfareFundraisingGoalHint),
           ),
           const SizedBox(height: 16),
 
-          _label('Duration'),
+          _label(t.welfareDuration),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -197,19 +211,19 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
                   divisions: 83,
                   activeColor: AppColors.forest700,
                   inactiveColor: AppColors.border,
-                  label: '${_duration.round()} days',
+                  label: t.welfareDurationDays(_duration.round()),
                   onChanged: (v) => setState(() => _duration = v),
                 ),
               ),
               const SizedBox(width: 8),
-              Text('${_duration.round()} days',
+              Text(t.welfareDurationDays(_duration.round()),
                   style: body(13,
                       weight: FontWeight.w700, color: AppColors.forest800)),
             ],
           ),
           const SizedBox(height: 12),
 
-          _label('Choose an Icon'),
+          _label(t.welfareChooseIcon),
           const SizedBox(height: 10),
           Wrap(
             spacing: 12,
@@ -237,16 +251,16 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Verification Checklist',
+                Text(t.welfareVerificationChecklist,
                     style: body(13,
                         weight: FontWeight.w700,
                         color: AppColors.forest800)),
                 const SizedBox(height: 8),
-                for (final item in const [
-                  'Campaign is for community benefit',
-                  'Funds will be managed by committee',
-                  'Monthly progress reports will be shared',
-                  'Elder sub-committee has been informed',
+                for (final item in [
+                  t.welfareCheckCommunityBenefit,
+                  t.welfareCheckFundsManaged,
+                  t.welfareCheckMonthlyReports,
+                  t.welfareCheckEldersInformed,
                 ]) ...[
                   Row(
                     children: [
@@ -269,7 +283,7 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           SizedBox(
             width: double.infinity,
             child: ForestButton(
-              label: 'Submit for Review',
+              label: t.welfareSubmitForReview,
               icon: Icons.check_rounded,
               expand: true,
               onPressed: _submit,

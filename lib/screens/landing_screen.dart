@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
@@ -68,7 +69,7 @@ class _Logo extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Flexible(
-          child: Text('Daivajna Samaja',
+          child: Text(AppLocalizations.of(context).landOrgName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: display(17,
@@ -85,6 +86,7 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.hero),
       padding: const EdgeInsets.fromLTRB(20, 40, 20, 48),
@@ -110,7 +112,7 @@ class _Hero extends StatelessWidget {
                       color: AppColors.forest800, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 8),
-                Text('Daivajna Samaja Bangalore - Est. 2024',
+                Text(t.landEyebrow,
                     style: body(11,
                         weight: FontWeight.w700, color: AppColors.forest800)),
               ],
@@ -119,15 +121,13 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 22),
           // Headline
           Text(
-            'Preserving our Roots,\nNurturing our Future',
+            t.landHeadline,
             style: display(40,
                 color: AppColors.forest900, height: 1.1, weight: FontWeight.w800),
           ),
           const SizedBox(height: 18),
           Text(
-            'The official digital sanctuary for the Daivajna Samaja - connecting '
-            'generations, preserving heritage, and building community welfare '
-            'through a living family tree.',
+            t.landSubtitle,
             style: body(15, color: AppColors.textMuted, height: 1.55),
           ),
           const SizedBox(height: 24),
@@ -136,12 +136,12 @@ class _Hero extends StatelessWidget {
             runSpacing: 12,
             children: [
               ForestButton(
-                label: 'Begin Your Journey',
+                label: t.landBeginJourney,
                 icon: Icons.arrow_forward_rounded,
                 onPressed: () => context.go('/register'),
               ),
               OutlineButtonX(
-                label: 'Access Portal',
+                label: t.landAccessPortal,
                 onPressed: () => context.go('/login'),
               ),
             ],
@@ -160,6 +160,7 @@ class _TreePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         gradient: AppGradients.deepForest,
@@ -176,7 +177,7 @@ class _TreePreviewCard extends StatelessWidget {
               const Icon(Icons.park_rounded,
                   size: 14, color: AppColors.forest500),
               const SizedBox(width: 8),
-              Text('FAMILY LINEAGE PREVIEW',
+              Text(t.landFamilyLineagePreview,
                   style: body(11,
                       weight: FontWeight.w700,
                       color: AppColors.forest500,
@@ -193,10 +194,10 @@ class _TreePreviewCard extends StatelessWidget {
             alignment: WrapAlignment.center,
             spacing: 8,
             runSpacing: 8,
-            children: const [
-              _TreeTag('4 Generations', AppColors.gold500),
-              _TreeTag('6 Members', AppColors.forest500),
-              _TreeTag('Udupi Branch', AppColors.forest300),
+            children: [
+              _TreeTag(t.landGenerationsTag, AppColors.gold500),
+              _TreeTag(t.landMembersTag, AppColors.forest500),
+              _TreeTag(t.landUdupiBranch, AppColors.forest300),
             ],
           ),
         ],
@@ -301,46 +302,41 @@ class _TreePainter extends CustomPainter {
 class _Pillars extends StatelessWidget {
   const _Pillars();
 
-  static const _pillars = [
-    (
-      Icons.park_rounded,
-      'Family Tree',
-      'Document your family lineage across generations. Interactive tree '
-          'visualization with photo archives, life stories, and ancestral '
-          'connections.',
-      '/family-tree',
-    ),
-    (
-      Icons.favorite_rounded,
-      'Community Welfare',
-      'Transparent crowdfunding for Samaj development. Every rupee accounted '
-          'for - community center, scholarships, emergency support.',
-      '/welfare',
-    ),
-    (
-      Icons.groups_rounded,
-      'Matrimonial Hub',
-      'Elder-mediated matrimonial connections that honour lineage and '
-          'cultural alignment. Verified profiles with complete family '
-          'background.',
-      '/matrimonial',
-    ),
-    (
-      Icons.shield_rounded,
-      'Elder Governance',
-      'Community-driven decisions guided by our respected elders. Resolve '
-          'conflicts, verify members, and govern with generational wisdom.',
-      '/elder',
-    ),
-  ];
+  static List<(IconData, String, String, String)> _pillarsOf(AppLocalizations t) => [
+        (
+          Icons.park_rounded,
+          t.landPillarFamilyTreeTitle,
+          t.landPillarFamilyTreeDesc,
+          '/family-tree',
+        ),
+        (
+          Icons.favorite_rounded,
+          t.landPillarWelfareTitle,
+          t.landPillarWelfareDesc,
+          '/welfare',
+        ),
+        (
+          Icons.groups_rounded,
+          t.landPillarMatrimonialTitle,
+          t.landPillarMatrimonialDesc,
+          '/matrimonial',
+        ),
+        (
+          Icons.shield_rounded,
+          t.landPillarElderTitle,
+          t.landPillarElderDesc,
+          '/elder',
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 48, 20, 48),
       child: Column(
         children: [
-          ..._pillars.map((p) => Padding(
+          ..._pillarsOf(t).map((p) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: _PillarCard(
                   icon: p.$1,
@@ -371,6 +367,7 @@ class _PillarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       onTap: onTap,
       child: Column(
@@ -394,7 +391,7 @@ class _PillarCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Explore',
+              Text(t.landExplore,
                   style: body(13,
                       weight: FontWeight.w700, color: AppColors.gold700)),
               const SizedBox(width: 4),
@@ -412,42 +409,40 @@ class _PillarCard extends StatelessWidget {
 class _TrustSection extends StatelessWidget {
   const _TrustSection();
 
-  static const _items = [
-    (
-      Icons.verified_rounded,
-      'Aadhaar Verification',
-      'Every member submits a government-issued ID. Aadhaar-matched and '
-          'digitally registered.',
-    ),
-    (
-      Icons.groups_rounded,
-      'Peer Vouching',
-      'New members are vouched by 3 existing verified family members within '
-          'the Samaj network.',
-    ),
-    (
-      Icons.shield_rounded,
-      'Elder Approval',
-      'Elder sub-committee reviews and approves all lineage connections and '
-          'matrimonial requests.',
-    ),
-  ];
+  static List<(IconData, String, String)> _itemsOf(AppLocalizations t) => [
+        (
+          Icons.verified_rounded,
+          t.landTrustAadhaarTitle,
+          t.landTrustAadhaarDesc,
+        ),
+        (
+          Icons.groups_rounded,
+          t.landTrustPeerTitle,
+          t.landTrustPeerDesc,
+        ),
+        (
+          Icons.shield_rounded,
+          t.landTrustElderTitle,
+          t.landTrustElderDesc,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.cream),
       padding: const EdgeInsets.fromLTRB(20, 44, 20, 44),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
-            eyebrow: 'A circle of absolute trust',
-            title: 'Every member, every connection - verified.',
+          SectionHeader(
+            eyebrow: t.landTrustEyebrow,
+            title: t.landTrustTitle,
             titleSize: 26,
           ),
           const SizedBox(height: 24),
-          ..._items.map((it) => Padding(
+          ..._itemsOf(t).map((it) => Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,15 +490,14 @@ class _TrustSection extends StatelessWidget {
                 const Text('🌳', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 16),
                 Text(
-                  '"A tree is only as strong as its roots. Verification ensures '
-                  'the legacy you build is authentic and lasting."',
+                  t.landQuote,
                   style: display(18,
                       color: AppColors.gold500,
                       height: 1.5,
                       weight: FontWeight.w500),
                 ),
                 const SizedBox(height: 12),
-                Text('- Samaj Heritage Council',
+                Text(t.landQuoteAuthor,
                     style: body(13, color: AppColors.forest500)),
               ],
             ),
@@ -520,6 +514,7 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -534,7 +529,7 @@ class _Footer extends StatelessWidget {
         children: [
           const _Logo(onDark: true),
           const SizedBox(height: 8),
-          Text('Daivajna Samaja Community Portal',
+          Text(t.landFooterTagline,
               style: body(12, color: AppColors.forest500)),
           const SizedBox(height: 20),
           Divider(color: Colors.white.withValues(alpha: 0.1)),
@@ -543,12 +538,12 @@ class _Footer extends StatelessWidget {
             alignment: WrapAlignment.center,
             spacing: 16,
             runSpacing: 10,
-            children: const [
-              'Privacy Policy',
-              'Terms of Service',
-              'Heritage Guidelines',
-              'Contact Admin',
-              'Community Governance',
+            children: [
+              t.landFooterPrivacy,
+              t.landFooterTerms,
+              t.landFooterHeritage,
+              t.landFooterContact,
+              t.landFooterGovernance,
             ]
                 .map((l) => Text(l,
                     style: body(12, color: AppColors.forest500)))
@@ -556,7 +551,7 @@ class _Footer extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            '© 2024 Daivajna Samaja - Preserving Legacies for Generations.',
+            t.landFooterCopyright,
             textAlign: TextAlign.center,
             style: body(11, color: AppColors.forest700),
           ),

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/api_client.dart';
 import '../data/invitation_member.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -117,7 +118,9 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not load the map';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).invCouldNotLoadMap;
         _loading = false;
       });
     }
@@ -216,7 +219,9 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     } catch (e) {
       if (!mounted || seq != _planSeq) return;
       setState(() {
-        _planError = e is ApiException ? e.message : 'Could not plan the route';
+        _planError = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).invRoutePlanError;
         _planning = false;
       });
     }
@@ -241,7 +246,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _locating = false);
-      _snack('Could not read your location');
+      _snack(AppLocalizations.of(context).invCouldNotReadLocation);
     }
   }
 
@@ -278,9 +283,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   /// The stops go across in the order the server worked out, so the navigation
   /// follows the optimised route rather than re-deciding it.
   Future<void> _startNavigation() async {
+    final t = AppLocalizations.of(context);
     final stops = _orderedStops;
     if (stops.isEmpty) {
-      _snack('Select at least one family to begin.');
+      _snack(t.invSelectAtLeastOne);
       return;
     }
 
@@ -295,17 +301,14 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         mode: LaunchMode.externalApplication,
       );
       if (!opened) {
-        _snack('No maps app could open the route');
+        _snack(t.invNoMapsApp);
         return;
       }
       if (link.dropped > 0) {
-        _snack(
-          'Navigating the first 10 stops - maps can only take that many at once '
-          '(${link.dropped} left for the next trip).',
-        );
+        _snack(t.invNavigatingFirst10(link.dropped));
       }
     } catch (_) {
-      _snack('Could not open a maps app');
+      _snack(t.invCouldNotOpenMapsApp);
     }
   }
 
@@ -328,7 +331,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Invitations',
+      title: AppLocalizations.of(context).invTitle,
       currentRoute: '/invitations',
       scrollable: false,
       padding: EdgeInsets.zero,
@@ -359,6 +362,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   }
 
   Widget _body() {
+    final t = AppLocalizations.of(context);
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -366,8 +370,8 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       return _message(
         icon: Icons.cloud_off_rounded,
         title: _error,
-        detail: 'Check your connection and try again.',
-        action: 'Retry',
+        detail: t.invCheckConnectionRetry,
+        action: t.invRetry,
       );
     }
     if (_all.isEmpty) {
@@ -376,13 +380,12 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       return _message(
         icon: Icons.person_pin_circle_outlined,
         title: _query.isEmpty
-            ? 'No members on the map yet'
-            : 'No members match "$_query"',
+            ? t.invNoMembersYet
+            : t.invNoMembersMatch(_query),
         detail: _query.isEmpty
-            ? 'A member appears here once they save their current address - '
-                'the address is what puts them on the map.'
-            : 'Search matches Samaj ID, username or phone number.',
-        action: 'Refresh',
+            ? t.invNoMembersYetDetail
+            : t.invSearchMatchesDetail,
+        action: t.invRefresh,
       );
     }
 
@@ -397,37 +400,37 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: [
-          Text('SMART INVITATION PLANNER',
+          Text(t.invSmartPlanner,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.gold700,
                   letterSpacing: 2)),
           const SizedBox(height: 4),
-          Text('Route Planner', style: display(22, color: AppColors.forest900)),
+          Text(t.invRoutePlanner, style: display(22, color: AppColors.forest900)),
           const SizedBox(height: 4),
-          Text('Select families · the route orders itself',
+          Text(t.invSelectFamiliesSubtitle,
               style: body(12, color: AppColors.textMuted)),
           if (_count > _all.length) ...[
             const SizedBox(height: 6),
             Text(
-              'Showing the ${_all.length} nearest of $_count mapped members.',
+              t.invShowingNearest(_all.length, _count),
               style: body(11, color: AppColors.gold700, height: 1.4),
             ),
           ],
           const SizedBox(height: 12),
-          _originPicker(),
+          _originPicker(t),
           if (_planError.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(_planError, style: body(11, color: AppColors.gold700)),
           ],
           const SizedBox(height: 12),
-          _searchField(),
+          _searchField(t),
           const SizedBox(height: 12),
           if (visible.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30),
               child: Center(
-                child: Text('No members match "$_query"',
+                child: Text(t.invNoMembersMatch(_query),
                     style: body(13, color: AppColors.hint)),
               ),
             ),
@@ -453,14 +456,14 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   /// Where the round starts — always where the member is standing, since that
   /// is also the position the map is sorted around. The only control here is
   /// taking a fresh fix after moving.
-  Widget _originPicker() {
+  Widget _originPicker(AppLocalizations t) {
   final origin = _gpsOrigin;
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
-        'START FROM',
+        t.invStartFrom,
         style: body(
           10,
           weight: FontWeight.w700,
@@ -485,12 +488,12 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                 Flexible(
                   child: Text(
                     _locating
-                        ? 'Locating…'
+                        ? t.invLocating
                         : origin == null
-                            ? 'Waiting for your location'
-                            : 'Current location · '
-                                '${origin.latitude.toStringAsFixed(4)}, '
-                                '${origin.longitude.toStringAsFixed(4)}',
+                            ? t.invWaitingForLocation
+                            : t.invCurrentLocation(
+                                origin.latitude.toStringAsFixed(4),
+                                origin.longitude.toStringAsFixed(4)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: body(12, color: AppColors.ink),
@@ -508,7 +511,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh_rounded, size: 16),
-            label: Text('Update', style: body(12)),
+            label: Text(t.invUpdate, style: body(12)),
           ),
         ],
       ),
@@ -518,13 +521,13 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
 
 
 
-  Widget _searchField() {
+  Widget _searchField(AppLocalizations t) {
     return TextField(
       controller: _searchCtrl,
       onChanged: (v) => setState(() => _query = v),
       style: body(14, color: AppColors.ink),
       decoration: InputDecoration(
-        hintText: 'Search by name, area or Samaj ID',
+        hintText: t.invSearchHint,
         hintStyle: body(13, color: AppColors.hint),
         filled: true,
         fillColor: Colors.white,
@@ -666,8 +669,8 @@ class _MapPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     loading
-                        ? 'Loading the map…'
-                        : 'Select families to plan a route',
+                        ? AppLocalizations.of(context).invLoadingMap
+                        : AppLocalizations.of(context).invSelectFamiliesToPlan,
                     style:
                         body(13, weight: FontWeight.w600, color: AppColors.hint),
                   ),
@@ -757,21 +760,22 @@ class _MemberCard extends StatelessWidget {
   static String _km(double km) =>
       km < 10 ? '${km.toStringAsFixed(1)} km' : '${km.round()} km';
 
-  String get _localityLine {
+  String _localityLine(AppLocalizations t) {
     final leg = legKm;
     final away = distanceKmFromOrigin;
     final distance = selected && leg != null
         ? (stopNumber == 1
-            ? '${_km(leg)} from the start'
-            : '${_km(leg)} from stop ${stopNumber - 1}')
+            ? t.invFromTheStart(_km(leg))
+            : t.invFromStopN(_km(leg), stopNumber - 1))
         : away == null
             ? ''
-            : '${_km(away)} away';
+            : t.invAway(_km(away));
     return [member.locality, distance].where((s) => s.isNotEmpty).join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppCard(
       padding: const EdgeInsets.all(12),
       color: selected ? const Color(0xFFF0FBF4) : Colors.white,
@@ -831,7 +835,7 @@ class _MemberCard extends StatelessWidget {
                             size: 12, color: AppColors.hint),
                         const SizedBox(width: 2),
                         Flexible(
-                          child: Text(_localityLine,
+                          child: Text(_localityLine(t),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: body(11, color: AppColors.hint)),
@@ -904,19 +908,20 @@ class _SummaryBar extends StatelessWidget {
 
   /// The trip in one line: distance, driving time, and — when OSRM could not be
   /// reached — that these are straight lines rather than roads.
-  String get _tripLine {
-    if (planning) return 'Optimising the route…';
+  String _tripLine(AppLocalizations t) {
+    if (planning) return t.invOptimisingRoute;
     final p = plan;
-    if (p == null || p.stops.isEmpty) return 'Pick the families to visit';
+    if (p == null || p.stops.isEmpty) return t.invPickFamilies;
     final km =
         p.totalKm < 10 ? p.totalKm.toStringAsFixed(1) : p.totalKm.round().toString();
     final mins = p.totalMinutes;
     final time = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}m' : '${mins}m';
-    return '$km km · $time${p.isEstimate ? ' (straight-line estimate)' : ''}';
+    return '$km km · $time${p.isEstimate ? t.invStraightLineEstimate : ''}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
@@ -938,7 +943,7 @@ class _SummaryBar extends StatelessWidget {
                       const Icon(Icons.groups_rounded,
                           size: 15, color: AppColors.forest700),
                       const SizedBox(width: 5),
-                      Text('$stops ${stops == 1 ? "stop" : "stops"}',
+                      Text('$stops ${stops == 1 ? t.invStop : t.invStops}',
                           style: body(14,
                               weight: FontWeight.w700,
                               color: AppColors.forest900)),
@@ -952,7 +957,7 @@ class _SummaryBar extends StatelessWidget {
                           size: 13, color: AppColors.textMuted),
                       const SizedBox(width: 5),
                       Flexible(
-                        child: Text(_tripLine,
+                        child: Text(_tripLine(t),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: body(11, color: AppColors.textMuted)),
@@ -964,7 +969,7 @@ class _SummaryBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             ForestButton(
-              label: 'Start Navigation',
+              label: t.invStartNavigation,
               icon: Icons.navigation_rounded,
               onPressed: onStart,
             ),

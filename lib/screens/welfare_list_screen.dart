@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/ui_kit.dart';
@@ -25,15 +26,16 @@ class _WelfareListScreenState extends State<WelfareListScreen> {
     final totalBackers =
         campaigns.fold<int>(0, (s, c) => s + (c['backers'] as int));
 
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Welfare',
+      title: t.welfareTitle,
       currentRoute: '/welfare',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/welfare/new'),
         backgroundColor: AppColors.gold500,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded, size: 20),
-        label: Text('Start a Campaign',
+        label: Text(t.welfareStartCampaign,
             style: body(13, weight: FontWeight.w700, color: Colors.white)),
       ),
       child: Column(
@@ -41,7 +43,7 @@ class _WelfareListScreenState extends State<WelfareListScreen> {
         children: [
           _HeaderBand(totalRaised: totalRaised, totalBackers: totalBackers),
           const SizedBox(height: 20),
-          Text('Active Fundraising Campaigns',
+          Text(t.welfareActiveCampaigns,
               style: display(20, color: AppColors.forest900)),
           const SizedBox(height: 14),
           for (final c in campaigns) ...[
@@ -64,6 +66,7 @@ class _HeaderBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -74,13 +77,13 @@ class _HeaderBand extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('COMMUNITY WELFARE & DEVELOPMENT',
+          Text(t.welfareKicker,
               style: body(11,
                   weight: FontWeight.w700,
                   color: AppColors.forest300,
                   letterSpacing: 1.4)),
           const SizedBox(height: 8),
-          Text('Build the Samaj tree, one contribution at a time.',
+          Text(t.welfareHeroLine,
               style: display(20, color: Colors.white, height: 1.25)),
           const SizedBox(height: 18),
           Row(
@@ -88,14 +91,14 @@ class _HeaderBand extends StatelessWidget {
               Expanded(
                 child: _StatTile(
                   value: formatLakh(totalRaised),
-                  label: 'Total Raised',
+                  label: t.welfareTotalRaised,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _StatTile(
                   value: formatIndian(totalBackers),
-                  label: 'Total Backers',
+                  label: t.welfareTotalBackers,
                 ),
               ),
             ],
@@ -138,6 +141,7 @@ class _CampaignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final c = campaign;
     final raised = c['raised'] as int;
     final goal = c['goal'] as int;
@@ -198,12 +202,12 @@ class _CampaignCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('${formatLakh(raised)} raised',
+                    Text(t.welfareRaised(formatLakh(raised)),
                         style: body(13,
                             weight: FontWeight.w700,
                             color: AppColors.forest800)),
                     const Spacer(),
-                    Text('of ${formatLakh(goal)} · $pct%',
+                    Text(t.welfareOfGoalPct(formatLakh(goal), pct),
                         style: body(12, color: AppColors.textMuted)),
                   ],
                 ),
@@ -213,13 +217,13 @@ class _CampaignCard extends StatelessWidget {
                     const Icon(Icons.schedule_rounded,
                         size: 14, color: AppColors.hint),
                     const SizedBox(width: 4),
-                    Text('${c['daysLeft']} days left',
+                    Text(t.welfareDaysLeft(c['daysLeft'] as int),
                         style: body(12, color: AppColors.hint)),
                     const SizedBox(width: 14),
                     const Icon(Icons.favorite_rounded,
                         size: 14, color: AppColors.gold700),
                     const SizedBox(width: 4),
-                    Text('${c['backers']} backers',
+                    Text(t.welfareBackers(c['backers'] as int),
                         style: body(12, color: AppColors.hint)),
                   ],
                 ),
@@ -227,7 +231,7 @@ class _CampaignCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ForestButton(
-                    label: 'Donate',
+                    label: t.welfareDonate,
                     icon: Icons.volunteer_activism_rounded,
                     expand: true,
                     onPressed: () =>
@@ -246,6 +250,7 @@ class _CampaignCard extends StatelessWidget {
 class _ImpactCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         gradient: AppGradients.deepForest,
@@ -259,14 +264,14 @@ class _ImpactCta extends StatelessWidget {
           const Icon(Icons.bar_chart_rounded,
               color: AppColors.forest300, size: 26),
           const SizedBox(height: 10),
-          Text('Heritage Impact 2024-25',
+          Text(t.welfareImpactTitle,
               style: display(17, color: Colors.white)),
           const SizedBox(height: 6),
-          Text('See exactly where every rupee goes - full transparency report.',
+          Text(t.welfareImpactBody,
               style: body(13, color: AppColors.forest300, height: 1.5)),
           const SizedBox(height: 14),
           GoldButton(
-            label: 'View Impact Report',
+            label: t.welfareViewImpactReport,
             icon: Icons.arrow_forward_rounded,
             onPressed: () => context.push('/welfare/impact'),
           ),

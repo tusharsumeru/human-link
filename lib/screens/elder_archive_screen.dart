@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/avatars.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
@@ -12,60 +13,57 @@ import '../widgets/ui_kit.dart';
 class ElderArchiveScreen extends StatelessWidget {
   const ElderArchiveScreen({super.key});
 
-  static const List<Map<String, dynamic>> _memories = [
+  // Wire tag key (also the lookup key into _tagColors) → localized fields.
+  // Built at call time (not `const`), so it always reflects the active
+  // language.
+  static List<Map<String, dynamic>> _memoriesOf(AppLocalizations t) => [
     {
-      'title': '1968 Samaj Utsava in Kumta',
+      'title': t.elderMem1Title,
       'year': '1968',
       'tag': 'Cultural',
       'photo': 2601464,
-      'caption':
-          'The first inter-village Samaja Utsava bringing together goldsmith families from Kumta, Kundapura and Honnavar.',
-      'contributor': 'Venkatesh Haldankar',
+      'caption': t.elderMem1Caption,
+      'contributor': t.elderMem1Contributor,
     },
     {
-      'title': 'First Samaj Bhavan, 1974',
+      'title': t.elderMem2Title,
       'year': '1974',
       'tag': 'Heritage',
       'photo': 17815020,
-      'caption':
-          'Inauguration of the community-built Samaja Bhavan in Basavanagudi - funded entirely by member contributions.',
-      'contributor': 'Shri Narayanarao Suvarna',
+      'caption': t.elderMem2Caption,
+      'contributor': t.elderMem2Contributor,
     },
     {
-      'title': 'Goldsmith Guild Charter, 1952',
+      'title': t.elderMem3Title,
       'year': '1952',
       'tag': 'Lineage',
       'photo': 4053536,
-      'caption':
-          'The founding charter of the Daivajna goldsmith guild, signed by 28 master craftsmen of the coastal districts.',
-      'contributor': 'Samaj Archives Committee',
+      'caption': t.elderMem3Caption,
+      'contributor': t.elderMem3Contributor,
     },
     {
-      'title': 'Annual Utsava 1992',
+      'title': t.elderMem4Title,
       'year': '1992',
       'tag': 'Cultural',
       'photo': 5746790,
-      'caption':
-          'Carnatic recitals and the elder felicitation that drew over 600 members across three generations.',
-      'contributor': 'Rekha Diwakar',
+      'caption': t.elderMem4Caption,
+      'contributor': t.elderMem4Contributor,
     },
     {
-      'title': 'Elder Felicitation 2008',
+      'title': t.elderMem5Title,
       'year': '2008',
       'tag': 'Heritage',
       'photo': 11138457,
-      'caption':
-          'Honouring the senior-most members of each branch with shawls and the traditional gold medallion.',
-      'contributor': 'Lakshmi Revankar',
+      'caption': t.elderMem5Caption,
+      'contributor': t.elderMem5Contributor,
     },
     {
-      'title': 'Temple Kumbhabhisheka 1981',
+      'title': t.elderMem6Title,
       'year': '1981',
       'tag': 'Devotional',
       'photo': 29201034,
-      'caption':
-          'The consecration of the community temple after its renovation, with priests from Kundapura and Udupi.',
-      'contributor': 'Parvati Shirodkar',
+      'caption': t.elderMem6Caption,
+      'contributor': t.elderMem6Contributor,
     },
   ];
 
@@ -75,6 +73,14 @@ class ElderArchiveScreen extends StatelessWidget {
     'Lineage': [0xFFD1FAE5, 0xFF065F46],
     'Devotional': [0xFFFEF3C7, 0xFFD97706],
   };
+
+  static String _tagLabel(String tag, AppLocalizations t) => switch (tag) {
+        'Cultural' => t.elderTagCultural,
+        'Heritage' => t.elderTagHeritage,
+        'Lineage' => t.elderTagLineage,
+        'Devotional' => t.elderTagDevotional,
+        _ => tag,
+      };
 
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
@@ -88,8 +94,9 @@ class ElderArchiveScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Archives',
+      title: t.elderArchives,
       currentRoute: '/elder/archive',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,12 +104,11 @@ class ElderArchiveScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: SectionHeader(
-                  eyebrow: 'Heritage Memory Archive',
-                  title: 'Our Living History',
-                  subtitle:
-                      'Photographs, charters and oral histories of the Daivajna Samaja',
+                  eyebrow: t.elderHeritageMemoryArchive,
+                  title: t.elderOurLivingHistory,
+                  subtitle: t.elderLivingHistorySubtitle,
                   titleSize: 24,
                 ),
               ),
@@ -110,15 +116,14 @@ class ElderArchiveScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           GoldButton(
-            label: 'Upload a Memory',
+            label: t.elderUploadMemory,
             icon: Icons.upload_rounded,
-            onPressed: () =>
-                _toast(context, 'Memory upload - opening contributor form'),
+            onPressed: () => _toast(context, t.elderUploadMemoryToast),
           ),
           const SizedBox(height: 18),
-          ..._memories.map((m) => Padding(
+          ..._memoriesOf(t).map((m) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: _memoryCard(context, m),
+                child: _memoryCard(context, m, t),
               )),
           const SizedBox(height: 8),
         ],
@@ -126,11 +131,11 @@ class ElderArchiveScreen extends StatelessWidget {
     );
   }
 
-  Widget _memoryCard(BuildContext context, Map<String, dynamic> m) {
+  Widget _memoryCard(BuildContext context, Map<String, dynamic> m, AppLocalizations t) {
     final col = _tagColors[m['tag']] ?? const [0xFFF3F4F6, 0xFF374151];
     return AppCard(
       padding: EdgeInsets.zero,
-      onTap: () => _openDetail(context, m),
+      onTap: () => _openDetail(context, m, t),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: Column(
@@ -150,7 +155,7 @@ class ElderArchiveScreen extends StatelessWidget {
                   Positioned(
                     top: 10,
                     left: 10,
-                    child: Pill(m['tag'] as String,
+                    child: Pill(_tagLabel(m['tag'] as String, t),
                         bg: Color(col[0]), fg: Color(col[1])),
                   ),
                 ],
@@ -182,7 +187,7 @@ class ElderArchiveScreen extends StatelessWidget {
                       const Icon(Icons.person_outline_rounded,
                           size: 13, color: AppColors.hint),
                       const SizedBox(width: 5),
-                      Text('Contributed by ${m['contributor']}',
+                      Text(t.elderContributedBy(m['contributor'] as String),
                           style: body(11, color: AppColors.hint)),
                     ],
                   ),
@@ -195,7 +200,7 @@ class ElderArchiveScreen extends StatelessWidget {
     );
   }
 
-  void _openDetail(BuildContext context, Map<String, dynamic> m) {
+  void _openDetail(BuildContext context, Map<String, dynamic> m, AppLocalizations t) {
     final col = _tagColors[m['tag']] ?? const [0xFFF3F4F6, 0xFF374151];
     showModalBottomSheet<void>(
       context: context,
@@ -233,7 +238,7 @@ class ElderArchiveScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Pill(m['tag'] as String,
+                      Pill(_tagLabel(m['tag'] as String, t),
                           bg: Color(col[0]), fg: Color(col[1])),
                       const SizedBox(width: 8),
                       Pill(m['year'] as String,
@@ -260,7 +265,7 @@ class ElderArchiveScreen extends StatelessWidget {
                             size: 16, color: AppColors.gold700),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text('Contributed by ${m['contributor']}',
+                          child: Text(t.elderContributedBy(m['contributor'] as String),
                               style: body(12.5,
                                   weight: FontWeight.w600,
                                   color: AppColors.forest900)),
@@ -270,7 +275,7 @@ class ElderArchiveScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   ForestButton(
-                    label: 'Close',
+                    label: t.elderClose,
                     expand: true,
                     onPressed: () => Navigator.pop(ctx),
                   ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/api_client.dart';
 import '../data/comment_store.dart';
 import '../data/demo_data.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
@@ -107,7 +108,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
-    final me = context.read<AuthService>().user?.name ?? 'You';
+    final t = AppLocalizations.of(context);
+    final me = context.read<AuthService>().user?.name ?? t.postAuthorFallback;
 
     // Clear the field up front — the comment is appended optimistically, and
     // CommentStore rolls it back if the POST fails.
@@ -121,18 +123,19 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       if (!mounted) return;
       _controller.text = text; // give the user their text back to retry
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not post comment: ${_message(e)}')),
+        SnackBar(content: Text(t.commentCouldNotPost(_message(e, t)))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
 
-  String _message(Object e) =>
-      e is ApiException ? e.message : 'check your connection';
+  String _message(Object e, AppLocalizations t) =>
+      e is ApiException ? e.message : t.commentCheckConnection;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final mq = MediaQuery.of(context);
     final available = mq.size.height - mq.padding.top - mq.viewInsets.bottom - 8;
     final height = (mq.size.height * 0.85).clamp(240.0, available);
@@ -160,7 +163,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                 ),
               ),
               const SizedBox(height: 10),
-              Text('Comments', style: display(17, color: AppColors.forest900)),
+              Text(t.commentTitle, style: display(17, color: AppColors.forest900)),
               const SizedBox(height: 8),
               const Divider(height: 1, color: AppColors.border),
 
@@ -179,12 +182,12 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                             const Icon(Icons.mode_comment_outlined,
                                 size: 40, color: AppColors.hint),
                             const SizedBox(height: 10),
-                            Text('No comments yet',
+                            Text(t.commentNoneYet,
                                 style: body(15,
                                     weight: FontWeight.w600,
                                     color: AppColors.label)),
                             const SizedBox(height: 4),
-                            Text('Start the conversation.',
+                            Text(t.commentStartConversation,
                                 style: body(13, color: AppColors.hint)),
                           ],
                         ),
@@ -194,7 +197,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       itemCount: comments.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (_, i) => _CommentRow(comment: comments[i]),
+                      itemBuilder: (_, i) => _CommentRow(comment: comments[i], t: t),
                     );
                   },
                 ),
@@ -237,7 +240,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                   padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                   child: Row(
                     children: [
-                      PexelsImage(url: '', name: me?.name ?? 'You', size: 34),
+                      PexelsImage(url: '', name: me?.name ?? t.postAuthorFallback, size: 34),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
@@ -249,7 +252,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           maxLines: 4,
                           style: body(14, color: AppColors.ink),
                           decoration: InputDecoration(
-                            hintText: 'Add a comment…  (type @ to tag)',
+                            hintText: t.commentHint,
                             hintStyle: body(13, color: AppColors.hint),
                             isDense: true,
                             border: InputBorder.none,
@@ -264,7 +267,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                               value.text.trim().isNotEmpty && !_sending;
                           return TextButton(
                             onPressed: enabled ? _send : null,
-                            child: Text(_sending ? 'Posting…' : 'Post',
+                            child: Text(_sending ? t.commentPosting : t.commentPost,
                                 style: body(14,
                                     weight: FontWeight.w700,
                                     color: enabled
@@ -286,8 +289,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow({required this.comment});
+  const _CommentRow({required this.comment, required this.t});
   final Comment comment;
+  final AppLocalizations t;
 
   @override
   Widget build(BuildContext context) {
@@ -317,7 +321,7 @@ class _CommentRow extends StatelessWidget {
                   if (comment.likeCount > 0) ...[
                     const SizedBox(width: 12),
                     Text(
-                      '${comment.likeCount} like${comment.likeCount == 1 ? '' : 's'}',
+                      t.commentLikeCount(comment.likeCount),
                       style: body(11,
                           weight: FontWeight.w600, color: AppColors.hint),
                     ),
@@ -349,8 +353,8 @@ class _CommentRow extends StatelessWidget {
                   } catch (e) {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(
-                          'Could not like: ${e is ApiException ? e.message : 'check your connection'}'),
+                      content: Text(t.commentCouldNotLike(
+                          e is ApiException ? e.message : t.commentCheckConnection)),
                     ));
                   }
                 },

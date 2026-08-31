@@ -128,6 +128,7 @@ class Repository {
   Future<int> feedNewCount(String afterPostId) async {
     try {
       final data = await _api.getJson('/feed/new-count?after=$afterPostId');
+      
       if (data is Map && data['count'] is num) {
         return (data['count'] as num).toInt();
       }
@@ -1149,6 +1150,37 @@ Future<Map<String, dynamic>> addFamilyMember({
           .toList();
     }
     return const [];
+  }
+
+  /// GET /api/family/relationships — my direct family links, accepted and still
+  /// pending, each worded from my side:
+  /// `[{_id, relation, storedRelation, status, member, addedByMe, message}]`.
+  /// `_id` is the relationshipId [removeFamilyRelationship] wants, and `member`
+  /// is the person on the other end — their `_id` matches a tree node id.
+  Future<List<Map<String, dynamic>>> familyRelationships() async {
+    final data = await _api.getJson('/api/family/relationships');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [];
+  }
+
+  /// POST /api/family/relationships/remove — take a link back down, from either
+  /// side and at any stage: the sender who picked the wrong relation, or the
+  /// relative who already accepted it. The optional [note] (max 280 chars) is
+  /// passed on to the other side. Uses the POST alias rather than
+  /// `DELETE /api/family/relationships/:id` because only the POST form carries a
+  /// body. **Refetch the tree afterwards** — removing one edge can drop or
+  /// relabel everyone who was reached through it.
+  Future<void> removeFamilyRelationship(String relationshipId,
+      {String? note}) async {
+    await _api.postJson('/api/family/relationships/remove', {
+      'relationshipId': relationshipId,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
   }
 
   /// POST /api/family/requests/accept — accept a request by id, with an optional

@@ -10,6 +10,7 @@ import '../data/api_client.dart';
 import '../data/gotras.dart';
 import '../data/kuladevatas.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/digilocker_card.dart';
@@ -60,12 +61,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// Validate the details and advance to OTP entry. No SMS is sent — the
   /// backend accepts the fixed demo OTP (matches the web register flow).
   void _handleNext() {
+    final t = AppLocalizations.of(context);
     if (_nameCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Please enter your full name');
+      setState(() => _error = t.registerErrorName);
       return;
     }
     if (_phoneCtrl.text.length < 10) {
-      setState(() => _error = 'Please enter a valid 10-digit phone number');
+      setState(() => _error = t.registerErrorPhone);
       return;
     }
     setState(() {
@@ -86,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleVerify() async {
     if (_otpCtrl.text != '121212') {
-      setState(() => _error = 'Invalid OTP. Please try again.');
+      setState(() => _error = AppLocalizations.of(context).registerErrorInvalidOtp);
       return;
     }
     setState(() {
@@ -174,18 +176,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() {
         _error = e.message.isNotEmpty
             ? e.message
-            : 'Registration failed. Please try again.';
+            : AppLocalizations.of(context).registerErrorGeneric;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
+      final t = AppLocalizations.of(context);
       // Surface *why* it failed — a bare "network error" hides whether this was
       // a timeout, a dead tunnel/DNS failure, or a bad response.
       final detail = e is TimeoutException
-          ? 'the server took too long to respond'
+          ? t.registerErrorTimeout
           : e.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _error = 'Network error - $detail';
+        _error = t.registerErrorNetwork(detail);
         _loading = false;
       });
     }
@@ -216,7 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Center(
                 child: GestureDetector(
                   onTap: () => context.go('/login'),
-                  child: Text('← Back to Sign in',
+                  child: Text(AppLocalizations.of(context).registerBackToSignIn,
                       style: body(13,
                           weight: FontWeight.w600, color: AppColors.gold500)),
                 ),
@@ -236,14 +239,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       };
 
   Widget _buildDetails() {
+    final t = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Join the Samaj',
-            style: display(26, color: AppColors.forest900)),
+        Text(t.registerJoinTitle, style: display(26, color: AppColors.forest900)),
         const SizedBox(height: 6),
-        Text('Create your account and begin documenting your lineage',
-            style: body(13, color: AppColors.textMuted)),
+        Text(t.registerJoinSubtitle, style: body(13, color: AppColors.textMuted)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -251,30 +253,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: const Color(0xFFEAF7EE),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('An OTP will be sent to your mobile via SMS',
+          child: Text(t.registerOtpNotice,
               style: body(12,
                   weight: FontWeight.w600, color: AppColors.forest700)),
         ),
         const SizedBox(height: 18),
-        _label('Full Name', hint: '(as per aadhar)'),
-        _field(_nameCtrl, 'e.g. Aditi Shanbhag Rao'),
+        _label(t.registerFullName, hint: t.registerAsPerAadhar),
+        _field(_nameCtrl, t.registerFullNameHint),
         const SizedBox(height: 14),
-        _label('Mobile Number', hint: '(as per aadhar)'),
+        _label(t.registerMobileNumber, hint: t.registerAsPerAadhar),
         _field(_phoneCtrl, '9876543210',
             keyboardType: TextInputType.phone,
             maxLength: 10,
             digitsOnly: true),
         const SizedBox(height: 14),
-        _label('Gender'),
+        _label(t.registerGender),
         Row(
           children: [
-            _genderButton('M', 'Male'),
+            _genderButton('M', t.registerMale),
             const SizedBox(width: 10),
-            _genderButton('F', 'Female'),
+            _genderButton('F', t.registerFemale),
           ],
         ),
         const SizedBox(height: 14),
-        _label('Gotra'),
+        _label(t.registerGotra),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -297,7 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        _label('Kuladevata', hint: '(optional)'),
+        _label(t.registerKuladevata, hint: t.registerOptional),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -309,7 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: DropdownButton<String>(
               value: _kuladevata,
               isExpanded: true,
-              hint: Text('Select your Kuladevata', style: body(14, color: AppColors.hint)),
+              hint: Text(t.registerSelectKuladevata, style: body(14, color: AppColors.hint)),
               icon: const Icon(Icons.keyboard_arrow_down_rounded,
                   color: AppColors.hint),
               style: body(14, color: AppColors.ink),
@@ -321,19 +323,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        _label('Are you a purohit?'),
+        _label(t.registerIsPurohit),
         Row(
           children: [
-            _yesNoButton(true, 'Yes'),
+            _yesNoButton(true, t.registerYes),
             const SizedBox(width: 10),
-            _yesNoButton(false, 'No'),
+            _yesNoButton(false, t.registerNo),
           ],
         ),
         const SizedBox(height: 14),
         PlaceField(
-          label: 'Native Place (optional)',
+          label: t.registerNativePlace,
           controller: _nativeCtrl,
-          hint: 'e.g. Kundapura, Udupi, Karnataka',
+          hint: t.registerNativePlaceHint,
         ),
         const SizedBox(height: 16),
         // Optional identity check up front. No Aadhaar number is ever typed —
@@ -352,10 +354,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               border: Border.all(color: AppColors.border),
             ),
             child: DigilockerCard(
-              description:
-                  'Optional - verify now and your profile carries the ✓ badge '
-                  'from day one. We never ask for or store your Aadhaar number, '
-                  'only the masked reference DigiLocker returns.',
+              description: t.registerDigilockerDetailsDesc,
               onVerified: _onKycVerified,
             ),
           ),
@@ -365,7 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ],
         const SizedBox(height: 18),
         ForestButton(
-          label: 'Continue',
+          label: t.registerContinue,
           icon: Icons.arrow_forward_rounded,
           expand: true,
           onPressed: _handleNext,
@@ -375,11 +374,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Wrap(
             alignment: WrapAlignment.center,
             children: [
-              Text('Already a member?  ',
+              Text(t.registerAlreadyMember,
                   style: body(13, color: AppColors.textMuted)),
               GestureDetector(
                 onTap: () => context.go('/login'),
-                child: Text('Sign in',
+                child: Text(t.registerSignIn,
                     style: body(13,
                         weight: FontWeight.w700, color: AppColors.forest800)),
               ),
@@ -391,19 +390,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildOtp() {
+    final t = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Verify your number',
-            style: display(26, color: AppColors.forest900)),
+        Text(t.registerVerifyNumber, style: display(26, color: AppColors.forest900)),
         const SizedBox(height: 6),
         Text.rich(
           TextSpan(
             style: body(13, color: AppColors.textMuted),
             children: [
-              const TextSpan(text: 'OTP sent to '),
+              TextSpan(text: t.registerOtpSentToPrefix),
               TextSpan(
-                text: '+91 ${_phoneCtrl.text}',
+                text: t.registerOtpSentToPhone(_phoneCtrl.text),
                 style: body(13,
                     weight: FontWeight.w700, color: AppColors.forest800),
               ),
@@ -417,7 +416,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: const Color(0xFFEAF7EE),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('Enter the 6-digit OTP  ·  use 121212 for this demo',
+          child: Text(t.registerOtpHint,
               style: body(12,
                   weight: FontWeight.w600, color: AppColors.forest700)),
         ),
@@ -457,7 +456,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ],
         const SizedBox(height: 14),
         ForestButton(
-          label: 'Create Account & Continue',
+          label: t.registerCreateAccountContinue,
           icon: Icons.check_circle_outline_rounded,
           expand: true,
           loading: _loading,
@@ -471,7 +470,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _error = '';
               _otpCtrl.clear();
             }),
-            child: Text('← Back',
+            child: Text(t.registerBack,
                 style: body(13, color: AppColors.textMuted)),
           ),
         ),
@@ -483,6 +482,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// already created, so this is skippable: unverified members can finish it
   /// later from Profile → Verify Identity.
   Widget _buildIdentity() {
+    final t = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -492,40 +492,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 size: 18, color: AppColors.forest700),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Account created',
+              child: Text(t.registerAccountCreated,
                   style: body(13,
                       weight: FontWeight.w700, color: AppColors.forest700)),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        Text(_identityVerified ? 'You\'re all set' : 'Verify your identity',
+        Text(_identityVerified ? t.registerAllSet : t.registerVerifyIdentity,
             style: display(26, color: AppColors.forest900)),
         const SizedBox(height: 6),
         Text(
           _identityVerified
-              ? 'Your Aadhaar is verified and saved to your profile - the ✓ '
-                  'badge is already yours.'
-              : 'Aadhaar KYC through the government DigiLocker earns your '
-                  'profile the ✓ verified badge and keeps our ancestral records '
-                  'trustworthy. We store only a masked reference - never your '
-                  'full Aadhaar number.',
+              ? t.registerAadhaarVerifiedSubtitle
+              : t.registerAadhaarUnverifiedSubtitle,
           style: body(13, color: AppColors.textMuted, height: 1.5),
         ),
         const SizedBox(height: 16),
         AppCard(
           child: DigilockerCard(
-            description:
-                'Sign in to the official DigiLocker portal and consent to share '
-                'your Aadhaar. Verification is confirmed automatically.',
+            description: t.registerDigilockerIdentityDesc,
             onVerified: (_) => setState(() => _identityVerified = true),
           ),
         ),
         const SizedBox(height: 16),
         ForestButton(
           label: _identityVerified
-              ? 'Continue to Dashboard'
-              : 'Skip for now - verify later',
+              ? t.registerContinueToDashboard
+              : t.registerSkipForNow,
           icon: Icons.arrow_forward_rounded,
           expand: true,
           onPressed: () => context.go('/dashboard'),
@@ -537,6 +531,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// Stands in for the DigiLocker card once KYC is captured on the details
   /// step — the verification survives until the account is created.
   Widget _kycConfirmation() {
+    final t = AppLocalizations.of(context);
     final name = (_kyc?['full_name'] ?? '').toString();
     final masked = (_kyc?['masked_aadhaar'] ?? '').toString();
     final detail = [
@@ -559,14 +554,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Aadhaar verified via DigiLocker',
+                Text(t.registerKycVerifiedTitle,
                     style: body(12,
                         weight: FontWeight.w700, color: AppColors.forest800)),
                 const SizedBox(height: 3),
                 Text(
-                  detail.isEmpty
-                      ? 'Saved to your account when you finish signing up.'
-                      : detail,
+                  detail.isEmpty ? t.registerKycSavedOnSignup : detail,
                   style: body(11, color: AppColors.forest700, height: 1.4),
                 ),
               ],
@@ -685,6 +678,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -719,9 +713,8 @@ class _Header extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Daivajna Samaja',
-                        style: display(16, color: Colors.white)),
-                    Text('Heritage Portal · Bangalore',
+                    Text(t.appName, style: display(16, color: Colors.white)),
+                    Text(t.appTagline,
                         style: body(11, color: AppColors.forest500)),
                   ],
                 ),
@@ -729,14 +722,11 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Text('Begin your lineage journey today.',
+          Text(t.registerHeroHeadline,
               style: display(24, color: Colors.white, height: 1.25)),
           const SizedBox(height: 10),
-          Text(
-            'Join 1,428 families who have documented their heritage and '
-            'connected with their ancestral roots.',
-            style: body(13, color: AppColors.forest300, height: 1.5),
-          ),
+          Text(t.registerHeroBody,
+              style: body(13, color: AppColors.forest300, height: 1.5)),
         ],
       ),
     );

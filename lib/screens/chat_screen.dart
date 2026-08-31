@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/api_client.dart';
 import '../data/chat_service.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'full_screen_reel.dart';
@@ -134,8 +135,9 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       _input.text = text; // let them retry
       if (mounted) {
+        final t = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e is ApiException ? e.message : 'Message not sent'),
+          content: Text(e is ApiException ? e.message : t.chatMessageNotSent),
         ));
       }
     } finally {
@@ -145,6 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _showAttachmentOptions() async {
     if (_uploading) return;
+    final t = AppLocalizations.of(context);
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.white,
@@ -156,17 +159,17 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_outlined, color: AppColors.forest800),
-              title: Text('Photos/Videos', style: body(14, color: AppColors.ink)),
+              title: Text(t.chatPhotosVideos, style: body(14, color: AppColors.ink)),
               onTap: () => Navigator.pop(ctx, 'gallery_media'),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined, color: AppColors.forest800),
-              title: Text('Camera', style: body(14, color: AppColors.ink)),
+              title: Text(t.chatCamera, style: body(14, color: AppColors.ink)),
               onTap: () => Navigator.pop(ctx, 'camera_photo'),
             ),
             ListTile(
               leading: const Icon(Icons.insert_drive_file_outlined, color: AppColors.forest800),
-              title: Text('Documents', style: body(14, color: AppColors.ink)),
+              title: Text(t.chatDocuments, style: body(14, color: AppColors.ink)),
               onTap: () => Navigator.pop(ctx, 'document'),
             ),
           ],
@@ -215,8 +218,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
+        final t = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e is ApiException ? e.message : 'Could not send file'),
+          content: Text(e is ApiException ? e.message : t.chatCouldNotSendFile),
         ));
       }
     } finally {
@@ -247,6 +251,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -276,7 +281,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
                     ? Center(
-                        child: Text('Say hello 👋',
+                        child: Text(t.chatSayHello,
                             style: body(14, color: AppColors.hint)),
                       )
                     : ListView.builder(
@@ -299,13 +304,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         },
                       ),
           ),
-          _composer(),
+          _composer(t),
         ],
       ),
     );
   }
 
-  Widget _composer() {
+  Widget _composer(AppLocalizations t) {
     return SafeArea(
       top: false,
       child: Container(
@@ -346,7 +351,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onSubmitted: (_) => _send(),
                 style: body(14, color: AppColors.ink),
                 decoration: InputDecoration(
-                  hintText: 'Message…',
+                  hintText: t.chatMessageHint,
                   hintStyle: body(14, color: AppColors.hint),
                   filled: true,
                   fillColor: Colors.white,
@@ -442,8 +447,8 @@ class _Bubble extends StatelessWidget {
       final opened =
           uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No app could open this file'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).chatNoAppForFile),
         ));
       }
     } else {
@@ -581,7 +586,7 @@ class _DocumentCard extends StatelessWidget {
         const SizedBox(width: 8),
         Flexible(
           child: Text(
-            name.isEmpty ? 'Document' : name,
+            name.isEmpty ? AppLocalizations.of(context).chatDocumentFallback : name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: body(13, weight: FontWeight.w600, color: fg),

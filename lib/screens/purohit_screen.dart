@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/pexels_image.dart';
@@ -135,7 +136,7 @@ Future<void> _load() async {
     if (!mounted) return;
 
     setState(() {
-      _error = 'Could not load purohits.';
+      _error = AppLocalizations.of(context).purohitCouldNotLoad;
       _loading = false;
     });
   }
@@ -143,8 +144,9 @@ Future<void> _load() async {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Purohit',
+      title: t.purohitTitle,
       currentRoute: '/purohit',
       scrollable: false,
       padding: EdgeInsets.zero,
@@ -155,16 +157,17 @@ Future<void> _load() async {
           : _error != null
               ? _message(
                   icon: Icons.cloud_off_rounded,
-                  title: "Couldn't load purohits",
+                  title: t.purohitCouldNotLoadTitle,
                   subtitle: _error!,
                   retry: _load,
+                  t: t,
                 )
               : _purohits.isEmpty
                   ? _message(
                       icon: Icons.temple_hindu_outlined,
-                      title: 'No purohits yet',
-                      subtitle: 'Members who mark themselves as a purohit at '
-                          'registration will appear here.',
+                      title: t.purohitNoneYet,
+                      subtitle: t.purohitNoneYetBody,
+                      t: t,
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
@@ -186,6 +189,7 @@ Future<void> _load() async {
     required IconData icon,
     required String title,
     required String subtitle,
+    required AppLocalizations t,
     VoidCallback? retry,
   }) {
     return Center(
@@ -206,7 +210,7 @@ Future<void> _load() async {
               OutlinedButton.icon(
                 onPressed: retry,
                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: Text('Retry', style: body(13, weight: FontWeight.w600)),
+                label: Text(t.commonRetry, style: body(13, weight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.forest700,
                   side: const BorderSide(color: AppColors.forest700),
@@ -228,6 +232,7 @@ class _PurohitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final name = _str('name');
     final native = _str('native');
     final km = _str('km');
@@ -274,7 +279,7 @@ class _PurohitCard extends StatelessWidget {
                 if (km.isNotEmpty) ...[
   const SizedBox(height: 3),
   Text(
-    '${double.tryParse(km)?.toStringAsFixed(1) ?? km} km away',
+    t.purohitKmAway(double.tryParse(km)?.toStringAsFixed(1) ?? km),
     style: body(
       11,
       color: AppColors.forest700,

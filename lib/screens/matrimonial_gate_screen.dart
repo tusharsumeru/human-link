@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import 'matrimonial_list_screen.dart';
@@ -54,25 +55,28 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Could not reach the server';
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).matCouldNotReachServer;
         _loading = false;
       });
     }
   }
 
   Future<void> _submit() async {
+    final t = AppLocalizations.of(context);
     setState(() => _submitting = true);
     try {
       await Repository.instance.publishMatrimonialProfile();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Your profile is live in the Matrimonial Hub'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(t.matProfileLive),
       ));
       await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is ApiException ? e.message : 'Could not publish'),
+        content: Text(e is ApiException ? e.message : t.matCouldNotPublish),
       ));
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -81,11 +85,12 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     if (_loading) {
-      return const AppShell(
-        title: 'Matrimonial',
+      return AppShell(
+        title: t.matTitle,
         currentRoute: '/matrimonial',
-        child: Padding(
+        child: const Padding(
           padding: EdgeInsets.symmetric(vertical: 48),
           child: Center(child: CircularProgressIndicator()),
         ),
@@ -94,13 +99,13 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
 
     if (_error != null) {
       return AppShell(
-        title: 'Matrimonial',
+        title: t.matTitle,
         currentRoute: '/matrimonial',
         child: _Panel(
           icon: Icons.wifi_off_rounded,
-          title: 'Could not load',
+          title: t.matCouldNotLoad,
           message: _error!,
-          action: ('Try again', _load),
+          action: (t.matTryAgain, _load),
         ),
       );
     }
@@ -110,13 +115,13 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
     if (e['eligible'] == true) return const MatrimonialListScreen();
 
     return AppShell(
-      title: 'Matrimonial',
+      title: t.matTitle,
       currentRoute: '/matrimonial',
-      child: _blockedView(e),
+      child: _blockedView(e, t),
     );
   }
 
-  Widget _blockedView(Map<String, dynamic> e) {
+  Widget _blockedView(Map<String, dynamic> e, AppLocalizations t) {
     final ageOk = e['ageEligible'] == true;
     final range = (e['ageRange'] as Map?) ?? const {'min': 18, 'max': 50};
     final age = e['age'];
@@ -134,11 +139,11 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
     if (!ageOk) {
       return _Panel(
         icon: age == null ? Icons.event_rounded : Icons.lock_outline_rounded,
-        title: age == null ? 'Add your date of birth' : 'Not available',
+        title: age == null ? t.matAddDob : t.matNotAvailable,
         message: age == null
-            ? 'The matrimonial section is open to members aged ${range['min']}-${range['max']}. Add your date of birth in your profile to continue.'
-            : 'The matrimonial section is open to members aged ${range['min']}-${range['max']}. Your age is $age.',
-        action: age == null ? ('Go to my profile', _goToProfile) : null,
+            ? t.matAgeRangeAddDob('${range['min']}', '${range['max']}')
+            : t.matAgeRangeYourAge('${range['min']}', '${range['max']}', '$age'),
+        action: age == null ? (t.matGoToMyProfile, _goToProfile) : null,
       );
     }
 
@@ -148,11 +153,11 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
       final note = (e['reviewNote'] ?? '').toString();
       return _Panel(
         icon: Icons.publish_rounded,
-        title: 'Ready to publish',
+        title: t.matReadyToPublish,
         message: note.isEmpty
-            ? 'Your details are complete. Publish your profile to enter the hub.'
-            : 'Your details are complete. Earlier note on this profile: $note',
-        action: _submitting ? null : ('Publish my profile', _submit),
+            ? t.matDetailsCompletePublish
+            : t.matDetailsCompleteNote(note),
+        action: _submitting ? null : (t.matPublishMyProfile, _submit),
       );
     }
 
@@ -208,6 +213,7 @@ class _ChecklistPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final complete = missing.isEmpty;
     final fromProfile =
         missing.where((m) => _userFieldKeys.contains(m.key)).toList();
@@ -233,15 +239,15 @@ class _ChecklistPanel extends StatelessWidget {
                   const Icon(Icons.favorite_rounded,
                       color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Text('Matrimonial Hub',
+                  Text(t.matHubTitle,
                       style: display(17, color: Colors.white)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 complete
-                    ? 'Your profile is complete. Publish it to enter the hub.'
-                    : 'Complete your profile to enter. Every field below is shown to prospective matches, so the hub stays trustworthy for everyone.',
+                    ? t.matProfileCompletePublish
+                    : t.matCompleteToEnter,
                 style: body(13, color: Colors.white70, height: 1.4),
               ),
             ],
@@ -252,13 +258,13 @@ class _ChecklistPanel extends StatelessWidget {
         if (!complete) ...[
           Row(
             children: [
-              Text('STILL TO FILL',
+              Text(t.matStillToFill,
                   style: body(11,
                       weight: FontWeight.w700,
                       color: AppColors.gold700,
                       letterSpacing: 1.6)),
               const Spacer(),
-              Text('${missing.length} remaining',
+              Text(t.matRemaining(missing.length),
                   style: body(12,
                       weight: FontWeight.w600, color: AppColors.textMuted)),
             ],
@@ -268,17 +274,17 @@ class _ChecklistPanel extends StatelessWidget {
           // Grouped by the form that fixes them, so tapping a button always
           // leads to the fields listed directly above it.
           if (fromProfile.isNotEmpty) ...[
-            _groupHeading('In your profile'),
+            _groupHeading(t.matInYourProfile),
             ...fromProfile.map((m) => _row(m.label)),
             const SizedBox(height: 10),
-            _button('Edit my profile', onEditProfile, filled: true),
+            _button(t.matEditMyProfile, onEditProfile, filled: true),
             const SizedBox(height: 18),
           ],
           if (fromMatrimonial.isNotEmpty) ...[
-            _groupHeading('In your matrimonial details'),
+            _groupHeading(t.matInYourMatrimonialDetails),
             ...fromMatrimonial.map((m) => _row(m.label)),
             const SizedBox(height: 10),
-            _button('Add matrimonial details', onEditMatrimonial,
+            _button(t.matAddMatrimonialDetails, onEditMatrimonial,
                 filled: fromProfile.isEmpty),
           ],
         ] else ...[
@@ -288,7 +294,7 @@ class _ChecklistPanel extends StatelessWidget {
                   size: 20, color: AppColors.forest600),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('All required details are filled in.',
+                child: Text(t.matAllDetailsFilledIn,
                     style: body(14,
                         weight: FontWeight.w600, color: AppColors.forest900)),
               ),
@@ -305,7 +311,7 @@ class _ChecklistPanel extends StatelessWidget {
               ),
               onPressed: submitting ? null : onSubmit,
               child: Text(
-                  submitting ? 'Publishing…' : 'Publish my profile',
+                  submitting ? t.matPublishing : t.matPublishMyProfile,
                   style: body(14,
                       weight: FontWeight.w700, color: Colors.white)),
             ),
@@ -314,7 +320,7 @@ class _ChecklistPanel extends StatelessWidget {
 
         const SizedBox(height: 14),
         Text(
-          'Aadhaar verification is optional - every detail can be entered by hand. Your details are visible only to other members who have completed and published their own profile, and you can withdraw yours at any time.',
+          t.matOptionalAadhaarNote,
           style: body(12, color: AppColors.textMuted, height: 1.4),
         ),
       ],

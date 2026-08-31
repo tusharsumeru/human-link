@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/ui_kit.dart';
@@ -10,36 +11,36 @@ import '../widgets/ui_kit.dart';
 class ElderEventsScreen extends StatelessWidget {
   const ElderEventsScreen({super.key});
 
-  static const List<Map<String, dynamic>> _events = [
+  static List<Map<String, dynamic>> _eventsOf(AppLocalizations t) => [
     {
-      'title': 'Annual Samaja Utsava 2025',
+      'title': t.elderEvent1Title,
       'date': '15 Aug',
       'type': 'Cultural',
-      'venue': 'Samaja Bhavan, Basavanagudi, Bengaluru',
+      'venue': t.elderEvent1Venue,
       'attendees': 420,
       'status': 'Upcoming',
     },
     {
-      'title': 'Elder Committee Meeting - Q3',
+      'title': t.elderEvent2Title,
       'date': '28 Jun',
       'type': 'Admin',
-      'venue': 'Committee Room, Samaj Bhavan',
+      'venue': t.elderEvent2Venue,
       'attendees': 12,
       'status': 'Upcoming',
     },
     {
-      'title': 'Vidya Nidhi Scholarship Day',
+      'title': t.elderEvent3Title,
       'date': '10 Jul',
       'type': 'Education',
-      'venue': 'SDM College Auditorium, Mangaluru',
+      'venue': t.elderEvent3Venue,
       'attendees': 180,
       'status': 'Upcoming',
     },
     {
-      'title': 'Daivajna Matrimonial Meet',
+      'title': t.elderEvent4Title,
       'date': '22 Jul',
       'type': 'Community',
-      'venue': 'VR Mall Convention, Bengaluru',
+      'venue': t.elderEvent4Venue,
       'attendees': 250,
       'status': 'Planning',
     },
@@ -51,6 +52,17 @@ class ElderEventsScreen extends StatelessWidget {
     'Education': [0xFFDBEAFE, 0xFF1E40AF],
     'Community': [0xFFFEF3C7, 0xFFD97706],
   };
+
+  static String _typeLabel(String type, AppLocalizations t) => switch (type) {
+        'Cultural' => t.elderTypeCultural,
+        'Admin' => t.elderTypeAdmin,
+        'Education' => t.elderTypeEducation,
+        'Community' => t.elderTypeCommunity,
+        _ => type,
+      };
+
+  static String _statusLabel(String status, AppLocalizations t) =>
+      status == 'Planning' ? t.elderStatusPlanning : t.elderStatusUpcoming;
 
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
@@ -64,8 +76,9 @@ class ElderEventsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return AppShell(
-      title: 'Settings',
+      title: t.elderSettings,
       currentRoute: '/elder/events',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,11 +86,11 @@ class ElderEventsScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: SectionHeader(
-                  eyebrow: 'Manage Events',
-                  title: 'Community Events',
-                  subtitle: 'Daivajna Samaja events across all branches',
+                  eyebrow: t.elderManageEventsEyebrow,
+                  title: t.elderCommunityEvents,
+                  subtitle: t.elderEventsSubtitle,
                   titleSize: 24,
                 ),
               ),
@@ -85,24 +98,24 @@ class ElderEventsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           ForestButton(
-            label: 'Add Event',
+            label: t.elderAddEvent,
             icon: Icons.add_circle_outline_rounded,
-            onPressed: () => _toast(context, 'New event - opening event form'),
+            onPressed: () => _toast(context, t.elderAddEventToast),
           ),
           const SizedBox(height: 18),
-          ..._events.map((e) => Padding(
+          ..._eventsOf(t).map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _eventCard(context, e),
+                child: _eventCard(context, e, t),
               )),
           const SizedBox(height: 8),
-          _settingsSection(context),
+          _settingsSection(context, t),
           const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _eventCard(BuildContext context, Map<String, dynamic> e) {
+  Widget _eventCard(BuildContext context, Map<String, dynamic> e, AppLocalizations t) {
     final col = _typeColors[e['type']] ?? const [0xFFF3F4F6, 0xFF374151];
     final status = e['status'] as String;
     final isPlanning = status == 'Planning';
@@ -142,9 +155,9 @@ class ElderEventsScreen extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    Pill(e['type'] as String,
+                    Pill(_typeLabel(e['type'] as String, t),
                         bg: Color(col[0]), fg: Color(col[1])),
-                    Pill(status,
+                    Pill(_statusLabel(status, t),
                         bg: isPlanning
                             ? const Color(0xFFFEF3C7)
                             : const Color(0xFFD1FAE5),
@@ -171,7 +184,7 @@ class ElderEventsScreen extends StatelessWidget {
                     const Icon(Icons.groups_rounded,
                         size: 13, color: AppColors.hint),
                     const SizedBox(width: 4),
-                    Text('${e['attendees']} attendees expected',
+                    Text(t.elderAttendeesExpected(e['attendees'] as int),
                         style: body(11.5, color: AppColors.textMuted)),
                   ],
                 ),
@@ -179,15 +192,15 @@ class ElderEventsScreen extends StatelessWidget {
                 Row(
                   children: [
                     ForestButton(
-                      label: 'RSVP',
-                      onPressed: () =>
-                          _toast(context, 'RSVP confirmed · ${e['title']}'),
+                      label: t.elderRsvp,
+                      onPressed: () => _toast(
+                          context, t.elderRsvpConfirmed(e['title'] as String)),
                     ),
                     const SizedBox(width: 8),
                     OutlineButtonX(
-                      label: 'Manage',
-                      onPressed: () =>
-                          _toast(context, 'Managing · ${e['title']}'),
+                      label: t.elderManage,
+                      onPressed: () => _toast(
+                          context, t.elderManaging(e['title'] as String)),
                     ),
                   ],
                 ),
@@ -199,40 +212,40 @@ class ElderEventsScreen extends StatelessWidget {
     );
   }
 
-  Widget _settingsSection(BuildContext context) {
+  Widget _settingsSection(BuildContext context, AppLocalizations t) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Committee Preferences',
+          Text(t.elderCommitteePreferences,
               style: display(18, color: AppColors.forest900)),
           const SizedBox(height: 4),
-          Text('Notification & registry settings for the elder committee',
+          Text(t.elderCommitteePreferencesSubtitle,
               style: body(12.5, color: AppColors.textMuted)),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.notifications_active_outlined,
-            title: 'Event reminders',
-            subtitle: 'Notify all branch heads 7 days before each event',
+            title: t.elderEventReminders,
+            subtitle: t.elderEventRemindersSubtitle,
             initial: true,
-            onChanged: (v) => _toast(
-                context, v ? 'Event reminders on' : 'Event reminders off'),
+            onChanged: (v) => _toast(context,
+                v ? t.elderEventRemindersOn : t.elderEventRemindersOff),
           ),
           _SettingsTile(
             icon: Icons.how_to_reg_outlined,
-            title: 'Auto-approve RSVPs',
-            subtitle: 'Verified members are confirmed without review',
+            title: t.elderAutoApproveRsvps,
+            subtitle: t.elderAutoApproveRsvpsSubtitle,
             initial: false,
             onChanged: (v) => _toast(
-                context, v ? 'Auto-approve on' : 'Auto-approve off'),
+                context, v ? t.elderAutoApproveOn : t.elderAutoApproveOff),
           ),
           _SettingsTile(
             icon: Icons.public_outlined,
-            title: 'Publish to public calendar',
-            subtitle: 'Show upcoming Samaja events on the portal landing page',
+            title: t.elderPublishToPublicCalendar,
+            subtitle: t.elderPublishToPublicCalendarSubtitle,
             initial: true,
             onChanged: (v) => _toast(
-                context, v ? 'Public calendar on' : 'Public calendar off'),
+                context, v ? t.elderPublicCalendarOn : t.elderPublicCalendarOff),
           ),
         ],
       ),
