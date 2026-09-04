@@ -110,7 +110,7 @@ class SouthIndianKundliChart extends StatelessWidget {
   Widget _centreBox() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF6EE),
+        color: Colors.white,
         border: Border.all(color: AppColors.border),
       ),
       alignment: Alignment.center,

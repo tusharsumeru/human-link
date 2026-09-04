@@ -86,8 +86,13 @@ class _FeedState extends State<_Feed> {
       final currentUserId = context.read<AuthService>().user?.id ?? '';
       final posts = raw
           .whereType<Map>()
-          .map((m) => _Post.fromBackend(t, Map<String, dynamic>.from(m),
-              currentUserId: currentUserId))
+          .map(
+            (m) => _Post.fromBackend(
+              t,
+              Map<String, dynamic>.from(m),
+              currentUserId: currentUserId,
+            ),
+          )
           .toList();
       if (!mounted) return;
       setState(() {
@@ -103,7 +108,6 @@ class _FeedState extends State<_Feed> {
     }
   }
 
-
   /// Drops [post] from the feed after it's deleted (or hidden). A post still
   /// held by [FeedStore] (this session's own upload) is removed there too, so
   /// it doesn't reappear on the next FeedStore notification.
@@ -115,7 +119,11 @@ class _FeedState extends State<_Feed> {
       }
     }
     if (mounted) {
-      setState(() => _backendPosts = _backendPosts.where((p) => p.id != post.id).toList());
+      setState(
+        () => _backendPosts = _backendPosts
+            .where((p) => p.id != post.id)
+            .toList(),
+      );
     }
   }
 
@@ -155,8 +163,9 @@ class _FeedState extends State<_Feed> {
       builder: (context, _) {
         // Locally-uploaded posts (this session) sit on top of the real backend
         // feed. No demo/seed content — an empty backend shows an empty feed.
-        final userPosts =
-            FeedStore.instance.posts.map((p) => _Post.fromUser(t, p)).toList();
+        final userPosts = FeedStore.instance.posts
+            .map((p) => _Post.fromUser(t, p))
+            .toList();
         // A post uploaded this session also comes back in the backend feed on
         // the next refresh — keep the local card (it renders from the local
         // file, so no re-download) and drop the duplicate.
@@ -176,29 +185,41 @@ class _FeedState extends State<_Feed> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 28),
                 child: Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.forest700, strokeWidth: 2)),
+                  child: CircularProgressIndicator(
+                    color: AppColors.forest700,
+                    strokeWidth: 2,
+                  ),
+                ),
               )
             else if (_error != null && all.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
                 child: Column(
                   children: [
-                    const Icon(Icons.cloud_off_rounded,
-                        size: 44, color: AppColors.hint),
+                    const Icon(
+                      Icons.cloud_off_rounded,
+                      size: 44,
+                      color: AppColors.hint,
+                    ),
                     const SizedBox(height: 12),
-                    Text(t.dashCouldNotLoadFeed,
-                        style: display(16, color: AppColors.forest900)),
+                    Text(
+                      t.dashCouldNotLoadFeed,
+                      style: display(16, color: AppColors.forest900),
+                    ),
                     const SizedBox(height: 4),
-                    Text(_error!,
-                        textAlign: TextAlign.center,
-                        style: body(13, color: AppColors.textMuted)),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: body(13, color: AppColors.textMuted),
+                    ),
                     const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: _loadFeed,
                       icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: Text(t.commonRetry,
-                          style: body(13, weight: FontWeight.w600)),
+                      label: Text(
+                        t.commonRetry,
+                        style: body(13, weight: FontWeight.w600),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.forest700,
                         side: const BorderSide(color: AppColors.forest700),
@@ -212,15 +233,22 @@ class _FeedState extends State<_Feed> {
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
                 child: Column(
                   children: [
-                    const Icon(Icons.photo_library_outlined,
-                        size: 44, color: AppColors.hint),
+                    const Icon(
+                      Icons.photo_library_outlined,
+                      size: 44,
+                      color: AppColors.hint,
+                    ),
                     const SizedBox(height: 12),
-                    Text(t.dashNoPostsYet,
-                        style: display(16, color: AppColors.forest900)),
+                    Text(
+                      t.dashNoPostsYet,
+                      style: display(16, color: AppColors.forest900),
+                    ),
                     const SizedBox(height: 4),
-                    Text(t.dashBeFirstToShare,
-                        textAlign: TextAlign.center,
-                        style: body(13, color: AppColors.textMuted)),
+                    Text(
+                      t.dashBeFirstToShare,
+                      textAlign: TextAlign.center,
+                      style: body(13, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
@@ -229,15 +257,18 @@ class _FeedState extends State<_Feed> {
                 key: ValueKey(post.id),
                 post: post,
                 onDeleted: () => _removePost(post),
-                onCaptionUpdated: (caption) => _updatePostCaption(post, caption),
+                onCaptionUpdated: (caption) =>
+                    _updatePostCaption(post, caption),
               ),
             const SizedBox(height: 24),
             // "All caught up" would be a lie under a failed load — we don't
             // know what's up there.
             if (_error == null)
               Center(
-                child: Text(t.dashAllCaughtUp,
-                    style: body(12, color: AppColors.hint)),
+                child: Text(
+                  t.dashAllCaughtUp,
+                  style: body(12, color: AppColors.hint),
+                ),
               ),
             const SizedBox(height: 32),
           ],
@@ -256,8 +287,11 @@ enum _CaptureSource { camera, file }
 
 /// One choice tile in the "Your Story" source sheet: an icon over a short label.
 class _SourceBox extends StatelessWidget {
-  const _SourceBox(
-      {required this.icon, required this.label, required this.onTap});
+  const _SourceBox({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -287,9 +321,14 @@ class _SourceBox extends StatelessWidget {
               child: Icon(icon, color: Colors.white, size: 25),
             ),
             const SizedBox(height: 10),
-            Text(label,
-                style: body(14,
-                    weight: FontWeight.w700, color: AppColors.forest900)),
+            Text(
+              label,
+              style: body(
+                14,
+                weight: FontWeight.w700,
+                color: AppColors.forest900,
+              ),
+            ),
           ],
         ),
       ),
@@ -317,7 +356,15 @@ class _StoriesShelfState extends State<_StoriesShelf> {
   }
 
   static const _videoExts = {
-    'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
+    'mp4',
+    'mov',
+    'mkv',
+    'webm',
+    '3gp',
+    'avi',
+    'm4v',
+    'flv',
+    'wmv',
   };
 
   /// "Your Story" → choose Camera or a file, capture/pick, then open the
@@ -341,11 +388,14 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     } else {
       String? picked;
       try {
-        final result = await FilePicker.platform.pickFiles(type: FileType.media);
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.media,
+        );
         picked = result?.files.single.path;
       } catch (e) {
         messenger.showSnackBar(
-            SnackBar(content: Text(t.dashCouldNotPickMedia('$e'))));
+          SnackBar(content: Text(t.dashCouldNotPickMedia('$e'))),
+        );
         return;
       }
       if (picked == null) return; // cancelled
@@ -354,138 +404,132 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     }
 
     if (!mounted) return;
-    navigator.push(MaterialPageRoute(
-      builder: (_) =>
-          StoryComposeScreen(filePath: capturedPath, isVideo: capturedVideo),
-    ));
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) =>
+            StoryComposeScreen(filePath: capturedPath, isVideo: capturedVideo),
+      ),
+    );
   }
 
   /// Small sheet: capture with the Camera, or select an image/video from files.
-Future<_CaptureSource?> _chooseStorySource() {
-  final t = AppLocalizations.of(context);
+  Future<_CaptureSource?> _chooseStorySource() {
+    final t = AppLocalizations.of(context);
 
-  return showModalBottomSheet<_CaptureSource>(
-    context: context,
-    backgroundColor: AppColors.cream,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(22),
+    return showModalBottomSheet<_CaptureSource>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
-    ),
-    builder: (ctx) {
-      final pageController = PageController(
-        viewportFraction: 1,
-      );
+      builder: (ctx) {
+        final pageController = PageController(viewportFraction: 1);
 
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-             SizedBox(
-  height: 130,
-  child: PageView(
-    controller: pageController,
-    children: [
-      GestureDetector(
-        onTap: () {
-          Navigator.of(ctx).pop(_CaptureSource.camera);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.photo_camera_rounded,
-              size: 80,
-              color: AppColors.forest700,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              t.dashCamera,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
+                SizedBox(
+                  height: 130,
+                  child: PageView(
+                    controller: pageController,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(ctx).pop(_CaptureSource.camera);
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.photo_camera_rounded,
+                              size: 80,
+                              color: AppColors.forest700,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              t.dashCamera,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-      GestureDetector(
-        onTap: () {
-          Navigator.of(ctx).pop(_CaptureSource.file);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.perm_media_rounded,
-              size: 56,
-              color: AppColors.forest700,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              t.dashSelectFile,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-
-              const SizedBox(height: 12),
-
-              // Carousel indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.forest700,
-                    ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(ctx).pop(_CaptureSource.file);
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.perm_media_rounded,
+                              size: 56,
+                              color: AppColors.forest700,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              t.dashSelectFile,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.border,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Carousel indicator
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.forest700,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.border,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
-
-
-
-
+        );
+      },
+    );
+  }
 
   void _openMyStories() {
     final mine = StoryStore.instance.mine;
@@ -535,14 +579,16 @@ Future<_CaptureSource?> _chooseStorySource() {
 
   void _openViewer(List<StorySlide> slides) {
     if (slides.isEmpty) return;
-    Navigator.of(context).push(PageRouteBuilder(
-      opaque: false,
-      barrierColor: Colors.black,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (_, __, ___) => StoryViewerScreen(slides: slides),
-      transitionsBuilder: (_, anim, __, child) =>
-          FadeTransition(opacity: anim, child: child),
-    ));
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) => StoryViewerScreen(slides: slides),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   @override
@@ -559,11 +605,15 @@ Future<_CaptureSource?> _chooseStorySource() {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-                child: Text(AppLocalizations.of(context).dashFamilyUpdates,
-                    style: body(12,
-                        weight: FontWeight.w700,
-                        color: AppColors.gold700,
-                        letterSpacing: 1.4)),
+                child: Text(
+                  AppLocalizations.of(context).dashFamilyUpdates,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: AppColors.gold700,
+                    letterSpacing: 1.4,
+                  ),
+                ),
               ),
               SizedBox(
                 height: 96,
@@ -622,7 +672,11 @@ class _YourStory extends StatelessWidget {
           child: const SizedBox(
             width: 64,
             height: 64,
-            child: Icon(Icons.add_rounded, color: AppColors.forest700, size: 28),
+            child: Icon(
+              Icons.add_rounded,
+              color: AppColors.forest700,
+              size: 28,
+            ),
           ),
         ),
       );
@@ -637,7 +691,9 @@ class _YourStory extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            _ring(child: PexelsImage(url: '', name: name, size: 56)),
+            _ring(
+              child: PexelsImage(url: '', name: name, size: 56),
+            ),
             // Add-another badge
             Positioned(
               right: -2,
@@ -652,8 +708,11 @@ class _YourStory extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.cream, width: 2),
                   ),
-                  child: const Icon(Icons.add_rounded,
-                      color: Colors.white, size: 14),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
               ),
             ),
@@ -720,8 +779,11 @@ Widget _ring({required Widget child, bool viewed = false}) {
 
 /// Shared layout for a story item: avatar above a single-line label.
 class _StoryTile extends StatelessWidget {
-  const _StoryTile(
-      {required this.label, required this.avatar, required this.onTap});
+  const _StoryTile({
+    required this.label,
+    required this.avatar,
+    required this.onTap,
+  });
   final String label;
   final Widget avatar;
   final VoidCallback onTap;
@@ -737,11 +799,13 @@ class _StoryTile extends StatelessWidget {
           children: [
             avatar,
             const SizedBox(height: 6),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: body(11, color: AppColors.label)),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: body(11, color: AppColors.label),
+            ),
           ],
         ),
       ),
@@ -811,7 +875,8 @@ class _Post {
   final int comments;
   final int shareCount;
   final String time;
-  final String? mediaPath; // local upload file; null → use mediaUrl / placeholder
+  final String?
+  mediaPath; // local upload file; null → use mediaUrl / placeholder
   final String? mediaUrl; // remote (Cloudinary) media from the backend feed
   final bool isReel; // true → the media is a video
   final bool isMine; // true → the logged-in member authored this post
@@ -824,37 +889,43 @@ class _Post {
   /// Builds a feed card from a user-created upload. The id is the server's
   /// once the upload lands, so likes and comments hit the real post.
   factory _Post.fromUser(AppLocalizations t, UserPost p) => _Post(
-        id: p.feedId,
-        pending: (p.uploading || p.failed) ? p : null,
-        author: p.author,
-        location: p.location,
-        emoji: p.isReel ? '🎬' : '🖼️',
-        gradient: const [AppColors.forest800, AppColors.forest600],
-        caption: p.caption,
-        likes: 0,
-        comments: 0,
-        time: t.timeJustNow,
-        mediaPath: p.mediaPath,
-        isReel: p.isReel,
-        isMine: true,
-      );
+    id: p.feedId,
+    pending: (p.uploading || p.failed) ? p : null,
+    author: p.author,
+    location: p.location,
+    emoji: p.isReel ? '🎬' : '🖼️',
+    gradient: const [AppColors.forest800, AppColors.forest600],
+    caption: p.caption,
+    likes: 0,
+    comments: 0,
+    time: t.timeJustNow,
+    mediaPath: p.mediaPath,
+    isReel: p.isReel,
+    isMine: true,
+  );
 
   /// Builds a feed card from a backend `/feed` post (Cloudinary-hosted media).
   /// [currentUserId] decides whether the 3-dot menu offers Delete (mine) or
   /// Report/Hide (someone else's) — `userId` comes back either as a populated
   /// `{_id, userName}` map or a bare id string depending on the endpoint.
-  factory _Post.fromBackend(AppLocalizations t, Map<String, dynamic> m,
-      {String currentUserId = ''}) {
+  factory _Post.fromBackend(
+    AppLocalizations t,
+    Map<String, dynamic> m, {
+    String currentUserId = '',
+  }) {
     final urls = m['mediaUrls'];
-    final mediaUrl = (urls is List && urls.isNotEmpty) ? urls.first.toString() : null;
+    final mediaUrl = (urls is List && urls.isNotEmpty)
+        ? urls.first.toString()
+        : null;
     final isVideo = (m['postType'] ?? '').toString() == 'video';
     final userField = m['userId'];
     final authorId =
         (userField is Map ? userField['_id'] : userField)?.toString() ?? '';
-    final author = (m['userName'] ??
-            (userField is Map ? userField['userName'] : null) ??
-            t.profileSamajMember)
-        .toString();
+    final author =
+        (m['userName'] ??
+                (userField is Map ? userField['userName'] : null) ??
+                t.profileSamajMember)
+            .toString();
     return _Post(
       id: (m['_id'] ?? '').toString(),
       author: author,
@@ -876,35 +947,35 @@ class _Post {
   /// A copy with only the caption changed — used after a successful "Edit
   /// caption" so the feed reflects the new text without a full re-fetch.
   _Post copyWithCaption(String newCaption) => _Post(
-        id: id,
-        author: author,
-        location: location,
-        emoji: emoji,
-        gradient: gradient,
-        caption: newCaption,
-        likes: likes,
-        comments: comments,
-        shareCount: shareCount,
-        time: time,
-        mediaPath: mediaPath,
-        mediaUrl: mediaUrl,
-        isReel: isReel,
-        isMine: isMine,
-        likedByMe: likedByMe,
-        pending: pending,
-      );
+    id: id,
+    author: author,
+    location: location,
+    emoji: emoji,
+    gradient: gradient,
+    caption: newCaption,
+    likes: likes,
+    comments: comments,
+    shareCount: shareCount,
+    time: time,
+    mediaPath: mediaPath,
+    mediaUrl: mediaUrl,
+    isReel: isReel,
+    isMine: isMine,
+    likedByMe: likedByMe,
+    pending: pending,
+  );
 
   /// The bookmarkable form of this post/reel for the app-wide [SavedStore].
   SavedItem toSavedItem() => SavedItem(
-        id: id,
-        author: author,
-        caption: caption,
-        mediaPath: mediaPath,
-        mediaUrl: mediaUrl,
-        isReel: isReel,
-        emoji: emoji,
-        gradient: gradient,
-      );
+    id: id,
+    author: author,
+    caption: caption,
+    mediaPath: mediaPath,
+    mediaUrl: mediaUrl,
+    isReel: isReel,
+    emoji: emoji,
+    gradient: gradient,
+  );
 }
 
 /// "3h", "2d", "Just now" — a compact relative time from an ISO-8601 string.
@@ -925,7 +996,12 @@ String _timeAgo(AppLocalizations t, String? iso) {
 }
 
 class _PostCard extends StatefulWidget {
-  const _PostCard({super.key, required this.post, this.onDeleted, this.onCaptionUpdated});
+  const _PostCard({
+    super.key,
+    required this.post,
+    this.onDeleted,
+    this.onCaptionUpdated,
+  });
   final _Post post;
   final VoidCallback? onDeleted;
   final ValueChanged<String>? onCaptionUpdated;
@@ -989,8 +1065,12 @@ class _PostCardState extends State<_PostCard> {
     } catch (e) {
       if (!mounted || requestId != _likeRequestId) return;
       setState(() => _liked = wasLiked);
-      _showSnack(context,
-          e is ApiException ? e.message : AppLocalizations.of(context).couldNotUpdateLike);
+      _showSnack(
+        context,
+        e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).couldNotUpdateLike,
+      );
     }
   }
 
@@ -1024,8 +1104,9 @@ class _PostCardState extends State<_PostCard> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999)),
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
             const SizedBox(height: 8),
             if (mine) ...[
@@ -1090,17 +1171,24 @@ class _PostCardState extends State<_PostCard> {
     final color = destructive ? Colors.red : AppColors.forest900;
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(label, style: body(15, weight: FontWeight.w600, color: color)),
+      title: Text(
+        label,
+        style: body(15, weight: FontWeight.w600, color: color),
+      ),
       onTap: onTap,
     );
   }
 
   Future<void> _copyLink(BuildContext context) async {
-    final slug = widget.post.author.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
+    final slug = widget.post.author.toLowerCase().replaceAll(
+      RegExp(r'\s+'),
+      '-',
+    );
     final kind = widget.post.isReel ? 'reel' : 'post';
     final t = AppLocalizations.of(context);
     await Clipboard.setData(
-        ClipboardData(text: 'https://samaj.app/$kind/$slug'));
+      ClipboardData(text: 'https://samaj.app/$kind/$slug'),
+    );
     if (context.mounted) _showSnack(context, t.linkCopied);
   }
 
@@ -1116,18 +1204,28 @@ class _PostCardState extends State<_PostCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text(t.deletePostTitle, style: display(18, color: AppColors.forest900)),
-        content: Text(t.deletePostBody,
-            style: body(13, color: AppColors.textMuted)),
+        title: Text(
+          t.deletePostTitle,
+          style: display(18, color: AppColors.forest900),
+        ),
+        content: Text(
+          t.deletePostBody,
+          style: body(13, color: AppColors.textMuted),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
+            child: Text(
+              t.commonCancel,
+              style: body(14, color: AppColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.postDelete,
-                style: body(14, weight: FontWeight.w700, color: Colors.red)),
+            child: Text(
+              t.postDelete,
+              style: body(14, weight: FontWeight.w700, color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -1155,7 +1253,10 @@ class _PostCardState extends State<_PostCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text(t.postMenuEditCaption, style: display(18, color: AppColors.forest900)),
+        title: Text(
+          t.postMenuEditCaption,
+          style: display(18, color: AppColors.forest900),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -1166,11 +1267,21 @@ class _PostCardState extends State<_PostCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
+            child: Text(
+              t.commonCancel,
+              style: body(14, color: AppColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(t.commonSave, style: body(14, weight: FontWeight.w700, color: AppColors.forest700)),
+            child: Text(
+              t.commonSave,
+              style: body(
+                14,
+                weight: FontWeight.w700,
+                color: AppColors.forest700,
+              ),
+            ),
           ),
         ],
       ),
@@ -1183,7 +1294,10 @@ class _PostCardState extends State<_PostCard> {
       if (context.mounted) _showSnack(context, t.captionUpdated);
     } catch (e) {
       if (!context.mounted) return;
-      _showSnack(context, e is ApiException ? e.message : t.couldNotUpdateCaption);
+      _showSnack(
+        context,
+        e is ApiException ? e.message : t.couldNotUpdateCaption,
+      );
     }
   }
 
@@ -1191,274 +1305,321 @@ class _PostCardState extends State<_PostCard> {
   Widget build(BuildContext context) {
     final p = widget.post;
     final t = AppLocalizations.of(context);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.creamDark),
-        boxShadow: AppShadows.soft,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-            child: Row(
-              children: [
-                Container(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.gold500, AppColors.forest600],
+                  ),
+                ),
+                child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.gold500, AppColors.forest600],
-                    ),
+                    color: AppColors.cream,
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                        shape: BoxShape.circle, color: AppColors.cream),
-                    child: _Avatar(name: p.author, size: 36),
-                  ),
+                  child: _Avatar(name: p.author, size: 36),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p.author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(13,
-                              weight: FontWeight.w700,
-                              color: AppColors.forest900)),
-                      // Instagram-style: show a location line only when the
-                      // author attached one — no role label, no native place.
-                      if (p.location.isNotEmpty)
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 11, color: AppColors.hint),
-                            const SizedBox(width: 2),
-                            Flexible(
-                              child: Text(p.location,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: body(11, color: AppColors.hint)),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_horiz_rounded,
-                      color: AppColors.label),
-                  onPressed: () => _showPostMenu(context),
-                ),
-              ],
-            ),
-          ),
-          // Media. Reels handle their own tap (→ full screen), so we don't
-          // attach double-tap-to-like on them to avoid a gesture conflict.
-          GestureDetector(
-            onDoubleTap: p.isReel ? null : _doubleTapLike,
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (p.mediaUrl != null && p.isReel)
-                    _VideoTile(
-                        url: p.mediaUrl!,
-                        author: p.author,
-                        caption: p.caption,
-                        saved: p.toSavedItem())
-                  else if (p.mediaUrl != null)
-                    Image.network(p.mediaUrl!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null
-                                ? child
-                                : const ColoredBox(
-                                    color: AppColors.forest900,
-                                    child: Center(
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white54,
-                                            strokeWidth: 2))),
-                        errorBuilder: (_, __, ___) => const ColoredBox(
-                            color: AppColors.forest900,
-                            child: Icon(Icons.broken_image_outlined,
-                                color: Colors.white54, size: 48)))
-                  else if (p.mediaPath != null && p.isReel)
-                    _VideoTile(
-                        path: p.mediaPath!,
-                        author: p.author,
-                        caption: p.caption,
-                        saved: p.toSavedItem())
-                  else if (p.mediaPath != null)
-                    Image.file(File(p.mediaPath!), fit: BoxFit.cover)
-                  else ...[
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: p.gradient,
-                        ),
-                      ),
-                    ),
-                    Center(
-                        child: Text(p.emoji,
-                            style: const TextStyle(fontSize: 96))),
-                  ],
-                  // Reel badge (top-right)
-                  if (p.isReel)
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.play_arrow_rounded,
-                                size: 14, color: Colors.white),
-                            const SizedBox(width: 2),
-                            Text(t.dashReel,
-                                style: body(10,
-                                    weight: FontWeight.w700,
-                                    color: Colors.white)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // Double-tap heart burst
-                  Center(
-                    child: AnimatedScale(
-                      scale: _burst ? 1 : 0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutBack,
-                      child: AnimatedOpacity(
-                        opacity: _burst ? 1 : 0,
-                        duration: const Duration(milliseconds: 220),
-                        child: Icon(Icons.favorite,
-                            size: 110,
-                            color: Colors.white.withValues(alpha: 0.9)),
-                      ),
-                    ),
-                  ),
-                  // Upload state — only while POST /api/posts is in flight or
-                  // after it failed.
-                  if (p.pending != null) _UploadOverlay(post: p.pending!),
-                ],
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: AppColors.forest900,
+                      ),
+                    ),
+                    // Instagram-style: show a location line only when the
+                    // author attached one — no role label, no native place.
+                    if (p.location.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 11,
+                            color: AppColors.hint,
+                          ),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              p.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: body(11, color: AppColors.hint),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.more_horiz_rounded,
+                  color: AppColors.label,
+                ),
+                onPressed: () => _showPostMenu(context),
+              ),
+            ],
           ),
-          // Action row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
-            child: Row(
+        ),
+        // Media. Reels handle their own tap (→ full screen), so we don't
+        // attach double-tap-to-like on them to avoid a gesture conflict.
+        GestureDetector(
+          onDoubleTap: p.isReel ? null : _doubleTapLike,
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                _ActionIcon(
-                  icon: _liked
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  color: _liked ? const Color(0xFFE0245E) : AppColors.label,
-                  onTap: _toggleLike,
-                  count: _likeCount,
-                ),
-                ListenableBuilder(
-                  listenable: CommentStore.instance,
-                  builder: (context, _) => _ActionIcon(
-                    iconWidget: const _RoundCommentIcon(size: 25, color: AppColors.label),
-                    onTap: () => showCommentsSheet(context, postId: p.id),
-                    count: CommentStore.instance
-                        .countFor(p.id, fallback: p.comments),
-                  ),
-                ),
-                _ActionIcon(
-                  icon: Icons.share_rounded,
-                  onTap: () => showShareSheet(
-                    context,
+                if (p.mediaUrl != null && p.isReel)
+                  _VideoTile(
+                    url: p.mediaUrl!,
                     author: p.author,
                     caption: p.caption,
-                    isReel: p.isReel,
+                    saved: p.toSavedItem(),
+                  )
+                else if (p.mediaUrl != null)
+                  Image.network(
+                    p.mediaUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                        ? child
+                        : const ColoredBox(
+                            color: AppColors.forest900,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white54,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                    errorBuilder: (_, __, ___) => const ColoredBox(
+                      color: AppColors.forest900,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
+                    ),
+                  )
+                else if (p.mediaPath != null && p.isReel)
+                  _VideoTile(
+                    path: p.mediaPath!,
+                    author: p.author,
+                    caption: p.caption,
+                    saved: p.toSavedItem(),
+                  )
+                else if (p.mediaPath != null)
+                  Image.file(File(p.mediaPath!), fit: BoxFit.cover)
+                else ...[
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: p.gradient,
+                      ),
+                    ),
                   ),
-                  count: p.shareCount,
+                  Center(
+                    child: Text(p.emoji, style: const TextStyle(fontSize: 96)),
+                  ),
+                ],
+                // Reel badge (top-right)
+                if (p.isReel)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.play_arrow_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            t.dashReel,
+                            style: body(
+                              10,
+                              weight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Double-tap heart burst
+                Center(
+                  child: AnimatedScale(
+                    scale: _burst ? 1 : 0,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedOpacity(
+                      opacity: _burst ? 1 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: Icon(
+                        Icons.favorite,
+                        size: 110,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                ListenableBuilder(
-                  listenable: SavedStore.instance,
-                  builder: (context, _) {
-                    final saved = SavedStore.instance.isSaved(p.id);
-                    return _ActionIcon(
-                      icon: saved
-                          ? Icons.bookmark_rounded
-                          : Icons.bookmark_border_rounded,
-                      color: saved ? AppColors.gold700 : AppColors.label,
-                      onTap: () {
-                        final nowSaved =
-                            SavedStore.instance.toggle(p.toSavedItem());
-                        _showSnack(
-                            context,
-                            nowSaved
-                                ? t.savedToProfile
-                                : t.removedFromSaved);
-                      },
-                    );
-                  },
-                ),
+                // Upload state — only while POST /api/posts is in flight or
+                // after it failed.
+                if (p.pending != null) _UploadOverlay(post: p.pending!),
               ],
             ),
           ),
-          // Caption
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-            child: Text.rich(
-              TextSpan(children: [
-                TextSpan(
-                    text: '${p.author}  ',
-                    style: body(13,
-                        weight: FontWeight.w700, color: AppColors.ink)),
-                TextSpan(
-                    text: p.caption,
-                    style: body(13, color: AppColors.label, height: 1.35)),
-              ]),
-            ),
+        ),
+        // Action row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+          child: Row(
+            children: [
+              _ActionIcon(
+                icon: _liked
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: _liked ? const Color(0xFFE0245E) : AppColors.label,
+                onTap: _toggleLike,
+                count: _likeCount,
+              ),
+              const SizedBox(width: 12),
+              ListenableBuilder(
+                listenable: CommentStore.instance,
+                builder: (context, _) => _ActionIcon(
+                  iconWidget: const _RoundCommentIcon(
+                    size: 25,
+                    color: AppColors.label,
+                  ),
+                  onTap: () => showCommentsSheet(context, postId: p.id),
+                  count: CommentStore.instance.countFor(
+                    p.id,
+                    fallback: p.comments,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _ActionIcon(
+                icon: Icons.share_rounded,
+                onTap: () => showShareSheet(
+                  context,
+                  author: p.author,
+                  caption: p.caption,
+                  isReel: p.isReel,
+                ),
+                count: p.shareCount,
+              ),
+              const Spacer(),
+              ListenableBuilder(
+                listenable: SavedStore.instance,
+                builder: (context, _) {
+                  final saved = SavedStore.instance.isSaved(p.id);
+                  return _ActionIcon(
+                    icon: saved
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    color: saved ? AppColors.gold700 : AppColors.label,
+                    onTap: () {
+                      final nowSaved = SavedStore.instance.toggle(
+                        p.toSavedItem(),
+                      );
+                      _showSnack(
+                        context,
+                        nowSaved ? t.savedToProfile : t.removedFromSaved,
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
           ),
-          // Time
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        // Caption
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+          child: Text.rich(
+            TextSpan(
               children: [
-                Text(p.time.toUpperCase(),
-                    style: body(10,
-                        color: AppColors.hint, letterSpacing: 0.4)),
+                TextSpan(
+                  text: '${p.author}  ',
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+                TextSpan(
+                  text: p.caption,
+                  style: body(13, color: AppColors.label, height: 1.35),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        // Time
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                p.time.toUpperCase(),
+                style: body(10, color: AppColors.hint, letterSpacing: 0.4),
+              ),
+            ],
+          ),
+        ),
+        // Instagram-style separator instead of a boxed card — a hairline
+        // between posts, full-bleed, no border/shadow/rounded corners.
+        const Divider(height: 1, thickness: 1, color: AppColors.creamDark),
+      ],
     );
   }
 }
 
 /// Autoplaying, looping, muted video for a reel post (tap to mute/unmute).
 class _VideoTile extends StatefulWidget {
-  const _VideoTile(
-      {this.path, this.url, this.author = '', this.caption = '', this.saved})
-      : assert(path != null || url != null, 'need a local path or a remote url');
+  const _VideoTile({
+    this.path,
+    this.url,
+    this.author = '',
+    this.caption = '',
+    this.saved,
+  }) : assert(path != null || url != null, 'need a local path or a remote url');
   final String? path; // local file
   final String? url; // remote (Cloudinary) video
   final String author;
@@ -1481,16 +1642,19 @@ class _VideoTileState extends State<_VideoTile> {
         ? VideoPlayerController.networkUrl(Uri.parse(widget.url!))
         : VideoPlayerController.file(File(widget.path!));
     _controller = c;
-    c.initialize().then((_) {
-      if (!mounted) return;
-      c
-        ..setLooping(true)
-        ..setVolume(0)
-        ..play();
-      setState(() {});
-    }).catchError((_) {
-      if (mounted) setState(() => _error = true);
-    });
+    c
+        .initialize()
+        .then((_) {
+          if (!mounted) return;
+          c
+            ..setLooping(true)
+            ..setVolume(0)
+            ..play();
+          setState(() {});
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _error = true);
+        });
   }
 
   @override
@@ -1513,21 +1677,23 @@ class _VideoTileState extends State<_VideoTile> {
     if (c == null || !c.value.isInitialized) return;
     final pos = c.value.position;
     c.pause();
-    await Navigator.of(context).push(PageRouteBuilder(
-      opaque: false, // lets the feed show through while swiping to dismiss
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (_, __, ___) => FullScreenReelPage(
-        path: widget.path,
-        url: widget.url,
-        startAt: pos,
-        author: widget.author,
-        caption: widget.caption,
-        saved: widget.saved,
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false, // lets the feed show through while swiping to dismiss
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, __, ___) => FullScreenReelPage(
+          path: widget.path,
+          url: widget.url,
+          startAt: pos,
+          author: widget.author,
+          caption: widget.caption,
+          saved: widget.saved,
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
       ),
-      transitionsBuilder: (_, anim, __, child) =>
-          FadeTransition(opacity: anim, child: child),
-    ));
+    );
     if (mounted) c.play(); // resume inline playback when the user comes back
   }
 
@@ -1538,8 +1704,11 @@ class _VideoTileState extends State<_VideoTile> {
       return Container(
         color: AppColors.forest900,
         alignment: Alignment.center,
-        child: const Icon(Icons.videocam_off_rounded,
-            color: Colors.white54, size: 48),
+        child: const Icon(
+          Icons.videocam_off_rounded,
+          color: Colors.white54,
+          size: 48,
+        ),
       );
     }
     if (c == null || !c.value.isInitialized) {
@@ -1547,7 +1716,9 @@ class _VideoTileState extends State<_VideoTile> {
         color: AppColors.forest900,
         alignment: Alignment.center,
         child: const CircularProgressIndicator(
-            color: Colors.white54, strokeWidth: 2),
+          color: Colors.white54,
+          strokeWidth: 2,
+        ),
       );
     }
     return GestureDetector(
@@ -1577,8 +1748,11 @@ class _VideoTileState extends State<_VideoTile> {
                 color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.fullscreen_rounded,
-                  size: 16, color: Colors.white),
+              child: const Icon(
+                Icons.fullscreen_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
           ),
           // Mute toggle (its own tap target, doesn't trigger full-screen)
@@ -1629,19 +1803,22 @@ class _UploadOverlay extends StatelessWidget {
               width: 30,
               height: 30,
               child: CircularProgressIndicator(
-                  strokeWidth: 2.5, color: Colors.white),
+                strokeWidth: 2.5,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 12),
-            Text(t.uploadingEllipsis,
-                style: body(13,
-                    weight: FontWeight.w600, color: Colors.white)),
+            Text(
+              t.uploadingEllipsis,
+              style: body(13, weight: FontWeight.w600, color: Colors.white),
+            ),
           ] else ...[
-            const Icon(Icons.cloud_off_rounded,
-                size: 34, color: Colors.white),
+            const Icon(Icons.cloud_off_rounded, size: 34, color: Colors.white),
             const SizedBox(height: 8),
-            Text(t.uploadFailed,
-                style: body(13,
-                    weight: FontWeight.w700, color: Colors.white)),
+            Text(
+              t.uploadFailed,
+              style: body(13, weight: FontWeight.w700, color: Colors.white),
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -1652,18 +1829,27 @@ class _UploadOverlay extends StatelessWidget {
                       await FeedStore.instance.retry(post);
                     } catch (e) {
                       if (!context.mounted) return;
-                      _showSnack(context,
-                          e is ApiException ? e.message : t.stillOffline);
+                      _showSnack(
+                        context,
+                        e is ApiException ? e.message : t.stillOffline,
+                      );
                     }
                   },
-                  child: Text(t.commonRetry,
-                      style: body(13,
-                          weight: FontWeight.w700, color: Colors.white)),
+                  child: Text(
+                    t.commonRetry,
+                    style: body(
+                      13,
+                      weight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => FeedStore.instance.remove(post),
-                  child: Text(t.discard,
-                      style: body(13, color: Colors.white70)),
+                  child: Text(
+                    t.discard,
+                    style: body(13, color: Colors.white70),
+                  ),
                 ),
               ],
             ),
@@ -1681,8 +1867,10 @@ class _ActionIcon extends StatelessWidget {
     required this.onTap,
     this.color = AppColors.label,
     this.count = 0,
-  }) : assert(icon != null || iconWidget != null,
-            'need either an IconData or a custom iconWidget');
+  }) : assert(
+         icon != null || iconWidget != null,
+         'need either an IconData or a custom iconWidget',
+       );
   final IconData? icon;
 
   /// A custom-painted replacement for [icon], for a shape Material's icon
@@ -1707,9 +1895,14 @@ class _ActionIcon extends StatelessWidget {
             iconWidget ?? Icon(icon, size: 25, color: color),
             if (count > 0) ...[
               const SizedBox(width: 5),
-              Text('$count',
-                  style: body(13,
-                      weight: FontWeight.w600, color: AppColors.forest900)),
+              Text(
+                '$count',
+                style: body(
+                  13,
+                  weight: FontWeight.w600,
+                  color: AppColors.forest900,
+                ),
+              ),
             ],
           ],
         ),
@@ -1794,10 +1987,12 @@ class _Avatar extends StatelessWidget {
 void _showSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message, style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 1),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message, style: body(13, color: Colors.white)),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
 }

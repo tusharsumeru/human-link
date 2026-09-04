@@ -53,7 +53,8 @@ class Repository {
   /// `{ available: bool, suggestions: [..] }`.
   Future<Map<String, dynamic>> checkUsername(String userName) async {
     final data = await _api.getJson(
-        '/api/user/username/check?userName=${Uri.encodeQueryComponent(userName)}');
+      '/api/user/username/check?userName=${Uri.encodeQueryComponent(userName)}',
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'available': false};
   }
@@ -100,7 +101,9 @@ class Repository {
   /// from the name, disambiguated with the last 4 phone digits.
   String _deriveUserName(String name, String phone) {
     final base = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9._]'), '');
-    final suffix = phone.length >= 4 ? phone.substring(phone.length - 4) : phone;
+    final suffix = phone.length >= 4
+        ? phone.substring(phone.length - 4)
+        : phone;
     final raw = '${base.isEmpty ? 'member' : base}_$suffix';
     return raw.length > 30 ? raw.substring(0, 30) : raw;
   }
@@ -128,11 +131,13 @@ class Repository {
   Future<int> feedNewCount(String afterPostId) async {
     try {
       final data = await _api.getJson('/feed/new-count?after=$afterPostId');
-      
+
       if (data is Map && data['count'] is num) {
         return (data['count'] as num).toInt();
       }
-    } catch (_) {/* best-effort */}
+    } catch (_) {
+      /* best-effort */
+    }
     return 0;
   }
 
@@ -192,8 +197,10 @@ class Repository {
   /// POST /api/posts/comments/:commentId/likes — toggles the caller's like on
   /// a comment. Returns `{liked, likeCount}`.
   Future<Map<String, dynamic>> likeComment(String commentId) async {
-    final data =
-        await _api.postJson('/api/posts/comments/$commentId/likes', const {});
+    final data = await _api.postJson(
+      '/api/posts/comments/$commentId/likes',
+      const {},
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'liked': true, 'likeCount': 0};
   }
@@ -216,7 +223,10 @@ class Repository {
 
   /// GET /api/stories — active stories grouped per author ("trays"). Returns the
   /// raw envelope: `{count, trays:[{author, latestAt, stories:[...]}], nextCursor}`.
-  Future<Map<String, dynamic>> storiesFeed({int limit = 30, String? cursor}) async {
+  Future<Map<String, dynamic>> storiesFeed({
+    int limit = 30,
+    String? cursor,
+  }) async {
     final q = <String>['limit=$limit'];
     if (cursor != null && cursor.isNotEmpty) q.add('cursor=$cursor');
     final data = await _api.getJson('/api/stories?${q.join('&')}');
@@ -256,8 +266,10 @@ class Repository {
         'caption': caption,
         'visibility': visibility,
         // taggedMembers is sent as a JSON-array string (per the API contract).
-        if (taggedMembers.isNotEmpty) 'taggedMembers': jsonEncode(taggedMembers),
-        if (treeNodeId != null && treeNodeId.isNotEmpty) 'treeNodeId': treeNodeId,
+        if (taggedMembers.isNotEmpty)
+          'taggedMembers': jsonEncode(taggedMembers),
+        if (treeNodeId != null && treeNodeId.isNotEmpty)
+          'treeNodeId': treeNodeId,
         if (locationName != null && locationName.isNotEmpty)
           'locationName': locationName,
         if (locationKind != null && locationKind.isNotEmpty)
@@ -320,7 +332,6 @@ class Repository {
     return const [];
   }
 
- 
   /// GET /api/user/invitation-map — members with mapped coordinates, nearest
   /// first from [origin].
   ///
@@ -344,8 +355,9 @@ class Repository {
     ];
     if (q.isNotEmpty) query.add('search=${Uri.encodeQueryComponent(q)}');
 
-    final data =
-        await _api.getJson('/api/user/invitation-map?${query.join('&')}');
+    final data = await _api.getJson(
+      '/api/user/invitation-map?${query.join('&')}',
+    );
     if (data is! Map) return const InvitationMap();
 
     final members = <InvitationMember>[];
@@ -368,10 +380,7 @@ class Repository {
   /// The ids go up in whatever order they were picked: working out the order is
   /// the server's job. It always answers with a usable route — see
   /// [RoutePlan.isEstimate] for whether the distances are real road distances.
-  Future<RoutePlan> planRoute(
-    List<String> memberIds, {
-    LatLng? origin,
-  }) async {
+  Future<RoutePlan> planRoute(List<String> memberIds, {LatLng? origin}) async {
     final data = await _api.postJson('/api/user/route', {
       'memberIds': memberIds,
       if (origin != null)
@@ -391,22 +400,22 @@ class Repository {
   /// same field, in case the backend returns it without honoring the query
   /// filter — so this never shows a non-purohit member.
   Future<List<Map<String, dynamic>>> purohitDirectory({
-  int limit = 30,
-  int page = 1,
-}) async {
-  final data = await _api.getJson(
-    '/api/user/purohits?limit=$limit&page=$page',
-  );
+    int limit = 30,
+    int page = 1,
+  }) async {
+    final data = await _api.getJson(
+      '/api/user/purohits?limit=$limit&page=$page',
+    );
 
-  if (data is Map && data['users'] is List) {
-    return (data['users'] as List)
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
+    if (data is Map && data['users'] is List) {
+      return (data['users'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    return const [];
   }
-
-  return const [];
-}
 
   /// GET /api/user/me — the authenticated member's own full profile (same shape
   /// as login/register, including `samajId`). Used to refresh a restored session
@@ -430,10 +439,13 @@ class Repository {
   /// `[{ _id, name, gender, status, profileUrl, isPlaceholder, linkedUserId }]`.
   /// Omitting [q] returns the first [limit] members. Requires the bearer token
   /// like every other family route. [limit] is clamped to 1–50 server-side.
-  Future<List<Map<String, dynamic>>> familySearch(String q,
-      {int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> familySearch(
+    String q, {
+    int limit = 20,
+  }) async {
     final data = await _api.getJson(
-        '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit');
+      '/api/family/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit',
+    );
     if (data is List) {
       return data
           .whereType<Map>()
@@ -459,12 +471,16 @@ class Repository {
   }
 
   /// GET /api/conversations/:userId/messages — history, oldest→newest.
-  Future<List<Map<String, dynamic>>> messageHistory(String userId,
-      {int limit = 40, String? before}) async {
+  Future<List<Map<String, dynamic>>> messageHistory(
+    String userId, {
+    int limit = 40,
+    String? before,
+  }) async {
     final q = <String>['limit=$limit'];
     if (before != null && before.isNotEmpty) q.add('before=$before');
-    final data = await _api
-        .getJson('/api/conversations/$userId/messages?${q.join('&')}');
+    final data = await _api.getJson(
+      '/api/conversations/$userId/messages?${q.join('&')}',
+    );
     if (data is Map && data['messages'] is List) {
       return (data['messages'] as List)
           .whereType<Map>()
@@ -476,8 +492,10 @@ class Repository {
 
   /// POST /api/messages — send over REST (fallback when the socket is down).
   Future<Map<String, dynamic>> sendMessage(String toUserId, String text) async {
-    final data = await _api
-        .postJson('/api/messages', {'toUserId': toUserId, 'text': text});
+    final data = await _api.postJson('/api/messages', {
+      'toUserId': toUserId,
+      'text': text,
+    });
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not send message');
   }
@@ -510,7 +528,9 @@ class Repository {
 
   /// POST /api/connections — send a connection request (directory "Connect").
   Future<Map<String, dynamic>> connect(String toUserId) async {
-    final data = await _api.postJson('/api/connections', {'toUserId': toUserId});
+    final data = await _api.postJson('/api/connections', {
+      'toUserId': toUserId,
+    });
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not send connection request');
   }
@@ -584,7 +604,9 @@ class Repository {
       if (res is Map && res['url'] is String) {
         return '${ApiConfig.baseUrl}${res['url']}';
       }
-    } catch (_) {/* offline / endpoint not deployed yet */}
+    } catch (_) {
+      /* offline / endpoint not deployed yet */
+    }
     return null;
   }
 
@@ -597,73 +619,71 @@ class Repository {
   /// The user is identified by the bearer token, so `phone` is not sent — the
   /// server strips it anyway, and sending it implied an identity the request
   /// does not actually carry.
-Future<Map<String, dynamic>> saveProfile({
-  String? name,
-  String? gotra,
-  String? native,
-  String? bio,
-  String? occupation,
-  bool? matrimonialOptIn,
-  bool? showPhoneToMembers,
-  String? dob,
-  String? gender,
-  String? address,
-  Map<String, dynamic>? currentAddress,
-  String? profileUrl,
-  String? maskedAadhaar,
-  bool? verified,
-}) async {
-  debugPrint('========== SAVE PROFILE START ==========');
+  Future<Map<String, dynamic>> saveProfile({
+    String? name,
+    String? gotra,
+    String? native,
+    String? bio,
+    String? occupation,
+    bool? matrimonialOptIn,
+    bool? showPhoneToMembers,
+    String? dob,
+    String? gender,
+    String? bloodGroup,
+    String? address,
+    Map<String, dynamic>? currentAddress,
+    String? profileUrl,
+    String? maskedAadhaar,
+    bool? verified,
+  }) async {
+    debugPrint('========== SAVE PROFILE START ==========');
 
-  final payload = {
-    'name': name,
-    'gotra': gotra,
-    'native': native,
-    'bio': bio,
-    'occupation': occupation,
-    'matrimonialOptIn': matrimonialOptIn,
-    'showPhoneToMembers': showPhoneToMembers,
-    'dob': dob,
-    'gender': gender,
-    'address': address,
-    'currentAddress': currentAddress,
-    'profileUrl': profileUrl,
-    'masked_aadhaar': maskedAadhaar,
-    'verified': verified,
-  };
+    final payload = {
+      'name': name,
+      'gotra': gotra,
+      'native': native,
+      'bio': bio,
+      'occupation': occupation,
+      'matrimonialOptIn': matrimonialOptIn,
+      'showPhoneToMembers': showPhoneToMembers,
+      'dob': dob,
+      'gender': gender,
+      'bloodGroup': bloodGroup,
+      'address': address,
+      'currentAddress': currentAddress,
+      'profileUrl': profileUrl,
+      'masked_aadhaar': maskedAadhaar,
+      'verified': verified,
+    };
 
-  debugPrint('URL: /api/user/profile');
-  debugPrint('METHOD: PATCH');
-  debugPrint('PAYLOAD: $payload');
+    debugPrint('URL: /api/user/profile');
+    debugPrint('METHOD: PATCH');
+    debugPrint('PAYLOAD: $payload');
 
-  try {
-    debugPrint('Calling patchJson...');
+    try {
+      debugPrint('Calling patchJson...');
 
-    final data = await _api.patchJson(
-      '/api/user/profile',
-      payload,
-    );
+      final data = await _api.patchJson('/api/user/profile', payload);
 
-    debugPrint('PATCH API SUCCESS');
-    debugPrint('RESPONSE: $data');
+      debugPrint('PATCH API SUCCESS');
+      debugPrint('RESPONSE: $data');
 
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
+      if (data is Map) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw ApiException('Could not save your profile');
+    } catch (e, stackTrace) {
+      debugPrint('========== SAVE PROFILE ERROR ==========');
+      debugPrint('ERROR TYPE: ${e.runtimeType}');
+      debugPrint('ERROR: $e');
+      debugPrint('STACK TRACE: $stackTrace');
+      debugPrint('========================================');
+
+      rethrow;
     }
-
-    throw ApiException(
-      'Could not save your profile',
-    );
-  } catch (e, stackTrace) {
-    debugPrint('========== SAVE PROFILE ERROR ==========');
-    debugPrint('ERROR TYPE: ${e.runtimeType}');
-    debugPrint('ERROR: $e');
-    debugPrint('STACK TRACE: $stackTrace');
-    debugPrint('========================================');
-
-    rethrow;
   }
-}
+
   /// Best-effort [saveProfile]: true on success, false if the backend rejected
   /// the change or is unreachable. Used by the onboarding/registration flows,
   /// which must not stall on a profile write.
@@ -747,7 +767,11 @@ Future<Map<String, dynamic>> saveProfile({
     await _api.putJson('/api/parampara/me', {
       'kuladevata': trimmed.isEmpty
           ? {'status': 'NOT_PROVIDED'}
-          : {'status': 'PROVIDED', 'source': 'USER_DECLARED', 'customValue': trimmed},
+          : {
+              'status': 'PROVIDED',
+              'source': 'USER_DECLARED',
+              'customValue': trimmed,
+            },
     });
   }
 
@@ -762,7 +786,11 @@ Future<Map<String, dynamic>> saveProfile({
     await _api.putJson('/api/parampara/me', {
       'gotra': trimmed.isEmpty
           ? {'status': 'NOT_PROVIDED'}
-          : {'status': 'PROVIDED', 'source': 'USER_DECLARED', 'customValue': trimmed},
+          : {
+              'status': 'PROVIDED',
+              'source': 'USER_DECLARED',
+              'customValue': trimmed,
+            },
     });
   }
 
@@ -786,8 +814,8 @@ Future<Map<String, dynamic>> saveProfile({
     final data = _unwrapSurepass(res);
     final clientId = (data['client_id'] ?? '').toString();
     // Via Link returns a URL to open; the field name varies by product.
-    final url =
-        (data['url'] ?? data['link'] ?? data['digilocker_url'] ?? '').toString();
+    final url = (data['url'] ?? data['link'] ?? data['digilocker_url'] ?? '')
+        .toString();
     if (clientId.isEmpty || url.isEmpty) {
       throw ApiException('Could not start DigiLocker');
     }
@@ -819,11 +847,12 @@ Future<Map<String, dynamic>> saveProfile({
       'full_name': (data['full_name'] ?? data['name'] ?? '').toString(),
       'dob': (data['dob'] ?? data['date_of_birth'] ?? '').toString(),
       'gender': _normalizeGender(data['gender']),
-      'masked_aadhaar': (data['masked_aadhaar'] ??
-              data['aadhaar_id'] ??
-              data['aadhaar_number'] ??
-              '')
-          .toString(),
+      'masked_aadhaar':
+          (data['masked_aadhaar'] ??
+                  data['aadhaar_id'] ??
+                  data['aadhaar_number'] ??
+                  '')
+              .toString(),
       'full_address': _fullAddress(data),
     };
   }
@@ -856,8 +885,16 @@ Future<Map<String, dynamic>> saveProfile({
     if (address is String) return address;
     if (address is Map) {
       const order = [
-        'house', 'street', 'landmark', 'loc', 'vtc', 'po',
-        'subdist', 'dist', 'state', 'country',
+        'house',
+        'street',
+        'landmark',
+        'loc',
+        'vtc',
+        'po',
+        'subdist',
+        'dist',
+        'state',
+        'country',
       ];
       final line = [
         for (final key in order) (address[key] ?? '').toString().trim(),
@@ -885,7 +922,9 @@ Future<Map<String, dynamic>> saveProfile({
   /// Aadhaar (Surepass) — step 2: submit the OTP. Returns the verified KYC
   /// data map (full_name, dob, gender, address, …). Throws on invalid OTP.
   Future<Map<String, dynamic>> aadhaarSubmitOtp(
-      String clientId, String otp) async {
+    String clientId,
+    String otp,
+  ) async {
     final data = await _api.postJson('/api/aadhaar/submit-otp', {
       'client_id': clientId,
       'otp': otp,
@@ -901,13 +940,17 @@ Future<Map<String, dynamic>> saveProfile({
     try {
       final data = await _api.getJson('/api/stats');
       if (data is Map) return Map<String, dynamic>.from(data);
-    } catch (_) {/* fall through */}
+    } catch (_) {
+      /* fall through */
+    }
     return _demoStats();
   }
 
   Map<String, dynamic> _demoStats() {
     final donations = kWelfareCampaigns.fold<int>(
-        0, (sum, c) => sum + (c['raised'] as int));
+      0,
+      (sum, c) => sum + (c['raised'] as int),
+    );
     return {
       'totalMembers': 1428,
       'pendingVerifications': kVerificationRequests.length,
@@ -1039,91 +1082,87 @@ Future<Map<String, dynamic>> saveProfile({
   /// relation that already exists (in either direction) is idempotent — the
   /// existing edge comes back unchanged, so a 200 is not proof a *new* request
   /// was sent.
-Future<Map<String, dynamic>> addFamilyMember({
-  required String relation,
-  String? targetUserId,
-  String? name,
-  String? gender,
-  String status = 'alive',
-  String? phone,
-  String? dob,
-  String? dod,
-  String? placeOfDeath,
-  String? biography,
-  String? profileUrl,
-}) async {
-  final body = <String, dynamic>{
-    'relation': relation,
-  };
+  Future<Map<String, dynamic>> addFamilyMember({
+    required String relation,
+    String? targetUserId,
+    String? name,
+    String? gender,
+    String status = 'alive',
+    String? phone,
+    String? dob,
+    String? dod,
+    String? placeOfDeath,
+    String? biography,
+    String? profileUrl,
+  }) async {
+    final body = <String, dynamic>{'relation': relation};
 
-  if (targetUserId != null && targetUserId.isNotEmpty) {
-    body['targetUserId'] = targetUserId;
-  } else {
-    body['name'] = name;
+    if (targetUserId != null && targetUserId.isNotEmpty) {
+      body['targetUserId'] = targetUserId;
+    } else {
+      body['name'] = name;
 
-    if (gender != null && gender.isNotEmpty) {
-      body['gender'] = gender;
+      if (gender != null && gender.isNotEmpty) {
+        body['gender'] = gender;
+      }
+
+      body['status'] = status;
+
+      if (phone != null && phone.isNotEmpty) {
+        body['phone'] = phone;
+      }
+
+      if (dob != null && dob.isNotEmpty) {
+        body['dob'] = dob;
+      }
+
+      if (dod != null && dod.isNotEmpty) {
+        body['dod'] = dod;
+      }
+
+      if (placeOfDeath != null && placeOfDeath.isNotEmpty) {
+        body['placeOfDeath'] = placeOfDeath;
+      }
+
+      if (biography != null && biography.isNotEmpty) {
+        body['biography'] = biography;
+      }
+
+      if (profileUrl != null && profileUrl.isNotEmpty) {
+        body['profileUrl'] = profileUrl;
+      }
     }
 
-    body['status'] = status;
+    debugPrint('========== ADD FAMILY MEMBER ==========');
+    debugPrint('Relation: $relation');
+    debugPrint('Target User ID: $targetUserId');
+    debugPrint('Request Body: $body');
 
-    if (phone != null && phone.isNotEmpty) {
-      body['phone'] = phone;
-    }
+    try {
+      debugPrint('Calling: POST /api/family/members');
 
-    if (dob != null && dob.isNotEmpty) {
-      body['dob'] = dob;
-    }
+      final data = await _api.postJson('/api/family/members', body);
 
-    if (dod != null && dod.isNotEmpty) {
-      body['dod'] = dod;
-    }
+      debugPrint('API RESPONSE: $data');
 
-    if (placeOfDeath != null && placeOfDeath.isNotEmpty) {
-      body['placeOfDeath'] = placeOfDeath;
-    }
+      if (data is Map) {
+        debugPrint('Family member added successfully');
+        return Map<String, dynamic>.from(data);
+      }
 
-    if (biography != null && biography.isNotEmpty) {
-      body['biography'] = biography;
-    }
+      debugPrint('Unexpected response type: ${data.runtimeType}');
+      throw ApiException('Could not add member');
+    } catch (e, stackTrace) {
+      debugPrint('========== ADD FAMILY MEMBER ERROR ==========');
+      debugPrint('Error: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('=============================================');
 
-    if (profileUrl != null && profileUrl.isNotEmpty) {
-      body['profileUrl'] = profileUrl;
+      rethrow;
     }
   }
 
-  debugPrint('========== ADD FAMILY MEMBER ==========');
-  debugPrint('Relation: $relation');
-  debugPrint('Target User ID: $targetUserId');
-  debugPrint('Request Body: $body');
-
-  try {
-    debugPrint('Calling: POST /api/family/members');
-
-    final data = await _api.postJson(
-      '/api/family/members',
-      body,
-    );
-
-    debugPrint('API RESPONSE: $data');
-
-    if (data is Map) {
-      debugPrint('Family member added successfully');
-      return Map<String, dynamic>.from(data);
-    }
-
-    debugPrint('Unexpected response type: ${data.runtimeType}');
-    throw ApiException('Could not add member');
-  } catch (e, stackTrace) {
-    debugPrint('========== ADD FAMILY MEMBER ERROR ==========');
-    debugPrint('Error: $e');
-    debugPrint('Error type: ${e.runtimeType}');
-    debugPrint('Stack trace: $stackTrace');
-    debugPrint('=============================================');
-
-    rethrow;
-  }
-}
   /// GET /api/family/requests — requests awaiting **my** approval, each with the
   /// `requester` preview and a ready-made `message`.
   Future<List<Map<String, dynamic>>> familyRequests() async {
@@ -1175,8 +1214,10 @@ Future<Map<String, dynamic>> addFamilyMember({
   /// `DELETE /api/family/relationships/:id` because only the POST form carries a
   /// body. **Refetch the tree afterwards** — removing one edge can drop or
   /// relabel everyone who was reached through it.
-  Future<void> removeFamilyRelationship(String relationshipId,
-      {String? note}) async {
+  Future<void> removeFamilyRelationship(
+    String relationshipId, {
+    String? note,
+  }) async {
     await _api.postJson('/api/family/relationships/remove', {
       'relationshipId': relationshipId,
       if (note != null && note.isNotEmpty) 'note': note,
@@ -1306,7 +1347,8 @@ Future<Map<String, dynamic>> addFamilyMember({
 
   /// PUT /api/matrimonial/me — save-as-you-go draft. Every field optional.
   Future<Map<String, dynamic>> saveMatrimonialProfile(
-      Map<String, dynamic> fields) async {
+    Map<String, dynamic> fields,
+  ) async {
     final data = await _api.putJson('/api/matrimonial/me', fields);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not save your matrimonial profile');
@@ -1455,7 +1497,8 @@ Future<Map<String, dynamic>> addFamilyMember({
   /// anywhere in the app; this only stores the raw inputs the server-side
   /// engine will read later.
   Future<Map<String, dynamic>> saveBirthProfile(
-      Map<String, dynamic> fields) async {
+    Map<String, dynamic> fields,
+  ) async {
     final data = await _api.putJson('/api/birth-profile/me', fields);
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not save your birth details');
@@ -1489,7 +1532,9 @@ Future<Map<String, dynamic>> addFamilyMember({
       'include': include,
     });
     if (data is Map) {
-      return CalculateCompatibilityResponse.fromJson(Map<String, dynamic>.from(data));
+      return CalculateCompatibilityResponse.fromJson(
+        Map<String, dynamic>.from(data),
+      );
     }
     throw ApiException('Could not calculate compatibility');
   }
@@ -1558,7 +1603,9 @@ Future<Map<String, dynamic>> addFamilyMember({
   }
 
   /// GET /reports/:reportId/profile-compatibility
-  Future<ProfileCompatibility> profileCompatibilityReport(String reportId) async {
+  Future<ProfileCompatibility> profileCompatibilityReport(
+    String reportId,
+  ) async {
     final data = await _dedicatedModuleJson(reportId, 'profile-compatibility');
     return ProfileCompatibility.fromJson(data);
   }
@@ -1566,11 +1613,16 @@ Future<Map<String, dynamic>> addFamilyMember({
   /// Shared fetch for every `/reports/:reportId/<module>` endpoint above —
   /// same empty-id guard as [compatibilityReport]/[southIndianJataka], so a
   /// missing report id never reaches the network.
-  Future<Map<String, dynamic>> _dedicatedModuleJson(String reportId, String module) async {
+  Future<Map<String, dynamic>> _dedicatedModuleJson(
+    String reportId,
+    String module,
+  ) async {
     if (reportId.trim().isEmpty) {
       throw ApiException('Missing compatibility report id');
     }
-    final data = await _api.getJson('/api/v1/compatibility/reports/$reportId/$module');
+    final data = await _api.getJson(
+      '/api/v1/compatibility/reports/$reportId/$module',
+    );
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not load the $module result');
   }
@@ -1582,12 +1634,15 @@ Future<Map<String, dynamic>> addFamilyMember({
   /// score. [candidateProfileId] is a User id (same identifier every other
   /// compatibility endpoint keys on), not a MatrimonialProfile document id.
   Future<CompatibilityPrerequisites> compatibilityPrerequisites(
-      String candidateProfileId) async {
-    final data = await _api
-        .getJson('/api/v1/compatibility/prerequisites/$candidateProfileId');
+    String candidateProfileId,
+  ) async {
+    final data = await _api.getJson(
+      '/api/v1/compatibility/prerequisites/$candidateProfileId',
+    );
     if (data is Map) {
       return CompatibilityPrerequisites.fromJson(
-          Map<String, dynamic>.from(data));
+        Map<String, dynamic>.from(data),
+      );
     }
     throw ApiException('Could not check compatibility readiness');
   }
@@ -1605,8 +1660,9 @@ Future<Map<String, dynamic>> addFamilyMember({
     if (reportId.trim().isEmpty) {
       throw ApiException('Missing compatibility report id');
     }
-    final data =
-        await _api.getJson('/api/v1/compatibility/reports/$reportId/south-indian-jataka');
+    final data = await _api.getJson(
+      '/api/v1/compatibility/reports/$reportId/south-indian-jataka',
+    );
     if (data is Map) {
       return SouthIndianJatakaResult.fromJson(Map<String, dynamic>.from(data));
     }

@@ -127,9 +127,18 @@ Future<bool> _downloadCompatibilityPdfToDevice({
   required Uint8List bytes,
   required String fileName,
 }) async {
+  // Without an explicit type/allowedExtensions, file_picker's Android side
+  // defaults to FileType.any, which asks Android's Storage Access Framework
+  // to create the document with MIME "*/*" — Android then has no idea it's
+  // a PDF (despite the .pdf filename), so the Files app shows a generic
+  // icon and refuses to open it. FileType.custom + allowedExtensions:
+  // ['pdf'] makes the plugin resolve a real "application/pdf" MIME for the
+  // save intent instead.
   final savedPath = await FilePicker.platform.saveFile(
     dialogTitle: 'Save Compatibility Report',
     fileName: fileName,
+    type: FileType.custom,
+    allowedExtensions: const ['pdf'],
     bytes: bytes,
   );
   return savedPath != null;
@@ -142,3 +151,51 @@ Future<bool> downloadCompatibilityPdfToDevice({
   required String fileName,
 }) =>
     downloadCompatibilityPdfImpl(bytes: bytes, fileName: fileName);
+
+typedef SavePublicPdfFn = Future<String?> Function({
+  required Uint8List bytes,
+  required String fileName,
+});
+
+/// Overridable in tests, same reasoning as [saveCompatibilityPdfImpl] —
+/// widget tests fake this out to avoid a real platform-channel call.
+SavePublicPdfFn savePublicCompatibilityPdfImpl = _savePublicCompatibilityPdfToDevice;
+
+Future<String?> _savePublicCompatibilityPdfToDevice({
+  required Uint8List bytes,
+  required String fileName,
+}) async {
+  if (!kIsWeb && Platform.isAndroid) {
+    // Real shared Downloads folder — see the doc comment on
+    // [_downloadsChannel] for why this doesn't go through file_saver.
+    final path = await _downloadsChannel.invokeMethod<String>('saveToDownloads', {
+      'fileName': fileName,
+      'mimeType': 'application/pdf',
+      'bytes': bytes,
+    });
+    return path;
+  }
+  // iOS (and any other platform): file_saver's own Documents-folder save,
+  // exposed in the Files app via the Info.plist keys set up for this.
+  final name = fileName.toLowerCase().endsWith('.pdf')
+      ? fileName.substring(0, fileName.length - 4)
+      : fileName;
+  return FileSaver.instance.saveFile(name: name, bytes: bytes, fileExtension: 'pdf', mimeType: MimeType.pdf);
+}
+
+/// Saves the PDF somewhere the member can actually find it outside the app —
+/// the phone's public Downloads (Android, via MediaStore/SAF under the hood)
+/// or the Files app (iOS), unlike [saveCompatibilityPdf] which only writes
+/// into this app's own private, sandboxed documents directory. Returns the
+/// saved path/identifier the platform reports back, or null if the platform
+/// didn't return one (still saved — some platforms just don't hand back a
+/// path).
+Future<String?> savePublicCompatibilityPdf({
+  required Uint8List bytes,
+  required String person1Name,
+  required String person2Name,
+}) =>
+    savePublicCompatibilityPdfImpl(
+      bytes: bytes,
+      fileName: compatibilityPdfFileName(person1Name, person2Name),
+    );

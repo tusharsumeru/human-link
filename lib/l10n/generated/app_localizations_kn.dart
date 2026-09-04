@@ -981,6 +981,12 @@ class AppLocalizationsKn extends AppLocalizations {
   String get editSelectGotra => 'ನಿಮ್ಮ ಗೋತ್ರ ಆಯ್ಕೆಮಾಡಿ';
 
   @override
+  String get editBloodGroup => 'ರಕ್ತದ ಗುಂಪು';
+
+  @override
+  String get editSelectBloodGroup => 'ರಕ್ತದ ಗುಂಪನ್ನು ಆಯ್ಕೆಮಾಡಿ';
+
+  @override
   String get editKuladevata => 'ಕುಲದೇವತೆ';
 
   @override
@@ -1951,7 +1957,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get matMother => 'ತಾಯಿ';
 
   @override
-  String get matSiblings => 'ಒಡಹುಟ್ಟಿದವರು';
+  String get matSiblings => 'ಒಡಹುಟ್ಟಿದವರ ಸಂಖ್ಯೆ';
 
   @override
   String get matHoroscope => 'ಜಾತಕ';
@@ -2099,6 +2105,18 @@ class AppLocalizationsKn extends AppLocalizations {
   String get matEducationHint => 'ಉದಾ. ಎಂಬಿಎ ಫೈನಾನ್ಸ್, ಐಐಎಂ ಬೆಂಗಳೂರು';
 
   @override
+  String get matOccupationType => 'ಉದ್ಯೋಗ ಪ್ರಕಾರ';
+
+  @override
+  String get matOccupationSalaried => 'ಸಂಬಳದಾರ';
+
+  @override
+  String get matOccupationSelfEmployed => 'ಸ್ವಯಂ ಉದ್ಯೋಗಿ';
+
+  @override
+  String get matOccupationUnemployed => 'ನಿರುದ್ಯೋಗಿ';
+
+  @override
   String get matCompanyOrg => 'ಕಂಪನಿ / ಸಂಸ್ಥೆ';
 
   @override
@@ -2135,7 +2153,10 @@ class AppLocalizationsKn extends AppLocalizations {
   String get matMothersOccupation => 'ತಾಯಿಯ ಉದ್ಯೋಗ';
 
   @override
-  String get matSiblingsHint => 'ಉದಾ. 1 ಚಿಕ್ಕ ಸಹೋದರ, ಬಿ.ಟೆಕ್';
+  String get matSiblingsHint => 'ಉದಾ. 2';
+
+  @override
+  String get matSiblingsRangeError => '0 ರಿಂದ 20 ರ ನಡುವೆ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ';
 
   @override
   String get matSectionHoroscope => 'ಜಾತಕ';
@@ -2238,6 +2259,24 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get matHeightRangeError => 'ಎತ್ತರ 120 ರಿಂದ 250 ಸೆಂ.ಮೀ ನಡುವೆ ಇರಬೇಕು';
+
+  @override
+  String get matHeightFeet => 'ಅಡಿ';
+
+  @override
+  String get matHeightFeetHint => 'ಉದಾ. 5';
+
+  @override
+  String get matHeightInches => 'ಇಂಚು';
+
+  @override
+  String get matHeightInchesHint => 'ಉದಾ. 7';
+
+  @override
+  String get matHeightFeetRangeError => 'ಅಡಿ 3 ರಿಂದ 8 ರ ನಡುವೆ ಇರಬೇಕು';
+
+  @override
+  String get matHeightInchesRangeError => 'ಇಂಚು 0 ರಿಂದ 11 ರ ನಡುವೆ ಇರಬೇಕು';
 
   @override
   String get matMangalDosha => 'ಮಂಗಳ ದೋಷ';

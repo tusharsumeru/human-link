@@ -1858,6 +1858,18 @@ abstract class AppLocalizations {
   /// **'Select your gotra'**
   String get editSelectGotra;
 
+  /// No description provided for @editBloodGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood group'**
+  String get editBloodGroup;
+
+  /// No description provided for @editSelectBloodGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Select blood group'**
+  String get editSelectBloodGroup;
+
   /// No description provided for @editKuladevata.
   ///
   /// In en, this message translates to:
@@ -3577,7 +3589,7 @@ abstract class AppLocalizations {
   /// No description provided for @matSiblings.
   ///
   /// In en, this message translates to:
-  /// **'Siblings'**
+  /// **'Number of siblings'**
   String get matSiblings;
 
   /// No description provided for @matHoroscope.
@@ -3862,6 +3874,30 @@ abstract class AppLocalizations {
   /// **'e.g. MBA Finance, IIM Bangalore'**
   String get matEducationHint;
 
+  /// No description provided for @matOccupationType.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupation type'**
+  String get matOccupationType;
+
+  /// No description provided for @matOccupationSalaried.
+  ///
+  /// In en, this message translates to:
+  /// **'Salaried'**
+  String get matOccupationSalaried;
+
+  /// No description provided for @matOccupationSelfEmployed.
+  ///
+  /// In en, this message translates to:
+  /// **'Self Employed'**
+  String get matOccupationSelfEmployed;
+
+  /// No description provided for @matOccupationUnemployed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unemployed'**
+  String get matOccupationUnemployed;
+
   /// No description provided for @matCompanyOrg.
   ///
   /// In en, this message translates to:
@@ -3937,8 +3973,14 @@ abstract class AppLocalizations {
   /// No description provided for @matSiblingsHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. 1 younger brother, B.Tech'**
+  /// **'e.g. 2'**
   String get matSiblingsHint;
+
+  /// No description provided for @matSiblingsRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between 0 and 20'**
+  String get matSiblingsRangeError;
 
   /// No description provided for @matSectionHoroscope.
   ///
@@ -4137,6 +4179,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Height must be between 120 and 250 cm'**
   String get matHeightRangeError;
+
+  /// No description provided for @matHeightFeet.
+  ///
+  /// In en, this message translates to:
+  /// **'Feet'**
+  String get matHeightFeet;
+
+  /// No description provided for @matHeightFeetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 5'**
+  String get matHeightFeetHint;
+
+  /// No description provided for @matHeightInches.
+  ///
+  /// In en, this message translates to:
+  /// **'Inches'**
+  String get matHeightInches;
+
+  /// No description provided for @matHeightInchesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 7'**
+  String get matHeightInchesHint;
+
+  /// No description provided for @matHeightFeetRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Feet must be between 3 and 8'**
+  String get matHeightFeetRangeError;
+
+  /// No description provided for @matHeightInchesRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Inches must be between 0 and 11'**
+  String get matHeightInchesRangeError;
 
   /// No description provided for @matMangalDosha.
   ///

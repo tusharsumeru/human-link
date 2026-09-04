@@ -46,8 +46,17 @@ class CurrentAddress {
 
   static const empty = CurrentAddress();
 
-  List<String> get _parts =>
-      [street, landmark, area, city, taluk, district, state, pincode, country];
+  List<String> get _parts => [
+    street,
+    landmark,
+    area,
+    city,
+    taluk,
+    district,
+    state,
+    pincode,
+    country,
+  ];
 
   bool get isEmpty => _parts.every((p) => p.trim().isEmpty);
   bool get isNotEmpty => !isEmpty;
@@ -58,10 +67,12 @@ class CurrentAddress {
       _parts.map((p) => p.trim()).where((p) => p.isNotEmpty).join(', ');
 
   /// The half of it a member is happy to show — no street, landmark or pincode.
-  String get shortLine => [area, city, district, state]
-      .map((p) => p.trim())
-      .where((p) => p.isNotEmpty)
-      .join(', ');
+  String get shortLine => [
+    area,
+    city,
+    district,
+    state,
+  ].map((p) => p.trim()).where((p) => p.isNotEmpty).join(', ');
 
   factory CurrentAddress.fromMap(dynamic raw) {
     if (raw is! Map) return empty;
@@ -93,18 +104,17 @@ class CurrentAddress {
 
   /// Full shape, for persisting the session locally.
   Map<String, dynamic> toMap() => {
-        'country': country,
-        'state': state,
-        'district': district,
-        'taluk': taluk,
-        'city': city,
-        'area': area,
-        'street': street,
-        'landmark': landmark,
-        'pincode': pincode,
-        if (hasLocation)
-          'location': {'latitude': latitude, 'longitude': longitude},
-      };
+    'country': country,
+    'state': state,
+    'district': district,
+    'taluk': taluk,
+    'city': city,
+    'area': area,
+    'street': street,
+    'landmark': landmark,
+    'pincode': pincode,
+    if (hasLocation) 'location': {'latitude': latitude, 'longitude': longitude},
+  };
 
   /// What to send to the server — empty parts left out entirely, and null when
   /// there is no address at all, so a blank form doesn't overwrite a stored
@@ -137,32 +147,29 @@ class CurrentAddress {
   //   return m;
   // }
 
-
-Map<String, dynamic> toRequest({bool includeLocation = false}) {
-  final data = <String, dynamic>{
-    if (country.isNotEmpty) 'country': country,
-    if (state.isNotEmpty) 'state': state,
-    if (district.isNotEmpty) 'district': district,
-    if (taluk.isNotEmpty) 'taluk': taluk,
-    if (city.isNotEmpty) 'city': city,
-    if (area.isNotEmpty) 'area': area,
-    if (street.isNotEmpty) 'street': street,
-    if (landmark.isNotEmpty) 'landmark': landmark,
-    if (pincode.isNotEmpty) 'pincode': pincode,
-  };
-
-  if (includeLocation && latitude != null && longitude != null) {
-    data['location'] = {
-      'type': 'Point',
-      'coordinates': [
-        longitude,
-        latitude,
-      ],
+  Map<String, dynamic> toRequest({bool includeLocation = false}) {
+    final data = <String, dynamic>{
+      if (country.isNotEmpty) 'country': country,
+      if (state.isNotEmpty) 'state': state,
+      if (district.isNotEmpty) 'district': district,
+      if (taluk.isNotEmpty) 'taluk': taluk,
+      if (city.isNotEmpty) 'city': city,
+      if (area.isNotEmpty) 'area': area,
+      if (street.isNotEmpty) 'street': street,
+      if (landmark.isNotEmpty) 'landmark': landmark,
+      if (pincode.isNotEmpty) 'pincode': pincode,
     };
+
+    if (includeLocation && latitude != null && longitude != null) {
+      data['location'] = {
+        'type': 'Point',
+        'coordinates': [longitude, latitude],
+      };
+    }
+
+    return data;
   }
 
-  return data;
-}
   CurrentAddress copyWith({
     String? country,
     String? state,
@@ -175,20 +182,19 @@ Map<String, dynamic> toRequest({bool includeLocation = false}) {
     String? pincode,
     double? latitude,
     double? longitude,
-  }) =>
-      CurrentAddress(
-        country: country ?? this.country,
-        state: state ?? this.state,
-        district: district ?? this.district,
-        taluk: taluk ?? this.taluk,
-        city: city ?? this.city,
-        area: area ?? this.area,
-        street: street ?? this.street,
-        landmark: landmark ?? this.landmark,
-        pincode: pincode ?? this.pincode,
-        latitude: latitude ?? this.latitude,
-        longitude: longitude ?? this.longitude,
-      );
+  }) => CurrentAddress(
+    country: country ?? this.country,
+    state: state ?? this.state,
+    district: district ?? this.district,
+    taluk: taluk ?? this.taluk,
+    city: city ?? this.city,
+    area: area ?? this.area,
+    street: street ?? this.street,
+    landmark: landmark ?? this.landmark,
+    pincode: pincode ?? this.pincode,
+    latitude: latitude ?? this.latitude,
+    longitude: longitude ?? this.longitude,
+  );
 }
 
 /// Authenticated user — mirrors the web app's VVUser shape, plus a few
@@ -203,6 +209,7 @@ class AppUser {
   final String gotra;
   final String native;
   final String avatar;
+  final String bloodGroup;
   // Extras — backend supports `bio`/`matrimonialOptIn`; the rest are local-only.
   final String gender;
   final String bio;
@@ -212,6 +219,7 @@ class AppUser {
   final String address;
   final CurrentAddress currentAddress;
   final bool matrimonialOptIn;
+
   /// Whether other members may see this member's phone number. The server is
   /// what enforces it: with this off, `/api/user/:id` and the directory return
   /// `phone: ''`, so a hidden number never reaches another member's device.
@@ -234,6 +242,7 @@ class AppUser {
     required this.gotra,
     required this.native,
     required this.avatar,
+    this.bloodGroup = '',
     this.gender = '',
     this.bio = '',
     this.occupation = '',
@@ -252,58 +261,60 @@ class AppUser {
   bool get isElder => role == 'elder';
 
   factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
-        id: (m['_id'] ?? m['id'] ?? '').toString(),
-        samajId: (m['samajId'] ?? '') as String,
-        name: (m['name'] ?? '') as String,
-        userName: (m['userName'] ?? '') as String,
-        phone: (m['phone'] ?? '') as String,
-        role: (m['role'] ?? 'member') as String,
-        gotra: (m['gotra'] ?? '') as String,
-        native: (m['native'] ?? '') as String,
-        avatar: (m['avatar'] ?? '6') as String,
-        gender: (m['gender'] ?? '') as String,
-        bio: (m['bio'] ?? '') as String,
-        occupation: (m['occupation'] ?? '') as String,
-        address: (m['address'] ?? '') as String,
-        currentAddress: CurrentAddress.fromMap(m['currentAddress']),
-        matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
-        // Defaults to false — matching the schema default, so a profile from
-        // before this field existed reads as "hidden" rather than exposing a
-        // number the member never agreed to share.
-        showPhoneToMembers: (m['showPhoneToMembers'] ?? false) as bool,
-        photoPath: (m['photoPath'] ?? '') as String,
-        // Login/register return the remote photo as `profileUrl`.
-        photoUrl: (m['photoUrl'] ?? m['profileUrl'] ?? '') as String,
-        onboardingComplete: (m['onboardingComplete'] ?? true) as bool,
-        dob: (m['dob'] ?? '') as String,
-        maskedAadhaar: (m['masked_aadhaar'] ?? m['maskedAadhaar'] ?? '') as String,
-        verified: (m['verified'] ?? false) as bool,
-      );
+    id: (m['_id'] ?? m['id'] ?? '').toString(),
+    samajId: (m['samajId'] ?? '') as String,
+    name: (m['name'] ?? '') as String,
+    userName: (m['userName'] ?? '') as String,
+    phone: (m['phone'] ?? '') as String,
+    role: (m['role'] ?? 'member') as String,
+    gotra: (m['gotra'] ?? '') as String,
+    native: (m['native'] ?? '') as String,
+    avatar: (m['avatar'] ?? '6') as String,
+    bloodGroup: (m['bloodGroup'] ?? '') as String,
+    gender: (m['gender'] ?? '') as String,
+    bio: (m['bio'] ?? '') as String,
+    occupation: (m['occupation'] ?? '') as String,
+    address: (m['address'] ?? '') as String,
+    currentAddress: CurrentAddress.fromMap(m['currentAddress']),
+    matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
+    // Defaults to false — matching the schema default, so a profile from
+    // before this field existed reads as "hidden" rather than exposing a
+    // number the member never agreed to share.
+    showPhoneToMembers: (m['showPhoneToMembers'] ?? false) as bool,
+    photoPath: (m['photoPath'] ?? '') as String,
+    // Login/register return the remote photo as `profileUrl`.
+    photoUrl: (m['photoUrl'] ?? m['profileUrl'] ?? '') as String,
+    onboardingComplete: (m['onboardingComplete'] ?? true) as bool,
+    dob: (m['dob'] ?? '') as String,
+    maskedAadhaar: (m['masked_aadhaar'] ?? m['maskedAadhaar'] ?? '') as String,
+    verified: (m['verified'] ?? false) as bool,
+  );
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'samajId': samajId,
-        'name': name,
-        'userName': userName,
-        'phone': phone,
-        'role': role,
-        'gotra': gotra,
-        'native': native,
-        'avatar': avatar,
-        'gender': gender,
-        'bio': bio,
-        'occupation': occupation,
-        'address': address,
-        'currentAddress': currentAddress.toMap(),
-        'matrimonialOptIn': matrimonialOptIn,
-        'showPhoneToMembers': showPhoneToMembers,
-        'photoPath': photoPath,
-        'photoUrl': photoUrl,
-        'onboardingComplete': onboardingComplete,
-        'dob': dob,
-        'masked_aadhaar': maskedAadhaar,
-        'verified': verified,
-      };
+    'id': id,
+    'samajId': samajId,
+    'name': name,
+    'userName': userName,
+    'phone': phone,
+    'role': role,
+    'gotra': gotra,
+    'native': native,
+    'avatar': avatar,
+    'bloodGroup': bloodGroup,
+    'gender': gender,
+    'bio': bio,
+    'occupation': occupation,
+    'address': address,
+    'currentAddress': currentAddress.toMap(),
+    'matrimonialOptIn': matrimonialOptIn,
+    'showPhoneToMembers': showPhoneToMembers,
+    'photoPath': photoPath,
+    'photoUrl': photoUrl,
+    'onboardingComplete': onboardingComplete,
+    'dob': dob,
+    'masked_aadhaar': maskedAadhaar,
+    'verified': verified,
+  };
 
   AppUser copyWith({
     String? id,
@@ -315,6 +326,7 @@ class AppUser {
     String? gotra,
     String? native,
     String? avatar,
+    String? bloodGroup,
     String? gender,
     String? bio,
     String? occupation,
@@ -328,31 +340,31 @@ class AppUser {
     String? dob,
     String? maskedAadhaar,
     bool? verified,
-  }) =>
-      AppUser(
-        id: id ?? this.id,
-        samajId: samajId ?? this.samajId,
-        name: name ?? this.name,
-        userName: userName ?? this.userName,
-        phone: phone ?? this.phone,
-        role: role ?? this.role,
-        gotra: gotra ?? this.gotra,
-        native: native ?? this.native,
-        avatar: avatar ?? this.avatar,
-        gender: gender ?? this.gender,
-        bio: bio ?? this.bio,
-        occupation: occupation ?? this.occupation,
-        address: address ?? this.address,
-        currentAddress: currentAddress ?? this.currentAddress,
-        matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
-        showPhoneToMembers: showPhoneToMembers ?? this.showPhoneToMembers,
-        photoPath: photoPath ?? this.photoPath,
-        photoUrl: photoUrl ?? this.photoUrl,
-        onboardingComplete: onboardingComplete ?? this.onboardingComplete,
-        dob: dob ?? this.dob,
-        maskedAadhaar: maskedAadhaar ?? this.maskedAadhaar,
-        verified: verified ?? this.verified,
-      );
+  }) => AppUser(
+    id: id ?? this.id,
+    samajId: samajId ?? this.samajId,
+    name: name ?? this.name,
+    userName: userName ?? this.userName,
+    phone: phone ?? this.phone,
+    role: role ?? this.role,
+    gotra: gotra ?? this.gotra,
+    native: native ?? this.native,
+    avatar: avatar ?? this.avatar,
+    bloodGroup: bloodGroup ?? this.bloodGroup,
+    gender: gender ?? this.gender,
+    bio: bio ?? this.bio,
+    occupation: occupation ?? this.occupation,
+    address: address ?? this.address,
+    currentAddress: currentAddress ?? this.currentAddress,
+    matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,
+    showPhoneToMembers: showPhoneToMembers ?? this.showPhoneToMembers,
+    photoPath: photoPath ?? this.photoPath,
+    photoUrl: photoUrl ?? this.photoUrl,
+    onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+    dob: dob ?? this.dob,
+    maskedAadhaar: maskedAadhaar ?? this.maskedAadhaar,
+    verified: verified ?? this.verified,
+  );
 }
 
 /// Decodes a JWT's payload claims ({sub, userName, role, …}), or null if it
@@ -362,7 +374,9 @@ Map<String, dynamic>? _jwtClaims(String? token) {
   final parts = token.split('.');
   if (parts.length != 3) return null;
   try {
-    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    final payload = utf8.decode(
+      base64Url.decode(base64Url.normalize(parts[1])),
+    );
     return jsonDecode(payload) as Map<String, dynamic>;
   } catch (_) {
     return null;
@@ -445,7 +459,9 @@ class AuthService extends ChangeNotifier {
       final serverPhoto = (data['profileUrl'] ?? '').toString();
       if (serverPhoto.isNotEmpty) merged['photoUrl'] = serverPhoto;
       await _persist(AppUser.fromMap(merged));
-    } catch (_) {/* offline / endpoint unavailable — keep the cached user */}
+    } catch (_) {
+      /* offline / endpoint unavailable — keep the cached user */
+    }
   }
 
   /// Logs in via the API. Captures the JWT token for subsequent protected
@@ -501,7 +517,9 @@ class AuthService extends ChangeNotifier {
     ChatService.instance.disconnect();
     try {
       await FirebaseAuth.instance.signOut();
-    } catch (_) {/* ignore if Firebase isn't signed in */}
+    } catch (_) {
+      /* ignore if Firebase isn't signed in */
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
     await prefs.remove(_tokenKey);

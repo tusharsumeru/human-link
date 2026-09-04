@@ -27,10 +27,14 @@ class AppColors {
   static const Color goldSoft = Color(0xFFBCAAA4);
 
   // Cream / surfaces — Neutral, anchored at #F5F1E8
-  static const Color cream = Color(0xFFF5F1E8);
+  // Page/surface background — was cream (#F5F1E8), now white per design change.
+  // creamDark stays as-is: it's the tan accent used for borders, dividers and
+  // badge fills, not a page background, and turning it white too would make
+  // those elements invisible against this same white background.
+  static const Color cream = Color(0xFFFFFFFF);
   static const Color creamDark = Color(0xFFEBE0C9);
-  // Warm feed background — posts sit as white cards on this.
-  static const Color feedBg = Color(0xFFEFE9DA);
+  // Feed background — was a warm cream (#EFE9DA), now white to match.
+  static const Color feedBg = Color(0xFFFFFFFF);
 
   // Convenient aliases (kept for backwards-compat with legacy screens)
   static const Color forestDark = forest900;

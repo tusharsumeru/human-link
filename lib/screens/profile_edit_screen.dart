@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
+import '../data/blood_groups.dart';
 import '../data/gotras.dart';
 import '../data/kuladevatas.dart';
 import '../data/models/parampara.dart';
@@ -61,6 +62,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String? _gotra;
   late List<String> _gotraOptions;
 
+  // Nullable/fixed-list, same reasoning as [_gotra] — an unset profile shows
+  // an unselected dropdown, and a legacy value that isn't one of the 8
+  // standard groups (kBloodGroups) just starts unselected too rather than
+  // crashing DropdownButtonFormField.
+  String? _bloodGroup;
+
   // Kuladevata lives on a separate backend resource (Parampara profile, see
   // ../data/models/parampara.dart) fetched asynchronously — unlike the rest
   // of this screen's fields, it isn't available synchronously from
@@ -93,9 +100,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _name = TextEditingController(text: u?.name ?? '');
     final existingGotra = (u?.gotra ?? '').trim();
     _gotra = existingGotra.isEmpty ? null : existingGotra;
-    _gotraOptions = existingGotra.isEmpty || kDaivajnaGotras.contains(existingGotra)
+    _gotraOptions =
+        existingGotra.isEmpty || kDaivajnaGotras.contains(existingGotra)
         ? kDaivajnaGotras
         : [existingGotra, ...kDaivajnaGotras];
+    final existingBloodGroup = (u?.bloodGroup ?? '').trim();
+    _bloodGroup = kBloodGroups.contains(existingBloodGroup)
+        ? existingBloodGroup
+        : null;
     _native = TextEditingController(text: u?.native ?? '');
     _occupation = TextEditingController(text: u?.occupation ?? '');
     _bio = TextEditingController(text: u?.bio ?? '');
@@ -116,8 +128,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _fixIsCurrent = false;
     // _fixIsCurrent = addr.hasLocation;
     _addressFields = [
-      _country, _state, _district, _taluk, _city,
-      _area, _street, _landmark, _pincode,
+      _country,
+      _state,
+      _district,
+      _taluk,
+      _city,
+      _area,
+      _street,
+      _landmark,
+      _pincode,
     ];
     for (final c in _addressFields) {
       c.addListener(_onAddressEdited);
@@ -135,13 +154,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     try {
       final profile = await Repository.instance.myParampara();
       if (!mounted) return;
-      final existing = profile.kuladevata.status == ParamparaValueStatus.provided
+      final existing =
+          profile.kuladevata.status == ParamparaValueStatus.provided
           ? (profile.kuladevata.customValue ?? '').trim()
           : '';
       setState(() {
         _kuladevata = existing.isEmpty ? null : existing;
-        _kuladevataOptions =
-            existing.isEmpty || kKuladevatas.contains(existing) ? kKuladevatas : [existing, ...kKuladevatas];
+        _kuladevataOptions = existing.isEmpty || kKuladevatas.contains(existing)
+            ? kKuladevatas
+            : [existing, ...kKuladevatas];
         _kuladevataLoaded = true;
       });
     } catch (_) {
@@ -153,7 +174,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   void dispose() {
     for (final c in [
-      _name, _native, _occupation, _bio, _address,
+      _name,
+      _native,
+      _occupation,
+      _bio,
+      _address,
       ..._addressFields,
     ]) {
       c.dispose();
@@ -166,18 +191,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   CurrentAddress get _currentAddress => CurrentAddress(
-        country: _country.text.trim(),
-        state: _state.text.trim(),
-        district: _district.text.trim(),
-        taluk: _taluk.text.trim(),
-        city: _city.text.trim(),
-        area: _area.text.trim(),
-        street: _street.text.trim(),
-        landmark: _landmark.text.trim(),
-        pincode: _pincode.text.trim(),
-        latitude: _lat,
-        longitude: _lng,
-      );
+    country: _country.text.trim(),
+    state: _state.text.trim(),
+    district: _district.text.trim(),
+    taluk: _taluk.text.trim(),
+    city: _city.text.trim(),
+    area: _area.text.trim(),
+    street: _street.text.trim(),
+    landmark: _landmark.text.trim(),
+    pincode: _pincode.text.trim(),
+    latitude: _lat,
+    longitude: _lng,
+  );
 
   // ── Current location ──────────────────────────────────────────────────────
 
@@ -212,13 +237,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       });
       if (!mounted) return;
       final t = AppLocalizations.of(context);
-      _snack(addr.isEmpty
-          ? t.editGotPositionFillParts
-          : t.editAddressFilledFromLocation);
+      _snack(
+        addr.isEmpty
+            ? t.editGotPositionFillParts
+            : t.editAddressFilledFromLocation,
+      );
     } on LocationFailure catch (e) {
       _snack(e.message);
     } catch (_) {
-      if (mounted) _snack(AppLocalizations.of(context).editCouldNotReadLocation);
+      if (mounted)
+        _snack(AppLocalizations.of(context).editCouldNotReadLocation);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -229,8 +257,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Future<void> _pickPhoto() async {
     String? path;
     try {
-      final result =
-          await FilePicker.platform.pickFiles(type: FileType.image);
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
       path = result?.files.single.path;
     } catch (e) {
       if (mounted) {
@@ -255,9 +282,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _snack(AppLocalizations.of(context).editPhotoUpdated);
     } catch (e) {
       if (mounted) {
-        _snack(e is ApiException
-            ? e.message
-            : AppLocalizations.of(context).editCouldNotUploadPhoto);
+        _snack(
+          e is ApiException
+              ? e.message
+              : AppLocalizations.of(context).editCouldNotUploadPhoto,
+        );
       }
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
@@ -283,8 +312,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String get _dobIso => _dob == null
       ? ''
       : '${_dob!.year.toString().padLeft(4, '0')}-'
-          '${_dob!.month.toString().padLeft(2, '0')}-'
-          '${_dob!.day.toString().padLeft(2, '0')}';
+            '${_dob!.month.toString().padLeft(2, '0')}-'
+            '${_dob!.day.toString().padLeft(2, '0')}';
 
   int? get _age {
     if (_dob == null) return null;
@@ -307,16 +336,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       final updated = await Repository.instance.saveProfile(
         name: _name.text.trim(),
         gotra: _gotra ?? '',
+        bloodGroup: _bloodGroup,
         native: _native.text.trim(),
         occupation: _occupation.text.trim(),
         bio: _bio.text.trim(),
         address: _address.text.trim(),
         // Sent whole — the server replaces the stored address with this, and
         // geocodes it unless the device fix below travels with it.
-       currentAddress:
-    _currentAddress.toRequest(
-      includeLocation: _lat != null && _lng != null,
-    ),
+        currentAddress: _currentAddress.toRequest(
+          includeLocation: _lat != null && _lng != null,
+        ),
         gender: _gender.isEmpty ? null : _gender,
         dob: _dobIso.isEmpty ? null : _dobIso,
       );
@@ -366,7 +395,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(t.editProfileTitle, style: display(18, color: Colors.white)),
+        title: Text(
+          t.editProfileTitle,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -377,12 +409,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             const SizedBox(height: 26),
 
             _sectionLabel(t.editSectionBasicDetails),
-            _text(_name, t.editFullName,
-                validator: (v) => (v == null || v.trim().length < 2)
-                    ? t.editNameTooShort
-                    : null),
+            _text(
+              _name,
+              t.editFullName,
+              validator: (v) => (v == null || v.trim().length < 2)
+                  ? t.editNameTooShort
+                  : null,
+            ),
             _genderField(t),
             _dobField(t),
+            _bloodGroupField(t),
             _gotraField(t),
             _kuladevataField(t),
             _text(_native, t.editNativePlace, hint: t.editNativePlaceHint),
@@ -399,16 +435,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             _text(_area, t.editArea, hint: t.editAreaHint),
             _text(_street, t.editStreet, hint: t.editStreetHint),
             _text(_landmark, t.editLandmark, hint: t.editLandmarkHint),
-            _text(_pincode, t.editPincode,
-                hint: t.editPincodeHint,
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  final s = (v ?? '').trim();
-                  if (s.isEmpty) return null;
-                  return RegExp(r'^\d{6}$').hasMatch(s)
-                      ? null
-                      : t.editPincodeInvalid;
-                }),
+            _text(
+              _pincode,
+              t.editPincode,
+              hint: t.editPincodeHint,
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                final s = (v ?? '').trim();
+                if (s.isEmpty) return null;
+                return RegExp(r'^\d{6}$').hasMatch(s)
+                    ? null
+                    : t.editPincodeInvalid;
+              },
+            ),
 
             const SizedBox(height: 18),
             _sectionLabel(t.editSectionAbout),
@@ -422,12 +461,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.forest800,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: _saving ? null : _save,
-                child: Text(_saving ? t.editSaving : t.editSaveChanges,
-                    style: body(15,
-                        weight: FontWeight.w700, color: Colors.white)),
+                child: Text(
+                  _saving ? t.editSaving : t.editSaveChanges,
+                  style: body(15, weight: FontWeight.w700, color: Colors.white),
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -470,10 +511,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
-                      : const Icon(Icons.photo_camera_rounded,
-                          size: 16, color: Colors.white),
+                      : const Icon(
+                          Icons.photo_camera_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                 ),
               ),
             ),
@@ -481,26 +527,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          _photoUrl.isEmpty
-              ? t.editAddPhotoRequired
-              : t.editTapCameraToChange,
+          _photoUrl.isEmpty ? t.editAddPhotoRequired : t.editTapCameraToChange,
           textAlign: TextAlign.center,
-          style: body(12,
-              color: _photoUrl.isEmpty ? AppColors.gold700 : AppColors.textMuted,
-              weight: _photoUrl.isEmpty ? FontWeight.w600 : FontWeight.w400),
+          style: body(
+            12,
+            color: _photoUrl.isEmpty ? AppColors.gold700 : AppColors.textMuted,
+            weight: _photoUrl.isEmpty ? FontWeight.w600 : FontWeight.w400,
+          ),
         ),
       ],
     );
   }
 
   Widget _sectionLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text,
-            style: body(11,
-                weight: FontWeight.w700,
-                color: AppColors.gold700,
-                letterSpacing: 1.6)),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      text,
+      style: body(
+        11,
+        weight: FontWeight.w700,
+        color: AppColors.gold700,
+        letterSpacing: 1.6,
+      ),
+    ),
+  );
 
   /// "Use my current location", plus what came of it. The coordinates matter
   /// enough to show: they are what the navigation feature routes to, and a
@@ -511,8 +561,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final status = _fixIsCurrent && _lat != null && _lng != null
         ? t.editPinnedAt(_lat!.toStringAsFixed(4), _lng!.toStringAsFixed(4))
         : hasSavedFix
-            ? t.editAlreadyOnMap
-            : t.editCoordinatesFromAddress;
+        ? t.editAlreadyOnMap
+        : t.editCoordinatesFromAddress;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -528,18 +578,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location_rounded, size: 18),
-            label: Text(_locating ? t.editLocating : t.editUseCurrentLocation,
-                style: body(13, weight: FontWeight.w600)),
+            label: Text(
+              _locating ? t.editLocating : t.editUseCurrentLocation,
+              style: body(13, weight: FontWeight.w600),
+            ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.forest800,
               side: const BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
           const SizedBox(height: 6),
-          Text(status, style: body(11, color: AppColors.textMuted, height: 1.4)),
+          Text(
+            status,
+            style: body(11, color: AppColors.textMuted, height: 1.4),
+          ),
         ],
       ),
     );
@@ -587,7 +643,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       child: DropdownButtonFormField<String>(
         initialValue: _gotra,
         isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.hint,
+        ),
         style: body(14, color: AppColors.ink),
         decoration: InputDecoration(
           labelText: t.editGotra,
@@ -611,6 +670,39 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
+  Widget _bloodGroupField(AppLocalizations t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        initialValue: _bloodGroup,
+        isExpanded: true,
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.hint,
+        ),
+        style: body(14, color: AppColors.ink),
+        decoration: InputDecoration(
+          labelText: t.editBloodGroup,
+          hintText: t.editSelectBloodGroup,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+        ),
+        items: kBloodGroups
+            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+            .toList(),
+        onChanged: (v) => setState(() => _bloodGroup = v),
+      ),
+    );
+  }
+
   static const _kuladevataNotSet = '';
 
   Widget _kuladevataField(AppLocalizations t) {
@@ -619,7 +711,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       child: DropdownButtonFormField<String>(
         initialValue: _kuladevata ?? _kuladevataNotSet,
         isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.hint),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.hint,
+        ),
         style: body(14, color: AppColors.ink),
         decoration: InputDecoration(
           labelText: t.editKuladevata,
@@ -640,10 +735,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             value: _kuladevataNotSet,
             child: Text(t.editNotSet, style: body(14, color: AppColors.hint)),
           ),
-          for (final k in _kuladevataOptions) DropdownMenuItem(value: k, child: Text(k)),
+          for (final k in _kuladevataOptions)
+            DropdownMenuItem(value: k, child: Text(k)),
         ],
-        onChanged: (v) =>
-            setState(() => _kuladevata = (v == null || v == _kuladevataNotSet) ? null : v),
+        onChanged: (v) => setState(
+          () => _kuladevata = (v == null || v == _kuladevataNotSet) ? null : v,
+        ),
       ),
     );
   }
@@ -693,19 +790,29 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
           child: Row(
             children: [
-              Text(_dobIso.isEmpty ? t.editNotSet : _dobIso,
-                  style: body(14,
-                      color: _dobIso.isEmpty
-                          ? AppColors.hint
-                          : AppColors.ink)),
+              Text(
+                _dobIso.isEmpty ? t.editNotSet : _dobIso,
+                style: body(
+                  14,
+                  color: _dobIso.isEmpty ? AppColors.hint : AppColors.ink,
+                ),
+              ),
               const Spacer(),
               if (age != null)
-                Text(t.editAgeYears(age),
-                    style: body(12,
-                        weight: FontWeight.w600, color: AppColors.textMuted)),
+                Text(
+                  t.editAgeYears(age),
+                  style: body(
+                    12,
+                    weight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               const SizedBox(width: 8),
-              const Icon(Icons.calendar_today_rounded,
-                  size: 16, color: AppColors.hint),
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 16,
+                color: AppColors.hint,
+              ),
             ],
           ),
         ),

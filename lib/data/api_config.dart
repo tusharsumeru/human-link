@@ -15,29 +15,15 @@ class ApiConfig {
   // For a physical device or a tunnel, override with
   // --dart-define=API_BASE_URL=https://<host> (see below).
   static const String _localDevPort = '4000';
-  // static const String _override = String.fromEnvironment(
-  //   'API_BASE_URL',
-  //   defaultValue: '',
-  // );
-    static const String _override = '';
 
+static const String _override = '';
 
-  /// Local NestJS server (por t 4000) as seen from each dev target: 10.0.2.2 is
-  /// the Android emulator's alias for the host machine — inside the emulator
-  /// `localhost` is the emulator itself, so a local server is unreachable
-  /// under that name. iOS Simulator, web and macOS desktop all share the
-  /// host's network, so `localhost` reaches it directly there.
-  //
-  // (A hardcoded ngrok URL used to live here. Free tunnels get a new address
-  // on every restart, so once it expired every call failed — and the screens
-  // swallowed the error, showing an empty feed and "Network error" on login.
-  // Only reach for a tunnel — via --dart-define=API_BASE_URL=https://<host>
-  // — for a physical device or a deployed backend; the simulator/emulator
-  // never needs one.)
-  static String get _localDev {
-    if (!kIsWeb && Platform.isAndroid) return 'http://192.168.31.92:$_localDevPort';
-    return 'http://192.168.31.92:$_localDevPort';
+static String get _localDev {
+  if (!kIsWeb && Platform.isAndroid) {
+    return 'http://10.0.2.2:$_localDevPort';
   }
+  return 'http://localhost:$_localDevPort';
+}
 
   static String get baseUrl {
     // Trailing slashes are stripped: request paths already start with `/`, and

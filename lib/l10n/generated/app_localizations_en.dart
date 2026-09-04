@@ -972,6 +972,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editSelectGotra => 'Select your gotra';
 
   @override
+  String get editBloodGroup => 'Blood group';
+
+  @override
+  String get editSelectBloodGroup => 'Select blood group';
+
+  @override
   String get editKuladevata => 'Kuladevata';
 
   @override
@@ -1934,7 +1940,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matMother => 'Mother';
 
   @override
-  String get matSiblings => 'Siblings';
+  String get matSiblings => 'Number of siblings';
 
   @override
   String get matHoroscope => 'Horoscope';
@@ -2081,6 +2087,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matEducationHint => 'e.g. MBA Finance, IIM Bangalore';
 
   @override
+  String get matOccupationType => 'Occupation type';
+
+  @override
+  String get matOccupationSalaried => 'Salaried';
+
+  @override
+  String get matOccupationSelfEmployed => 'Self Employed';
+
+  @override
+  String get matOccupationUnemployed => 'Unemployed';
+
+  @override
   String get matCompanyOrg => 'Company / organisation';
 
   @override
@@ -2117,7 +2135,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matMothersOccupation => 'Mother\'s occupation';
 
   @override
-  String get matSiblingsHint => 'e.g. 1 younger brother, B.Tech';
+  String get matSiblingsHint => 'e.g. 2';
+
+  @override
+  String get matSiblingsRangeError => 'Enter a number between 0 and 20';
 
   @override
   String get matSectionHoroscope => 'HOROSCOPE';
@@ -2220,6 +2241,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matHeightRangeError => 'Height must be between 120 and 250 cm';
+
+  @override
+  String get matHeightFeet => 'Feet';
+
+  @override
+  String get matHeightFeetHint => 'e.g. 5';
+
+  @override
+  String get matHeightInches => 'Inches';
+
+  @override
+  String get matHeightInchesHint => 'e.g. 7';
+
+  @override
+  String get matHeightFeetRangeError => 'Feet must be between 3 and 8';
+
+  @override
+  String get matHeightInchesRangeError => 'Inches must be between 0 and 11';
 
   @override
   String get matMangalDosha => 'Mangal dosha';

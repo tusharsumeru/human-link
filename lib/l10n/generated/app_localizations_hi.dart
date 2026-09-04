@@ -979,6 +979,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get editSelectGotra => 'अपना गोत्र चुनें';
 
   @override
+  String get editBloodGroup => 'रक्त समूह';
+
+  @override
+  String get editSelectBloodGroup => 'रक्त समूह चुनें';
+
+  @override
   String get editKuladevata => 'कुलदेवता';
 
   @override
@@ -1944,7 +1950,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get matMother => 'माता';
 
   @override
-  String get matSiblings => 'भाई-बहन';
+  String get matSiblings => 'भाई-बहनों की संख्या';
 
   @override
   String get matHoroscope => 'जन्म कुंडली';
@@ -2091,6 +2097,18 @@ class AppLocalizationsHi extends AppLocalizations {
   String get matEducationHint => 'उदा. एमबीए फाइनेंस, आईआईएम बैंगलोर';
 
   @override
+  String get matOccupationType => 'व्यवसाय प्रकार';
+
+  @override
+  String get matOccupationSalaried => 'वेतनभोगी';
+
+  @override
+  String get matOccupationSelfEmployed => 'स्वरोज़गार';
+
+  @override
+  String get matOccupationUnemployed => 'बेरोज़गार';
+
+  @override
   String get matCompanyOrg => 'कंपनी / संगठन';
 
   @override
@@ -2127,7 +2145,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get matMothersOccupation => 'माता का व्यवसाय';
 
   @override
-  String get matSiblingsHint => 'उदा. 1 छोटा भाई, बी.टेक';
+  String get matSiblingsHint => 'उदा. 2';
+
+  @override
+  String get matSiblingsRangeError => '0 से 20 के बीच एक संख्या दर्ज करें';
 
   @override
   String get matSectionHoroscope => 'जन्म कुंडली';
@@ -2230,6 +2251,24 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get matHeightRangeError => 'ऊंचाई 120 से 250 सेमी के बीच होनी चाहिए';
+
+  @override
+  String get matHeightFeet => 'फ़ीट';
+
+  @override
+  String get matHeightFeetHint => 'उदा. 5';
+
+  @override
+  String get matHeightInches => 'इंच';
+
+  @override
+  String get matHeightInchesHint => 'उदा. 7';
+
+  @override
+  String get matHeightFeetRangeError => 'फ़ीट 3 से 8 के बीच होना चाहिए';
+
+  @override
+  String get matHeightInchesRangeError => 'इंच 0 से 11 के बीच होना चाहिए';
 
   @override
   String get matMangalDosha => 'मंगल दोष';

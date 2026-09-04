@@ -139,11 +139,8 @@ void main() {
   late Repository originalRepository;
   late SharePlatform originalSharePlatform;
   late pdf_export.SavePdfFn originalSaveImpl;
-<<<<<<< HEAD
   late pdf_export.DownloadPdfFn originalDownloadImpl;
-=======
   late pdf_export.SavePublicPdfFn originalSavePublicImpl;
->>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   late AuthService authService;
   late _FakeSavedPdf fakeSave;
   late _FakeDeviceDownload fakeDownload;
@@ -156,13 +153,11 @@ void main() {
     originalRepository = Repository.instance;
     originalSharePlatform = SharePlatform.instance;
     originalSaveImpl = pdf_export.saveCompatibilityPdfImpl;
-<<<<<<< HEAD
     originalDownloadImpl = pdf_export.downloadCompatibilityPdfImpl;
     fakeSave = _FakeSavedPdf();
     pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
     fakeDownload = _FakeDeviceDownload();
     pdf_export.downloadCompatibilityPdfImpl = fakeDownload.download;
-=======
     originalSavePublicImpl = pdf_export.savePublicCompatibilityPdfImpl;
     fakeSave = _FakeSavedPdf();
     pdf_export.saveCompatibilityPdfImpl = fakeSave.save;
@@ -171,7 +166,6 @@ void main() {
     // saveCompatibilityPdfImpl above, just returning a plausible path.
     pdf_export.savePublicCompatibilityPdfImpl =
         ({required bytes, required fileName}) async => '/fake/downloads/$fileName';
->>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
 
     final fake = _FakeApiClient((_) async => _reportJson());
     Repository.instance = Repository(api: fake);
@@ -185,11 +179,8 @@ void main() {
     Repository.instance = originalRepository;
     SharePlatform.instance = originalSharePlatform;
     pdf_export.saveCompatibilityPdfImpl = originalSaveImpl;
-<<<<<<< HEAD
     pdf_export.downloadCompatibilityPdfImpl = originalDownloadImpl;
-=======
     pdf_export.savePublicCompatibilityPdfImpl = originalSavePublicImpl;
->>>>>>> 6a38f9611607f890fb87e4e50f7f6f3cde3f99ca
   });
 
   testWidgets('dashboard still renders correctly alongside the new PDF/Share actions', (tester) async {
@@ -234,6 +225,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Download PDF'));
+    // Wait for the picker call itself, not the idle "Download PDF" label —
+    // that label is also what's showing right after tap (setState hasn't
+    // rebuilt yet), so waiting on it would resolve before the async
+    // generate-then-save chain ever ran, never actually exercising the
+    // cancel path this test is for.
+    await _pumpUntil(tester, () => fakeDownload.calls.isNotEmpty);
     // The busy state still clears even though the picker was cancelled.
     await _pumpUntil(tester, () => find.text('Download PDF').evaluate().isNotEmpty);
 
