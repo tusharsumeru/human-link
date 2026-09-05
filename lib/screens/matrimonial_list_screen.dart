@@ -52,8 +52,9 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       _error = null;
     });
     try {
-      final profiles =
-          await Repository.instance.matrimonialProfiles(gender: _gender);
+      final profiles = await Repository.instance.matrimonialProfiles(
+        gender: _gender,
+      );
       if (!mounted) return;
       setState(() {
         _candidates = profiles;
@@ -83,8 +84,16 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           const SizedBox(height: 14),
           _genderLabel(t),
           const SizedBox(height: 16),
-          Text(t.matProfilesCount(_candidates.length),
-              style: body(13, color: AppColors.textMuted)),
+          Text(
+            t.matProfilesCount(_candidates.length),
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
           if (_loading)
             const Padding(
@@ -96,10 +105,12 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
           else if (_candidates.isEmpty)
             _emptyState(t)
           else
-            ..._candidates.map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _CandidateCard(candidate: c),
-                )),
+            ..._candidates.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _CandidateCard(candidate: c),
+              ),
+            ),
         ],
       ),
     );
@@ -110,15 +121,37 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       width: double.infinity,
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.forest800),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          side: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.forest800,
+              dark: AppColors.forest300,
+            ),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         onPressed: () => context.push('/matrimonial/discover'),
-        icon: const Icon(Icons.auto_awesome_rounded,
-            size: 18, color: AppColors.forest800),
-        label: Text(t.matDiscoverMatches,
-            style: body(14, weight: FontWeight.w700, color: AppColors.forest800)),
+        icon: Icon(
+          Icons.auto_awesome_rounded,
+          size: 18,
+          color: context.onBrightness(
+            light: AppColors.forest800,
+            dark: AppColors.forest300,
+          ),
+        ),
+        label: Text(
+          t.matDiscoverMatches,
+          style: body(
+            14,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.forest800,
+              dark: AppColors.forest300,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -131,10 +164,23 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
     };
     return Row(
       children: [
-        const Icon(Icons.favorite_rounded, size: 15, color: AppColors.forest700),
+        const Icon(
+          Icons.favorite_rounded,
+          size: 15,
+          color: AppColors.forest700,
+        ),
         const SizedBox(width: 6),
-        Text(label,
-            style: body(13, weight: FontWeight.w700, color: AppColors.forest800)),
+        Text(
+          label,
+          style: body(
+            13,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.forest800,
+              dark: AppColors.forest300,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -144,12 +190,26 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.favorite_border_rounded,
-              size: 30, color: AppColors.hint),
+          Icon(
+            Icons.favorite_border_rounded,
+            size: 30,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.matNoProfilesYet,
-              style:
-                  body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.matNoProfilesYet,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -160,17 +220,40 @@ class _MatrimonialListScreenState extends State<MatrimonialListScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 30, color: AppColors.hint),
+          Icon(
+            Icons.wifi_off_rounded,
+            size: 30,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(message,
-              textAlign: TextAlign.center,
-              style: body(14, color: AppColors.textMuted)),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           TextButton(
             onPressed: _load,
-            child: Text(t.matTryAgain,
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            child: Text(
+              t.matTryAgain,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -232,7 +315,9 @@ class _CandidateCard extends StatelessWidget {
                       right: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(999),
@@ -240,13 +325,20 @@ class _CandidateCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified,
-                                size: 13, color: AppColors.gold500),
+                            const Icon(
+                              Icons.verified,
+                              size: 13,
+                              color: AppColors.gold500,
+                            ),
                             const SizedBox(width: 4),
-                            Text(t.matVerified,
-                                style: body(10,
-                                    weight: FontWeight.w700,
-                                    color: AppColors.forest800)),
+                            Text(
+                              t.matVerified,
+                              style: body(
+                                10,
+                                weight: FontWeight.w700,
+                                color: AppColors.forest800,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -263,45 +355,58 @@ class _CandidateCard extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text('${c['name']}, ${c['age']}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: display(17, color: AppColors.forest900)),
+                        child: Text(
+                          '${c['name']}, ${c['age']}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: display(17, color: AppColors.forest900),
+                        ),
                       ),
                       const Spacer(),
                       if (premium)
                         _PremiumChip(t: t)
                       else
-                        Pill(t.matFree,
-                            bg: const Color(0xFFF0FBF4),
-                            fg: AppColors.forest700,
-                            fontSize: 10),
+                        Pill(
+                          t.matFree,
+                          bg: const Color(0xFFF0FBF4),
+                          fg: AppColors.forest700,
+                          fontSize: 10,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  _detailRow(Icons.height_rounded,
-                      '${c['height']} · ${c['location']}'),
+                  _detailRow(
+                    Icons.height_rounded,
+                    '${c['height']} · ${c['location']}',
+                  ),
                   const SizedBox(height: 4),
-                  _detailRow(Icons.school_outlined,
-                      (c['education'] as String).split(',').first),
+                  _detailRow(
+                    Icons.school_outlined,
+                    (c['education'] as String).split(',').first,
+                  ),
                   const SizedBox(height: 4),
-                  _detailRow(Icons.business_center_outlined,
-                      (c['company'] as String).split('—').first.trim()),
+                  _detailRow(
+                    Icons.business_center_outlined,
+                    (c['company'] as String).split('—').first.trim(),
+                  ),
                   const SizedBox(height: 10),
                   // Same Discovery Match % shown on the Discover Matches
                   // screen for this pair — one number for one pair of
                   // people, never a second, differently-computed score.
                   // Absent when the viewer has no profile yet.
                   DiscoveryMatchBadge(
-                    discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?,
+                    discoveryMatch:
+                        c['discoveryMatch'] as Map<String, dynamic>?,
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Pill(c['gotra'] as String,
-                          bg: const Color(0xFFF7F0E8),
-                          fg: AppColors.gold700,
-                          fontSize: 10),
+                      Pill(
+                        c['gotra'] as String,
+                        bg: const Color(0xFFF7F0E8),
+                        fg: AppColors.gold700,
+                        fontSize: 10,
+                      ),
                       const Spacer(),
                       ForestButton(
                         label: t.matViewProfile,
@@ -325,10 +430,12 @@ class _CandidateCard extends StatelessWidget {
         Icon(icon, size: 14, color: AppColors.hint),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: body(12, color: AppColors.textMuted)),
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: body(12, color: AppColors.textMuted),
+          ),
         ),
       ],
     );
@@ -350,12 +457,16 @@ class _PremiumChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded,
-              size: 12, color: Colors.white),
+          const Icon(
+            Icons.workspace_premium_rounded,
+            size: 12,
+            color: Colors.white,
+          ),
           const SizedBox(width: 4),
-          Text(t.matPremium,
-              style:
-                  body(10, weight: FontWeight.w700, color: Colors.white)),
+          Text(
+            t.matPremium,
+            style: body(10, weight: FontWeight.w700, color: Colors.white),
+          ),
         ],
       ),
     );

@@ -72,6 +72,7 @@ class Repository {
     String role = 'member',
     String avatar = '6',
     String gender = '',
+    String maritalStatus = '',
     Map<String, dynamic>? currentAddress,
     bool isPurohit = false,
   }) async {
@@ -83,6 +84,7 @@ class Repository {
       if (native.isNotEmpty) 'native': native,
       'role': role,
       if (gender.isNotEmpty) 'gender': gender,
+      if (maritalStatus.isNotEmpty) 'maritalStatus': maritalStatus,
       // Send it as `CurrentAddress.toRequest()` builds it — parts only, no
       // empty strings. The server geocodes it and stores the coordinates.
       'currentAddress': ?currentAddress,
@@ -630,6 +632,7 @@ class Repository {
     String? dob,
     String? gender,
     String? bloodGroup,
+    String? maritalStatus,
     String? address,
     Map<String, dynamic>? currentAddress,
     String? profileUrl,
@@ -649,6 +652,7 @@ class Repository {
       'dob': dob,
       'gender': gender,
       'bloodGroup': bloodGroup,
+      'maritalStatus': maritalStatus,
       'address': address,
       'currentAddress': currentAddress,
       'profileUrl': profileUrl,
@@ -1700,6 +1704,62 @@ class Repository {
     await _api.postJson('/api/v1/compatibility/consent/revoke', {
       'consentType': consentType,
     });
+  }
+
+  // ── Follow / Unfollow ────────────────────────────────────────────────────
+  // NOTE: these routes are NOT behind the `/api` prefix every other endpoint
+  // in this file uses — confirmed against the backend's live Swagger spec
+  // (`/api/docs-json`), which lists them at the bare `/follow-users/...`
+  // paths. Don't "fix" this to match the rest of the file without checking
+  // the spec again first.
+
+  /// POST /follow-users/followRequest — `followerId` follows `followingId`.
+  /// Returns the created follow-relationship document.
+  Future<Map<String, dynamic>> followUser({
+    required String followerId,
+    required String followingId,
+  }) async {
+    final data = await _api.postJson('/follow-users/followRequest', {
+      'followerId': followerId,
+      'followingId': followingId,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not follow user');
+  }
+
+  /// PATCH /follow-users/unfollowRequest — removes the follow relationship
+  /// (`followerId` → `followingId`). `deletedCount` is 0 if it never
+  /// existed — not an error, just a no-op.
+  Future<bool> unfollowUser({
+    required String followerId,
+    required String followingId,
+  }) async {
+    final data = await _api.patchJson('/follow-users/unfollowRequest', {
+      'followerId': followerId,
+      'followingId': followingId,
+    });
+    if (data is Map) {
+      return (data['deletedCount'] as num?) != 0;
+    }
+    return false;
+  }
+
+  /// GET /follow-users/followers/:userId — everyone who follows [userId].
+  Future<List<Map<String, dynamic>>> followers(String userId) async {
+    final data = await _api.getJson('/follow-users/followers/$userId');
+    if (data is List) {
+      return data.whereType<Map>().map(Map<String, dynamic>.from).toList();
+    }
+    return const [];
+  }
+
+  /// GET /follow-users/following/:userId — everyone [userId] follows.
+  Future<List<Map<String, dynamic>>> following(String userId) async {
+    final data = await _api.getJson('/follow-users/following/$userId');
+    if (data is List) {
+      return data.whereType<Map>().map(Map<String, dynamic>.from).toList();
+    }
+    return const [];
   }
 
   // ── Embedded content (same dataset the web pages use) ───────────────────────

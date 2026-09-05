@@ -27,7 +27,8 @@ class SouthIndianJatakaScreen extends StatefulWidget {
   final String otherName;
 
   @override
-  State<SouthIndianJatakaScreen> createState() => _SouthIndianJatakaScreenState();
+  State<SouthIndianJatakaScreen> createState() =>
+      _SouthIndianJatakaScreenState();
 }
 
 class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
@@ -74,11 +75,15 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final otherName =
-        widget.otherName.trim().isNotEmpty ? widget.otherName.trim() : t.compThisMember;
+    final otherName = widget.otherName.trim().isNotEmpty
+        ? widget.otherName.trim()
+        : t.compThisMember;
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -90,16 +95,25 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _errorState(_error!, t)
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-                    children: [
-                      Text(t.compYouAnd(otherName),
-                          style: body(13, weight: FontWeight.w600, color: AppColors.textMuted)),
-                      const SizedBox(height: 14),
-                      ..._content(_result!, t),
-                    ],
+            ? _errorState(_error!, t)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                children: [
+                  Text(
+                    t.compYouAnd(otherName),
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 14),
+                  ..._content(_result!, t),
+                ],
+              ),
       ),
     );
   }
@@ -112,16 +126,15 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         ? (null, null)
         : switch (error.reason) {
             CompatibilityErrorReason.missingConsent => (
-                t.compManageConsent,
-                () => context.push('/matrimonial/compatibility-consent'),
-              ),
+              t.compManageConsent,
+              () => context.push('/matrimonial/compatibility-consent'),
+            ),
             CompatibilityErrorReason.missingBirthData => (
-                t.compAddBirthDetailsBtn,
-                () => context.push('/matrimonial/birth-details'),
-              ),
+              t.compAddBirthDetailsBtn,
+              () => context.push('/matrimonial/birth-details'),
+            ),
             CompatibilityErrorReason.missingRole ||
-            CompatibilityErrorReason.apiError =>
-              (null, null),
+            CompatibilityErrorReason.apiError => (null, null),
           };
 
     return Center(
@@ -130,11 +143,26 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 32, color: AppColors.hint),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 32,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(error.message,
-                textAlign: TextAlign.center,
-                style: body(14, color: AppColors.textMuted)),
+            Text(
+              error.message,
+              textAlign: TextAlign.center,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             if (actionLabel != null) ...[
               ForestButton(label: actionLabel, onPressed: onAction),
@@ -155,23 +183,27 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
     switch (r.status) {
       case AstrologyModuleStatus.reviewRequired:
         widgets
-          ..add(_notice(
-            icon: Icons.rate_review_outlined,
-            title: t.jatakaReviewRequired,
-            message: t.jatakaReviewRequiredBody,
-            bg: const Color(0xFFFFF8E8),
-            fg: AppColors.gold700,
-          ))
+          ..add(
+            _notice(
+              icon: Icons.rate_review_outlined,
+              title: t.jatakaReviewRequired,
+              message: t.jatakaReviewRequiredBody,
+              bg: const Color(0xFFFFF8E8),
+              fg: AppColors.gold700,
+            ),
+          )
           ..add(const SizedBox(height: 14));
         break;
       case AstrologyModuleStatus.notCalculable:
-        widgets.add(_notice(
-          icon: Icons.info_outline_rounded,
-          title: t.jatakaNotCalculableTitle,
-          message: t.jatakaNotCalculableBody,
-          bg: const Color(0xFFFFF8E8),
-          fg: AppColors.gold700,
-        ));
+        widgets.add(
+          _notice(
+            icon: Icons.info_outline_rounded,
+            title: t.jatakaNotCalculableTitle,
+            message: t.jatakaNotCalculableBody,
+            bg: const Color(0xFFFFF8E8),
+            fg: AppColors.gold700,
+          ),
+        );
         return widgets;
       case AstrologyModuleStatus.calculated:
       case AstrologyModuleStatus.unknown:
@@ -187,13 +219,15 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         ..add(const SizedBox(height: 14))
         ..add(_poruthamListCard(karnataka, t));
     } else {
-      widgets.add(_notice(
-        icon: Icons.info_outline_rounded,
-        title: t.jatakaNoKarnatakaTitle,
-        message: t.jatakaNoKarnatakaBody,
-        bg: const Color(0xFFFFF8E8),
-        fg: AppColors.gold700,
-      ));
+      widgets.add(
+        _notice(
+          icon: Icons.info_outline_rounded,
+          title: t.jatakaNoKarnatakaTitle,
+          message: t.jatakaNoKarnatakaBody,
+          bg: const Color(0xFFFFF8E8),
+          fg: AppColors.gold700,
+        ),
+      );
     }
 
     widgets
@@ -231,9 +265,15 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: body(14, weight: FontWeight.w700, color: fg)),
+                Text(
+                  title,
+                  style: body(14, weight: FontWeight.w700, color: fg),
+                ),
                 const SizedBox(height: 4),
-                Text(message, style: body(13, color: AppColors.textMuted, height: 1.4)),
+                Text(
+                  message,
+                  style: body(13, color: AppColors.textMuted, height: 1.4),
+                ),
               ],
             ),
           ),
@@ -247,32 +287,67 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.jatakaSectionLabel,
-              style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1)),
+          Text(
+            t.jatakaSectionLabel,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.gold700,
+              letterSpacing: 1,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(t.jatakaKarnataka10Porutham, style: display(18, color: AppColors.forest900)),
+          Text(
+            t.jatakaKarnataka10Porutham,
+            style: display(18, color: AppColors.forest900),
+          ),
           const SizedBox(height: 4),
           Text(
-              t.jatakaMatchedOf(
-                  '${k.traditionalScoreMatched}', '${k.traditionalScoreTotal}'),
-              style: display(24, color: AppColors.forest900)),
+            t.jatakaMatchedOf(
+              '${k.traditionalScoreMatched}',
+              '${k.traditionalScoreTotal}',
+            ),
+            style: display(24, color: AppColors.forest900),
+          ),
           if (k.ruleVersion != null) ...[
             const SizedBox(height: 2),
-            Text(t.jatakaRuleVersion('${k.ruleVersion}'),
-                style: body(11, color: AppColors.textMuted)),
+            Text(
+              t.jatakaRuleVersion('${k.ruleVersion}'),
+              style: body(11, color: AppColors.textMuted),
+            ),
           ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _countChip(t.jatakaChipMatched, k.matchedCount, AppColors.forest700),
-              _countChip(t.jatakaChipPartial, k.partialCount, AppColors.gold700),
-              _countChip(t.jatakaChipNotMatched, k.notMatchedCount, Colors.red.shade700),
+              _countChip(
+                t.jatakaChipMatched,
+                k.matchedCount,
+                AppColors.forest700,
+              ),
+              _countChip(
+                t.jatakaChipPartial,
+                k.partialCount,
+                AppColors.gold700,
+              ),
+              _countChip(
+                t.jatakaChipNotMatched,
+                k.notMatchedCount,
+                Colors.red.shade700,
+              ),
               if (k.reviewRequiredCount > 0)
-                _countChip(t.jatakaChipReview, k.reviewRequiredCount, AppColors.gold700),
+                _countChip(
+                  t.jatakaChipReview,
+                  k.reviewRequiredCount,
+                  AppColors.gold700,
+                ),
               if (k.notCalculableCount > 0)
-                _countChip(t.jatakaChipUnavailable, k.notCalculableCount, AppColors.hint),
+                _countChip(
+                  t.jatakaChipUnavailable,
+                  k.notCalculableCount,
+                  AppColors.hint,
+                ),
             ],
           ),
         ],
@@ -288,7 +363,10 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.border),
       ),
-      child: Text('$label: $count', style: body(12, weight: FontWeight.w700, color: color)),
+      child: Text(
+        '$label: $count',
+        style: body(12, weight: FontWeight.w700, color: color),
+      ),
     );
   }
 
@@ -305,15 +383,38 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.priority_high_rounded, size: 18, color: Colors.red.shade700),
+              Icon(
+                Icons.priority_high_rounded,
+                size: 18,
+                color: Colors.red.shade700,
+              ),
               const SizedBox(width: 6),
-              Text(t.jatakaCriticalChecks, style: body(13, weight: FontWeight.w700, color: Colors.red.shade800)),
+              Text(
+                t.jatakaCriticalChecks,
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: Colors.red.shade800,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
-          _criticalRow(t.jatakaRajju, k.rajjuStatus, k.rajjuCritical, k.rajjuResult, t),
+          _criticalRow(
+            t.jatakaRajju,
+            k.rajjuStatus,
+            k.rajjuCritical,
+            k.rajjuResult,
+            t,
+          ),
           const Divider(height: 20),
-          _criticalRow(t.jatakaVedha, k.vedhaStatus, k.vedhaCritical, k.vedhaResult, t),
+          _criticalRow(
+            t.jatakaVedha,
+            k.vedhaStatus,
+            k.vedhaCritical,
+            k.vedhaResult,
+            t,
+          ),
         ],
       ),
     );
@@ -327,14 +428,36 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
     AppLocalizations t,
   ) {
     final (IconData icon, Color color, String statusLabel) = switch (status) {
-      PoruthamStatus.matched => (Icons.check_circle_rounded, AppColors.forest700, t.jatakaStatusMatched),
-      PoruthamStatus.partial => (Icons.adjust_rounded, AppColors.gold700, t.jatakaStatusPartial),
-      PoruthamStatus.notMatched => (Icons.cancel_rounded, Colors.red.shade700, t.jatakaStatusNotMatched),
-      PoruthamStatus.reviewRequired =>
-        (Icons.rate_review_outlined, AppColors.gold700, t.jatakaStatusReviewRequired),
-      PoruthamStatus.notCalculable =>
-        (Icons.remove_circle_outline_rounded, AppColors.hint, t.jatakaStatusUnavailable),
-      PoruthamStatus.unknown || null => (Icons.help_outline_rounded, AppColors.hint, t.jatakaStatusUnknown),
+      PoruthamStatus.matched => (
+        Icons.check_circle_rounded,
+        AppColors.forest700,
+        t.jatakaStatusMatched,
+      ),
+      PoruthamStatus.partial => (
+        Icons.adjust_rounded,
+        AppColors.gold700,
+        t.jatakaStatusPartial,
+      ),
+      PoruthamStatus.notMatched => (
+        Icons.cancel_rounded,
+        Colors.red.shade700,
+        t.jatakaStatusNotMatched,
+      ),
+      PoruthamStatus.reviewRequired => (
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        t.jatakaStatusReviewRequired,
+      ),
+      PoruthamStatus.notCalculable => (
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnavailable,
+      ),
+      PoruthamStatus.unknown || null => (
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnknown,
+      ),
     };
     final explanation = result?.explanation ?? '';
 
@@ -350,18 +473,35 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(label, style: body(13, weight: FontWeight.w700, color: AppColors.ink)),
+                    child: Text(
+                      label,
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                   ),
                   if (critical) ...[
-                    Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red.shade700),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: Colors.red.shade700,
+                    ),
                     const SizedBox(width: 4),
                   ],
-                  Text(statusLabel, style: body(12, weight: FontWeight.w700, color: color)),
+                  Text(
+                    statusLabel,
+                    style: body(12, weight: FontWeight.w700, color: color),
+                  ),
                 ],
               ),
               if (explanation.isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(explanation, style: body(11, color: AppColors.textMuted, height: 1.3)),
+                Text(
+                  explanation,
+                  style: body(11, color: AppColors.textMuted, height: 1.3),
+                ),
               ],
             ],
           ),
@@ -376,7 +516,10 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.jatakaThe10Poruthams, style: display(15, color: AppColors.forest900)),
+          Text(
+            t.jatakaThe10Poruthams,
+            style: display(15, color: AppColors.forest900),
+          ),
           const SizedBox(height: 10),
           for (final p in ordered) _poruthamRow(p, t),
         ],
@@ -388,14 +531,36 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
   /// returned in `status` — never inferred from `score`.
   Widget _poruthamRow(PoruthamResult p, AppLocalizations t) {
     final (IconData icon, Color color, String label) = switch (p.status) {
-      PoruthamStatus.matched => (Icons.check_circle_rounded, AppColors.forest700, t.jatakaStatusMatched),
-      PoruthamStatus.partial => (Icons.adjust_rounded, AppColors.gold700, t.jatakaStatusPartial),
-      PoruthamStatus.notMatched => (Icons.cancel_rounded, Colors.red.shade700, t.jatakaStatusNotMatched),
-      PoruthamStatus.reviewRequired =>
-        (Icons.rate_review_outlined, AppColors.gold700, t.jatakaStatusReviewRequired),
-      PoruthamStatus.notCalculable =>
-        (Icons.remove_circle_outline_rounded, AppColors.hint, t.jatakaStatusUnavailable),
-      PoruthamStatus.unknown => (Icons.help_outline_rounded, AppColors.hint, t.jatakaStatusUnknown),
+      PoruthamStatus.matched => (
+        Icons.check_circle_rounded,
+        AppColors.forest700,
+        t.jatakaStatusMatched,
+      ),
+      PoruthamStatus.partial => (
+        Icons.adjust_rounded,
+        AppColors.gold700,
+        t.jatakaStatusPartial,
+      ),
+      PoruthamStatus.notMatched => (
+        Icons.cancel_rounded,
+        Colors.red.shade700,
+        t.jatakaStatusNotMatched,
+      ),
+      PoruthamStatus.reviewRequired => (
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        t.jatakaStatusReviewRequired,
+      ),
+      PoruthamStatus.notCalculable => (
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnavailable,
+      ),
+      PoruthamStatus.unknown => (
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnknown,
+      ),
     };
 
     final content = Row(
@@ -410,22 +575,36 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(poruthamLabel(p.code),
-                        style: body(13,
-                            weight: FontWeight.w700,
-                            color: p.critical ? Colors.red.shade800 : AppColors.ink)),
+                    child: Text(
+                      poruthamLabel(p.code),
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: p.critical ? Colors.red.shade800 : AppColors.ink,
+                      ),
+                    ),
                   ),
                   if (p.critical) ...[
-                    Icon(Icons.priority_high_rounded, size: 14, color: Colors.red.shade700),
+                    Icon(
+                      Icons.priority_high_rounded,
+                      size: 14,
+                      color: Colors.red.shade700,
+                    ),
                     const SizedBox(width: 2),
                   ],
-                  Text(label, style: body(12, weight: FontWeight.w700, color: color)),
+                  Text(
+                    label,
+                    style: body(12, weight: FontWeight.w700, color: color),
+                  ),
                 ],
               ),
               // The backend's own explanation — never re-derived here.
               if (p.explanation.isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(p.explanation, style: body(11, color: AppColors.textMuted, height: 1.3)),
+                Text(
+                  p.explanation,
+                  style: body(11, color: AppColors.textMuted, height: 1.3),
+                ),
               ],
             ],
           ),
@@ -434,7 +613,10 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
     );
 
     if (!p.critical) {
-      return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: content);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: content,
+      );
     }
 
     return Container(
@@ -457,13 +639,24 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.jatakaAshtakootaLabel,
-                style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1)),
+            Text(
+              t.jatakaAshtakootaLabel,
+              style: body(
+                11,
+                weight: FontWeight.w700,
+                color: AppColors.gold700,
+                letterSpacing: 1,
+              ),
+            ),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.hint),
+                const Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 18,
+                  color: AppColors.hint,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -482,10 +675,20 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.jatakaAshtakootaLabel,
-              style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1)),
+          Text(
+            t.jatakaAshtakootaLabel,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.gold700,
+              letterSpacing: 1,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('${a.earned} / ${a.maximum}', style: display(24, color: AppColors.forest900)),
+          Text(
+            '${a.earned} / ${a.maximum}',
+            style: display(24, color: AppColors.forest900),
+          ),
           const SizedBox(height: 12),
           for (final koota in orderedKootas(a.kootas)) _kootaRow(koota, t),
         ],
@@ -495,14 +698,36 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
 
   Widget _kootaRow(KootaResult k, AppLocalizations t) {
     final (IconData icon, Color color, String label) = switch (k.status) {
-      PoruthamStatus.matched => (Icons.check_circle_rounded, AppColors.forest700, t.jatakaStatusMatched),
-      PoruthamStatus.partial => (Icons.adjust_rounded, AppColors.gold700, t.jatakaStatusPartial),
-      PoruthamStatus.notMatched => (Icons.cancel_rounded, Colors.red.shade700, t.jatakaStatusNotMatched),
-      PoruthamStatus.reviewRequired =>
-        (Icons.rate_review_outlined, AppColors.gold700, t.jatakaStatusReviewRequired),
-      PoruthamStatus.notCalculable =>
-        (Icons.remove_circle_outline_rounded, AppColors.hint, t.jatakaStatusUnavailable),
-      PoruthamStatus.unknown => (Icons.help_outline_rounded, AppColors.hint, t.jatakaStatusUnknown),
+      PoruthamStatus.matched => (
+        Icons.check_circle_rounded,
+        AppColors.forest700,
+        t.jatakaStatusMatched,
+      ),
+      PoruthamStatus.partial => (
+        Icons.adjust_rounded,
+        AppColors.gold700,
+        t.jatakaStatusPartial,
+      ),
+      PoruthamStatus.notMatched => (
+        Icons.cancel_rounded,
+        Colors.red.shade700,
+        t.jatakaStatusNotMatched,
+      ),
+      PoruthamStatus.reviewRequired => (
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        t.jatakaStatusReviewRequired,
+      ),
+      PoruthamStatus.notCalculable => (
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnavailable,
+      ),
+      PoruthamStatus.unknown => (
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        t.jatakaStatusUnknown,
+      ),
     };
     final scoreLabel = k.earned != null ? '${k.earned}/${k.maximum}' : label;
 
@@ -520,15 +745,27 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(kootaLabel(k.code),
-                          style: body(13, weight: FontWeight.w700, color: AppColors.ink)),
+                      child: Text(
+                        kootaLabel(k.code),
+                        style: body(
+                          13,
+                          weight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
+                      ),
                     ),
-                    Text(scoreLabel, style: body(12, weight: FontWeight.w700, color: color)),
+                    Text(
+                      scoreLabel,
+                      style: body(12, weight: FontWeight.w700, color: color),
+                    ),
                   ],
                 ),
                 if (k.explanation.isNotEmpty) ...[
                   const SizedBox(height: 3),
-                  Text(k.explanation, style: body(11, color: AppColors.textMuted, height: 1.3)),
+                  Text(
+                    k.explanation,
+                    style: body(11, color: AppColors.textMuted, height: 1.3),
+                  ),
                 ],
               ],
             ),
@@ -550,8 +787,14 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.jatakaOverallScore,
-                    style: body(12, weight: FontWeight.w700, color: AppColors.forest700)),
+                Text(
+                  t.jatakaOverallScore,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest700,
+                  ),
+                ),
                 Text('$score', style: display(18, color: AppColors.forest900)),
               ],
             ),

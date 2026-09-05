@@ -22,15 +22,11 @@ class _PurohitScreenState extends State<PurohitScreen> {
   bool _loading = true;
   String? _error;
 
+  final ScrollController _scrollController = ScrollController();
 
-final ScrollController _scrollController = ScrollController();
-
-bool _loadingMore = false;
-int _page = 1;
-bool _hasMore = true;
-
-
-  
+  bool _loadingMore = false;
+  int _page = 1;
+  bool _hasMore = true;
 
   // @override
   // void initState() {
@@ -39,108 +35,105 @@ bool _hasMore = true;
   // }
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  _scrollController.addListener(_onScroll);
+    _scrollController.addListener(_onScroll);
 
-  _load();
-}
-
-@override
-void dispose() {
-  _scrollController.removeListener(_onScroll);
-  _scrollController.dispose();
-  super.dispose();
-}
-
-void _onScroll() {
-  if (!_scrollController.hasClients) return;
-
-  final position = _scrollController.position;
-
-  if (position.pixels >= position.maxScrollExtent - 200) {
-    _loadNextPage();
+    _load();
   }
-}
 
-Future<void> _loadNextPage() async {
-  if (_loadingMore || !_hasMore || _loading) return;
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-  setState(() {
-    _loadingMore = true;
-  });
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
 
-  try {
-    final nextPage = _page + 1;
+    final position = _scrollController.position;
 
-    final list = await Repository.instance.purohitDirectory(
-      limit: 30,
-      page: nextPage,
-    );
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      _loadNextPage();
+    }
+  }
 
-    if (!mounted) return;
+  Future<void> _loadNextPage() async {
+    if (_loadingMore || !_hasMore || _loading) return;
 
     setState(() {
-      _purohits = [
-        ..._purohits,
-        ...list,
-      ];
+      _loadingMore = true;
+    });
 
-      _page = nextPage;
+    try {
+      final nextPage = _page + 1;
 
-      // If backend returned less than 30,
-      // there are no more records.
-      _hasMore = list.length == 30;
+      final list = await Repository.instance.purohitDirectory(
+        limit: 30,
+        page: nextPage,
+      );
 
+      if (!mounted) return;
+
+      setState(() {
+        _purohits = [..._purohits, ...list];
+
+        _page = nextPage;
+
+        // If backend returned less than 30,
+        // there are no more records.
+        _hasMore = list.length == 30;
+
+        _loadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingMore = false;
+      });
+
+      debugPrint('Error loading next Purohit page: $e');
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+
+      // Reset pagination
+      _page = 1;
+      _hasMore = true;
       _loadingMore = false;
     });
-  } catch (e) {
-    if (!mounted) return;
 
-    setState(() {
-      _loadingMore = false;
-    });
+    try {
+      final list = await Repository.instance.purohitDirectory(
+        limit: 30,
+        page: 1,
+      );
 
-    debugPrint('Error loading next Purohit page: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _purohits = list;
+        _loading = false;
+
+        // If less than 30 came back, there is no next page.
+        _hasMore = list.length == 30;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = AppLocalizations.of(context).purohitCouldNotLoad;
+        _loading = false;
+      });
+    }
   }
-}
-
-Future<void> _load() async {
-  setState(() {
-    _loading = true;
-    _error = null;
-
-    // Reset pagination
-    _page = 1;
-    _hasMore = true;
-    _loadingMore = false;
-  });
-
-  try {
-    final list = await Repository.instance.purohitDirectory(
-      limit: 30,
-      page: 1,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _purohits = list;
-      _loading = false;
-
-      // If less than 30 came back, there is no next page.
-      _hasMore = list.length == 30;
-    });
-  } catch (e) {
-    if (!mounted) return;
-
-    setState(() {
-      _error = AppLocalizations.of(context).purohitCouldNotLoad;
-      _loading = false;
-    });
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -153,35 +146,36 @@ Future<void> _load() async {
       child: _loading
           ? const Center(
               child: CircularProgressIndicator(
-                  color: AppColors.forest700, strokeWidth: 2))
+                color: AppColors.forest700,
+                strokeWidth: 2,
+              ),
+            )
           : _error != null
-              ? _message(
-                  icon: Icons.cloud_off_rounded,
-                  title: t.purohitCouldNotLoadTitle,
-                  subtitle: _error!,
-                  retry: _load,
-                  t: t,
-                )
-              : _purohits.isEmpty
-                  ? _message(
-                      icon: Icons.temple_hindu_outlined,
-                      title: t.purohitNoneYet,
-                      subtitle: t.purohitNoneYetBody,
-                      t: t,
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      color: AppColors.forest700,
-                      child: ListView.separated(
-  controller: _scrollController,
-  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-  itemCount: _purohits.length,
-  separatorBuilder: (_, __) => const SizedBox(height: 10),
-  itemBuilder: (_, i) => _PurohitCard(
-    member: _purohits[i],
-  ),
-),
-                    ),
+          ? _message(
+              icon: Icons.cloud_off_rounded,
+              title: t.purohitCouldNotLoadTitle,
+              subtitle: _error!,
+              retry: _load,
+              t: t,
+            )
+          : _purohits.isEmpty
+          ? _message(
+              icon: Icons.temple_hindu_outlined,
+              title: t.purohitNoneYet,
+              subtitle: t.purohitNoneYetBody,
+              t: t,
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              color: AppColors.forest700,
+              child: ListView.separated(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                itemCount: _purohits.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _PurohitCard(member: _purohits[i]),
+              ),
+            ),
     );
   }
 
@@ -198,19 +192,46 @@ Future<void> _load() async {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: AppColors.hint),
+            Icon(
+              icon,
+              size: 40,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(title, style: display(16, color: AppColors.forest900)),
+            Text(
+              title,
+              style: display(
+                16,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(subtitle,
-                textAlign: TextAlign.center,
-                style: body(13, color: AppColors.textMuted)),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: body(
+                13,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             if (retry != null) ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: retry,
                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: Text(t.commonRetry, style: body(13, weight: FontWeight.w600)),
+                label: Text(
+                  t.commonRetry,
+                  style: body(13, weight: FontWeight.w600),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.forest700,
                   side: const BorderSide(color: AppColors.forest700),
@@ -243,10 +264,11 @@ class _PurohitCard extends StatelessWidget {
       child: Row(
         children: [
           PexelsImage(
-              url: _str('profileUrl'),
-              name: name,
-              size: 46,
-              radius: BorderRadius.circular(12)),
+            url: _str('profileUrl'),
+            name: name,
+            size: 46,
+            radius: BorderRadius.circular(12),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -255,38 +277,49 @@ class _PurohitCard extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(14,
-                              weight: FontWeight.w700,
-                              color: AppColors.forest900)),
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: body(
+                          14,
+                          weight: FontWeight.w700,
+                          color: AppColors.forest900,
+                        ),
+                      ),
                     ),
                     if (member['verified'] == true) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.verified,
-                          size: 14, color: AppColors.forest600),
+                      const Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: AppColors.forest600,
+                      ),
                     ],
                   ],
                 ),
                 if (sub.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(12, color: AppColors.textMuted)),
+                  Text(
+                    sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(12, color: AppColors.textMuted),
+                  ),
                 ],
                 if (km.isNotEmpty) ...[
-  const SizedBox(height: 3),
-  Text(
-    t.purohitKmAway(double.tryParse(km)?.toStringAsFixed(1) ?? km),
-    style: body(
-      11,
-      color: AppColors.forest700,
-      weight: FontWeight.w600,
-    ),
-  ),
-],
+                  const SizedBox(height: 3),
+                  Text(
+                    t.purohitKmAway(
+                      double.tryParse(km)?.toStringAsFixed(1) ?? km,
+                    ),
+                    style: body(
+                      11,
+                      color: AppColors.forest700,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -300,8 +333,11 @@ class _PurohitCard extends StatelessWidget {
                 color: const Color(0xFFF0FBF4),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.call_rounded,
-                  size: 16, color: AppColors.forest700),
+              child: const Icon(
+                Icons.call_rounded,
+                size: 16,
+                color: AppColors.forest700,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -314,8 +350,11 @@ class _PurohitCard extends StatelessWidget {
                 color: const Color(0xFFF0FBF4),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.chat_bubble_outline_rounded,
-                  size: 16, color: AppColors.forest700),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 16,
+                color: AppColors.forest700,
+              ),
             ),
           ),
         ],

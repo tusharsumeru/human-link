@@ -62,10 +62,44 @@ class _FeedState extends State<_Feed> {
   // yet", which reads as an empty Samaj and hides the real problem.
   String? _error;
 
+  // Who the viewer already follows, so each post's Follow/Following button
+  // starts correct instead of always defaulting to "Follow" — the feed
+  // itself doesn't say whether the viewer follows a given author.
+  Set<String> _followingIds = const {};
+
   @override
   void initState() {
     super.initState();
     _loadFeed();
+    _loadFollowing();
+  }
+
+  Future<void> _loadFollowing() async {
+    final myId = context.read<AuthService>().user?.id ?? '';
+    if (myId.isEmpty) return;
+    try {
+      final rels = await Repository.instance.following(myId);
+      if (!mounted) return;
+      setState(() {
+        _followingIds = rels
+            .map((r) => (r['followingId'] ?? '').toString())
+            .where((id) => id.isNotEmpty)
+            .toSet();
+      });
+    } catch (_) {
+      // Best-effort — every card just starts on "Follow" if this fails.
+    }
+  }
+
+  /// Kept in sync from each card's own toggle so every post by the same
+  /// author (and a later rebuild) agrees on the current state.
+  void _setFollowing(String authorId, bool following) {
+    if (!mounted) return;
+    setState(() {
+      _followingIds = following
+          ? {..._followingIds, authorId}
+          : (_followingIds.difference({authorId}));
+    });
   }
 
   /// Pulls the real feed from the backend. An empty backend shows an empty
@@ -196,21 +230,36 @@ class _FeedState extends State<_Feed> {
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.cloud_off_rounded,
                       size: 44,
-                      color: AppColors.hint,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       t.dashCouldNotLoadFeed,
-                      style: display(16, color: AppColors.forest900),
+                      style: display(
+                        16,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: body(13, color: AppColors.textMuted),
+                      style: body(
+                        13,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     OutlinedButton.icon(
@@ -233,21 +282,36 @@ class _FeedState extends State<_Feed> {
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.photo_library_outlined,
                       size: 44,
-                      color: AppColors.hint,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       t.dashNoPostsYet,
-                      style: display(16, color: AppColors.forest900),
+                      style: display(
+                        16,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       t.dashBeFirstToShare,
                       textAlign: TextAlign.center,
-                      style: body(13, color: AppColors.textMuted),
+                      style: body(
+                        13,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -256,9 +320,12 @@ class _FeedState extends State<_Feed> {
               _PostCard(
                 key: ValueKey(post.id),
                 post: post,
+                isFollowing: _followingIds.contains(post.authorId),
                 onDeleted: () => _removePost(post),
                 onCaptionUpdated: (caption) =>
                     _updatePostCaption(post, caption),
+                onFollowChanged: (following) =>
+                    _setFollowing(post.authorId, following),
               ),
             const SizedBox(height: 24),
             // "All caught up" would be a lie under a failed load — we don't
@@ -267,7 +334,13 @@ class _FeedState extends State<_Feed> {
               Center(
                 child: Text(
                   t.dashAllCaughtUp,
-                  style: body(12, color: AppColors.hint),
+                  style: body(
+                    12,
+                    color: context.onBrightness(
+                      light: AppColors.hint,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
                 ),
               ),
             const SizedBox(height: 32),
@@ -598,7 +671,10 @@ class _StoriesShelfState extends State<_StoriesShelf> {
       builder: (context, _) {
         final trays = StoryStore.instance.otherTrays;
         return Container(
-          color: AppColors.pageBackground,
+          color: context.onBrightness(
+            light: AppColors.pageBackground,
+            dark: AppColors.darkBg,
+          ),
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,7 +686,10 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                   style: body(
                     12,
                     weight: FontWeight.w700,
-                    color: AppColors.gold700,
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
+                    ),
                     letterSpacing: 1.4,
                   ),
                 ),
@@ -804,7 +883,13 @@ class _StoryTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: body(11, color: AppColors.label),
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
+              ),
             ),
           ],
         ),
@@ -849,6 +934,7 @@ class _Post {
   const _Post({
     required this.id,
     required this.author,
+    this.authorId = '',
     this.location = '',
     required this.emoji,
     required this.gradient,
@@ -867,6 +953,7 @@ class _Post {
 
   final String id;
   final String author;
+  final String authorId; // '' for local uploads not yet round-tripped
   final String location; // place the author attached, or '' (Instagram-style)
   final String emoji;
   final List<Color> gradient;
@@ -929,6 +1016,7 @@ class _Post {
     return _Post(
       id: (m['_id'] ?? '').toString(),
       author: author,
+      authorId: authorId,
       location: (m['location'] ?? '').toString(),
       emoji: isVideo ? '🎬' : '🖼️',
       gradient: const [AppColors.forest800, AppColors.forest600],
@@ -949,6 +1037,7 @@ class _Post {
   _Post copyWithCaption(String newCaption) => _Post(
     id: id,
     author: author,
+    authorId: authorId,
     location: location,
     emoji: emoji,
     gradient: gradient,
@@ -999,12 +1088,16 @@ class _PostCard extends StatefulWidget {
   const _PostCard({
     super.key,
     required this.post,
+    this.isFollowing = false,
     this.onDeleted,
     this.onCaptionUpdated,
+    this.onFollowChanged,
   });
   final _Post post;
+  final bool isFollowing;
   final VoidCallback? onDeleted;
   final ValueChanged<String>? onCaptionUpdated;
+  final ValueChanged<bool>? onFollowChanged;
 
   @override
   State<_PostCard> createState() => _PostCardState();
@@ -1027,10 +1120,58 @@ class _PostCardState extends State<_PostCard> {
   // matching the CURRENT (latest) request is ever written into state.
   int _likeRequestId = 0;
 
+  late bool _following = widget.isFollowing;
+  bool _followBusy = false;
+
   @override
   void dispose() {
     _burstTimer?.cancel();
     super.dispose();
+  }
+
+  /// POST /follow-users/followRequest and PATCH /follow-users/unfollowRequest
+  /// — flips immediately and reverts if the request fails, same pattern as
+  /// [_toggleLike]. Busy-guarded rather than request-id-guarded: unlike
+  /// likes, a rapid double-tap here would otherwise fire a follow and an
+  /// unfollow in parallel with no server-side ordering guarantee.
+  Future<void> _toggleFollow() async {
+    final myId = context.read<AuthService>().user?.id ?? '';
+    final authorId = widget.post.authorId;
+    if (myId.isEmpty || authorId.isEmpty || _followBusy) return;
+
+    final wasFollowing = _following;
+    setState(() {
+      _following = !wasFollowing;
+      _followBusy = true;
+    });
+    try {
+      if (wasFollowing) {
+        await Repository.instance.unfollowUser(
+          followerId: myId,
+          followingId: authorId,
+        );
+      } else {
+        await Repository.instance.followUser(
+          followerId: myId,
+          followingId: authorId,
+        );
+      }
+      if (!mounted) return;
+      widget.onFollowChanged?.call(_following);
+      setState(() => _followBusy = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _following = wasFollowing;
+        _followBusy = false;
+      });
+      _showSnack(
+        context,
+        e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).couldNotUpdateFollow,
+      );
+    }
   }
 
   /// Optimistic count while a toggle is in flight. [widget.post.likes]
@@ -1344,7 +1485,10 @@ class _PostCardState extends State<_PostCard> {
                       style: body(
                         13,
                         weight: FontWeight.w700,
-                        color: AppColors.forest900,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
                       ),
                     ),
                     // Instagram-style: show a location line only when the
@@ -1352,10 +1496,13 @@ class _PostCardState extends State<_PostCard> {
                     if (p.location.isNotEmpty)
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 11,
-                            color: AppColors.hint,
+                            color: context.onBrightness(
+                              light: AppColors.hint,
+                              dark: AppColors.darkTextMuted,
+                            ),
                           ),
                           const SizedBox(width: 2),
                           Flexible(
@@ -1363,7 +1510,13 @@ class _PostCardState extends State<_PostCard> {
                               p.location,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: body(11, color: AppColors.hint),
+                              style: body(
+                                11,
+                                color: context.onBrightness(
+                                  light: AppColors.hint,
+                                  dark: AppColors.darkTextMuted,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -1371,10 +1524,17 @@ class _PostCardState extends State<_PostCard> {
                   ],
                 ),
               ),
+              if (!p.isMine && p.authorId.isNotEmpty) ...[
+                _FollowButton(following: _following, onTap: _toggleFollow),
+                const SizedBox(width: 4),
+              ],
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.more_horiz_rounded,
-                  color: AppColors.label,
+                  color: context.onBrightness(
+                    light: AppColors.label,
+                    dark: AppColors.darkText,
+                  ),
                 ),
                 onPressed: () => _showPostMenu(context),
               ),
@@ -1513,7 +1673,12 @@ class _PostCardState extends State<_PostCard> {
                 icon: _liked
                     ? Icons.favorite_rounded
                     : Icons.favorite_border_rounded,
-                color: _liked ? const Color(0xFFE0245E) : AppColors.label,
+                color: _liked
+                    ? const Color(0xFFE0245E)
+                    : context.onBrightness(
+                        light: AppColors.label,
+                        dark: AppColors.darkText,
+                      ),
                 onTap: _toggleLike,
                 count: _likeCount,
               ),
@@ -1521,9 +1686,12 @@ class _PostCardState extends State<_PostCard> {
               ListenableBuilder(
                 listenable: CommentStore.instance,
                 builder: (context, _) => _ActionIcon(
-                  iconWidget: const _RoundCommentIcon(
+                  iconWidget: _RoundCommentIcon(
                     size: 25,
-                    color: AppColors.label,
+                    color: context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
                   ),
                   onTap: () => showCommentsSheet(context, postId: p.id),
                   count: CommentStore.instance.countFor(
@@ -1535,6 +1703,10 @@ class _PostCardState extends State<_PostCard> {
               const SizedBox(width: 12),
               _ActionIcon(
                 icon: Icons.share_rounded,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
                 onTap: () => showShareSheet(
                   context,
                   author: p.author,
@@ -1552,7 +1724,12 @@ class _PostCardState extends State<_PostCard> {
                     icon: saved
                         ? Icons.bookmark_rounded
                         : Icons.bookmark_border_rounded,
-                    color: saved ? AppColors.gold700 : AppColors.label,
+                    color: saved
+                        ? AppColors.gold700
+                        : context.onBrightness(
+                            light: AppColors.label,
+                            dark: AppColors.darkText,
+                          ),
                     onTap: () {
                       final nowSaved = SavedStore.instance.toggle(
                         p.toSavedItem(),
@@ -1569,27 +1746,21 @@ class _PostCardState extends State<_PostCard> {
           ),
         ),
         // Caption
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${p.author}  ',
-                  style: body(
-                    13,
-                    weight: FontWeight.w700,
-                    color: AppColors.ink,
-                  ),
+        if (p.caption.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            child: Text(
+              p.caption,
+              style: body(
+                13,
+                height: 1.35,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
                 ),
-                TextSpan(
-                  text: p.caption,
-                  style: body(13, color: AppColors.label, height: 1.35),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
         // Time
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
@@ -1598,14 +1769,28 @@ class _PostCardState extends State<_PostCard> {
             children: [
               Text(
                 p.time.toUpperCase(),
-                style: body(10, color: AppColors.hint, letterSpacing: 0.4),
+                style: body(
+                  10,
+                  letterSpacing: 0.4,
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
               ),
             ],
           ),
         ),
         // Instagram-style separator instead of a boxed card — a hairline
         // between posts, full-bleed, no border/shadow/rounded corners.
-        const Divider(height: 1, thickness: 1, color: AppColors.creamDark),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: context.onBrightness(
+            light: AppColors.creamDark,
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ],
     );
   }
@@ -1900,7 +2085,10 @@ class _ActionIcon extends StatelessWidget {
                 style: body(
                   13,
                   weight: FontWeight.w600,
-                  color: AppColors.forest900,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
                 ),
               ),
             ],
@@ -1977,6 +2165,42 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Reuse PexelsImage's initials fallback by passing an empty url.
     return PexelsImage(url: '', name: name, size: size);
+  }
+}
+
+/// Instagram-style text button in a post's header row — bold accent color
+/// while unfollowed, muted once following, never a full bordered button
+/// (the header is compact and already carries an avatar + name + more-icon).
+class _FollowButton extends StatelessWidget {
+  const _FollowButton({required this.following, required this.onTap});
+  final bool following;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: Text(
+          following ? t.dashFollowing : t.dashFollow,
+          style: body(
+            13,
+            weight: FontWeight.w700,
+            color: following
+                ? context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  )
+                : context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.forest300,
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

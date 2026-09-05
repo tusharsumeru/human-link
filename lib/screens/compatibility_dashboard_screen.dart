@@ -54,10 +54,12 @@ class CompatibilityDashboardScreen extends StatefulWidget {
   final Map<String, dynamic>? discoveryMatch;
 
   @override
-  State<CompatibilityDashboardScreen> createState() => _CompatibilityDashboardScreenState();
+  State<CompatibilityDashboardScreen> createState() =>
+      _CompatibilityDashboardScreenState();
 }
 
-class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScreen> {
+class _CompatibilityDashboardScreenState
+    extends State<CompatibilityDashboardScreen> {
   bool _loading = true;
   String? _error;
   CompatibilityReport? _report;
@@ -91,7 +93,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       _error = null;
     });
     try {
-      final report = await Repository.instance.compatibilityReport(widget.reportId);
+      final report = await Repository.instance.compatibilityReport(
+        widget.reportId,
+      );
       if (!mounted) return;
       setState(() {
         _report = report;
@@ -116,7 +120,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final myName = context.watch<AuthService>().user?.name ?? t.compYou;
-    final otherName = widget.otherName.trim().isNotEmpty ? widget.otherName.trim() : t.compThisMember;
+    final otherName = widget.otherName.trim().isNotEmpty
+        ? widget.otherName.trim()
+        : t.compThisMember;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -125,14 +131,17 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(t.compMarriageCompatibility, style: display(18, color: Colors.white)),
+        title: Text(
+          t.compMarriageCompatibility,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _errorState(_error!, t)
-                : _content(_report!, myName, otherName, t),
+            ? _errorState(_error!, t)
+            : _content(_report!, myName, otherName, t),
       ),
     );
   }
@@ -142,7 +151,11 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   /// "Share Report" right after "Download PDF" reuses the same file. Trusts
   /// the in-memory cache without re-checking the file still exists on disk —
   /// nothing else in this screen's lifetime deletes it.
-  Future<File> _ensurePdf(CompatibilityReport report, String myName, String otherName) async {
+  Future<File> _ensurePdf(
+    CompatibilityReport report,
+    String myName,
+    String otherName,
+  ) async {
     final cached = _pdfFile;
     if (cached != null) return cached;
 
@@ -151,15 +164,19 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     // whether "me" is the bride or the groom, and traditionalRoleB the
     // other member's role. Falls back to (me = bride) if a role is ever
     // missing, rather than crashing or leaving a slot blank.
-    final iAmBride = report.traditionalRoleA == TraditionalRole.bride ||
-        (report.traditionalRoleA == null && report.traditionalRoleB != TraditionalRole.bride);
+    final iAmBride =
+        report.traditionalRoleA == TraditionalRole.bride ||
+        (report.traditionalRoleA == null &&
+            report.traditionalRoleB != TraditionalRole.bride);
     final brideName = iAmBride ? myName : otherName;
     final groomName = iAmBride ? otherName : myName;
     // Only "my" own photo is available at this screen today — the other
     // member's photo isn't threaded through the navigation chain that opens
     // this screen, so their slot always falls back to the gender icon for
     // now.
-    final myPhotoUrl = mounted ? context.read<AuthService>().user?.photoUrl : null;
+    final myPhotoUrl = mounted
+        ? context.read<AuthService>().user?.photoUrl
+        : null;
     final bridePhotoUrl = iAmBride ? myPhotoUrl : null;
     final groomPhotoUrl = iAmBride ? null : myPhotoUrl;
 
@@ -170,35 +187,50 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       bridePhotoUrl: bridePhotoUrl,
       groomPhotoUrl: groomPhotoUrl,
     );
-    final file = await saveCompatibilityPdf(bytes: bytes, person1Name: myName, person2Name: otherName);
+    final file = await saveCompatibilityPdf(
+      bytes: bytes,
+      person1Name: myName,
+      person2Name: otherName,
+    );
     _pdfBytes = bytes;
     _pdfFile = file;
     _pdfBytes = bytes;
     return file;
   }
 
-  Future<void> _downloadPdf(CompatibilityReport report, String myName, String otherName) async {
+  Future<void> _downloadPdf(
+    CompatibilityReport report,
+    String myName,
+    String otherName,
+  ) async {
     if (_pdfAction != null) return; // guards against a double tap firing twice
     final t = AppLocalizations.of(context);
     setState(() => _pdfAction = 'download');
     try {
-      // _ensurePdf's file lives in the app's own private storage (also what
-      // "Share Report" reads from) — never what gets shown as "downloaded"
-      // here. downloadCompatibilityPdfToDevice hands the same in-memory
-      // bytes _ensurePdf just cached to the OS's native save picker, so the
-      // file actually lands somewhere the member's device can find it.
-      final file = await _ensurePdf(report, myName, otherName);
-      final bytes = _pdfBytes!; // always set by _ensurePdf just above
-      final fileName = file.uri.pathSegments.last;
-      final saved = await downloadCompatibilityPdfToDevice(bytes: bytes, fileName: fileName);
+      final privateFile = await _ensurePdf(report, myName, otherName);
       if (!mounted) return;
-      if (saved) {
-  _showSnack(
-    'PDF saved: $fileName',
-    t: t,
-  );
-}
-      // saved == false means the member cancelled the picker — not an error.
+      final fileName = compatibilityPdfFileName(myName, otherName);
+      // Also drops a copy in the phone's own public Downloads/Files area
+      // (visible outside the app) — the cached-in-app-storage copy from
+      // _ensurePdf alone isn't reachable from the Files app.
+      final publicPath = await savePublicCompatibilityPdf(
+        bytes: _pdfBytes!,
+        person1Name: myName,
+        person2Name: otherName,
+      );
+      if (!mounted) return;
+      _showSnack(t.compPdfSaved(fileName), t: t);
+      // Best-effort — a notification failing to show never affects the
+      // download itself, which already succeeded by this point. Falls back
+      // to the private-storage path if the platform didn't hand back a
+      // public one, so tapping the notification still opens something.
+      unawaited(
+        DownloadNotificationService.instance.notifyDownloaded(
+          filePath: publicPath ?? privateFile.path,
+          title: t.compDownloadNotifTitle,
+          body: t.compDownloadNotifBody(fileName),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       _showSnack(
@@ -212,14 +244,21 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     }
   }
 
-  Future<void> _shareReport(CompatibilityReport report, String myName, String otherName) async {
+  Future<void> _shareReport(
+    CompatibilityReport report,
+    String myName,
+    String otherName,
+  ) async {
     if (_pdfAction != null) return; // guards against a double tap firing twice
     final t = AppLocalizations.of(context);
     setState(() => _pdfAction = 'share');
     try {
       final file = await _ensurePdf(report, myName, otherName);
       if (!mounted) return;
-      await shareCompatibilityPdf(file, subject: t.compShareSubject(myName, otherName));
+      await shareCompatibilityPdf(
+        file,
+        subject: t.compShareSubject(myName, otherName),
+      );
     } catch (_) {
       if (!mounted) return;
       _showSnack(
@@ -233,16 +272,29 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     }
   }
 
-  void _showSnack(String message, {required AppLocalizations t, bool isError = false, VoidCallback? onRetry}) {
+  void _showSnack(
+    String message, {
+    required AppLocalizations t,
+    bool isError = false,
+    VoidCallback? onRetry,
+  }) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(message, style: body(13, color: Colors.white)),
-        backgroundColor: isError ? Colors.red.shade700 : AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        action: onRetry != null ? SnackBarAction(label: t.compRetryAction, textColor: Colors.white, onPressed: onRetry) : null,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message, style: body(13, color: Colors.white)),
+          backgroundColor: isError ? Colors.red.shade700 : AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          action: onRetry != null
+              ? SnackBarAction(
+                  label: t.compRetryAction,
+                  textColor: Colors.white,
+                  onPressed: onRetry,
+                )
+              : null,
+        ),
+      );
   }
 
   Widget _errorState(String message, AppLocalizations t) {
@@ -254,7 +306,11 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
           children: [
             const Icon(Icons.wifi_off_rounded, size: 32, color: AppColors.hint),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: body(14, color: AppColors.textMuted)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: body(14, color: AppColors.textMuted),
+            ),
             const SizedBox(height: 14),
             OutlineButtonX(label: t.commonRetry, onPressed: _load),
           ],
@@ -263,7 +319,12 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     );
   }
 
-  Widget _content(CompatibilityReport report, String myName, String otherName, AppLocalizations t) {
+  Widget _content(
+    CompatibilityReport report,
+    String myName,
+    String otherName,
+    AppLocalizations t,
+  ) {
     final astro = report.astrologyCompatibility;
 
     // Profile Compatibility is the questionnaire-based figure
@@ -274,10 +335,12 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     // children/family/relocation/food/interests/location/age alignment) —
     // rather than leaving the card empty.
     final profilePercentage = report.profileCompatibility?.percentage;
-    final discoveryPercentage = (widget.discoveryMatch?['matchPercentage'] is num)
+    final discoveryPercentage =
+        (widget.discoveryMatch?['matchPercentage'] is num)
         ? (widget.discoveryMatch!['matchPercentage'] as num).round()
         : null;
-    final usingDiscoveryFallback = profilePercentage == null && discoveryPercentage != null;
+    final usingDiscoveryFallback =
+        profilePercentage == null && discoveryPercentage != null;
     final effectiveProfilePercentage = profilePercentage ?? discoveryPercentage;
 
     // Overall Compatibility: the backend's own figure is used as-is UNLESS
@@ -296,7 +359,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
         final aWeight = overall.astrologyWeight;
         final totalWeight = pWeight + aWeight;
         overallPercentage = totalWeight > 0
-            ? ((discoveryPercentage * pWeight + astrologyPercentage * aWeight) / totalWeight).round()
+            ? ((discoveryPercentage * pWeight + astrologyPercentage * aWeight) /
+                      totalWeight)
+                  .round()
             : discoveryPercentage;
         overallStatus = AstrologyModuleStatus.calculated;
       } else {
@@ -328,25 +393,34 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _percentageSummaryCard(
-              title: t.compProfileCompatibility,
-              percentage: effectiveProfilePercentage,
-              status: usingDiscoveryFallback
-                  ? AstrologyModuleStatus.calculated
-                  : (report.profileCompatibility?.status ?? AstrologyModuleStatus.notCalculable),
-              unavailableText: t.compNotEnoughProfileInfo,
-            )),
+            Expanded(
+              child: _percentageSummaryCard(
+                title: t.compProfileCompatibility,
+                percentage: effectiveProfilePercentage,
+                status: usingDiscoveryFallback
+                    ? AstrologyModuleStatus.calculated
+                    : (report.profileCompatibility?.status ??
+                          AstrologyModuleStatus.notCalculable),
+                unavailableText: t.compNotEnoughProfileInfo,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _percentageSummaryCard(
-              title: t.compAstrologyCompatibility,
-              percentage: astro?.percentage,
-              status: astro?.status ?? AstrologyModuleStatus.notCalculable,
-              unavailableText: t.compNotEnoughAstrologyInfo,
-            )),
+            Expanded(
+              child: _percentageSummaryCard(
+                title: t.compAstrologyCompatibility,
+                percentage: astro?.percentage,
+                status: astro?.status ?? AstrologyModuleStatus.notCalculable,
+                unavailableText: t.compNotEnoughAstrologyInfo,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
-        _overallCard(percentage: overallPercentage, status: overallStatus, t: t),
+        _overallCard(
+          percentage: overallPercentage,
+          status: overallStatus,
+          t: t,
+        ),
         const SizedBox(height: 14),
         _detailedReportButton(otherName, t),
         const SizedBox(height: 10),
@@ -364,14 +438,32 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
           Container(
             width: 56,
             height: 56,
-            decoration: const BoxDecoration(color: Color(0xFFFCEBDD), shape: BoxShape.circle),
-            child: const Icon(Icons.favorite_rounded, size: 26, color: AppColors.gold700),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFCEBDD),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.favorite_rounded,
+              size: 26,
+              color: AppColors.gold700,
+            ),
           ),
           const SizedBox(height: 14),
-          Text(t.compMarriageCompatibility, style: display(20, color: AppColors.forest900), textAlign: TextAlign.center),
+          Text(
+            t.compMarriageCompatibility,
+            style: display(20, color: AppColors.forest900),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 6),
-          Text('$myName × $otherName',
-              style: body(14, weight: FontWeight.w600, color: AppColors.textMuted), textAlign: TextAlign.center),
+          Text(
+            '$myName × $otherName',
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -382,16 +474,32 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   /// is the Discovery Match fallback scenario in [_content], where they're a
   /// client-side 50/50 blend of the substituted Profile figure and Astrology
   /// Compatibility — the same weights the backend's own blend uses.
-  Widget _overallCard({required int? percentage, required AstrologyModuleStatus status, required AppLocalizations t}) {
+  Widget _overallCard({
+    required int? percentage,
+    required AstrologyModuleStatus status,
+    required AppLocalizations t,
+  }) {
     final visual = _statusVisual(status, t);
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          Text(t.compOverallCompatibility,
-              style: body(10, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.2)),
+          Text(
+            t.compOverallCompatibility,
+            style: body(
+              10,
+              weight: FontWeight.w700,
+              color: AppColors.gold700,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
-          PercentageRing(percentage: percentage, color: visual.color, size: 92, strokeWidth: 9),
+          PercentageRing(
+            percentage: percentage,
+            color: visual.color,
+            size: 92,
+            strokeWidth: 9,
+          ),
         ],
       ),
     );
@@ -408,21 +516,35 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: body(12, weight: FontWeight.w700, color: AppColors.forest900, height: 1.3)),
+          Text(
+            title,
+            style: body(
+              12,
+              weight: FontWeight.w700,
+              color: AppColors.forest900,
+              height: 1.3,
+            ),
+          ),
           const SizedBox(height: 10),
           if (percentage != null)
             Text('$percentage%', style: display(26, color: AppColors.forest900))
           else
-            Text(unavailableText, style: body(12, color: AppColors.textMuted, height: 1.35)),
+            Text(
+              unavailableText,
+              style: body(12, color: AppColors.textMuted, height: 1.35),
+            ),
         ],
-),
+      ),
     );
   }
 
   /// Karnataka 10 Porutham + Ashtakoota 36 Guna — a compact summary only.
   /// Every number here is read straight from [AstrologyCompatibility]
   /// (STEP 64, already computed server-side); nothing is recalculated.
-  Widget _astrologySummaryCard(AstrologyCompatibility astro, AppLocalizations t) {
+  Widget _astrologySummaryCard(
+    AstrologyCompatibility astro,
+    AppLocalizations t,
+  ) {
     final karnataka = astro.karnatakaPorutham;
     final ashtakoota = astro.ashtakoota;
     return AppCard(
@@ -430,8 +552,15 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.compAstrologySummary,
-              style: body(13, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1.4)),
+          Text(
+            t.compAstrologySummary,
+            style: body(
+              13,
+              weight: FontWeight.w700,
+              color: AppColors.gold700,
+              letterSpacing: 1.4,
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -439,7 +568,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
                 child: _astrologyStat(
                   label: t.compKarnatakaPorutham,
                   value: '${karnataka.matched}/${karnataka.total}',
-                  sublabel: karnataka.percentage != null ? '${karnataka.percentage}%' : null,
+                  sublabel: karnataka.percentage != null
+                      ? '${karnataka.percentage}%'
+                      : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -453,7 +584,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
                     : _astrologyStat(
                         label: t.compAshtakootaGuna,
                         value: '${ashtakoota.earned} / ${ashtakoota.maximum}',
-                        sublabel: ashtakoota.percentage != null ? '${ashtakoota.percentage}%' : null,
+                        sublabel: ashtakoota.percentage != null
+                            ? '${ashtakoota.percentage}%'
+                            : null,
                       ),
               ),
             ],
@@ -463,7 +596,11 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
     );
   }
 
-  Widget _astrologyStat({required String label, required String value, required String? sublabel}) {
+  Widget _astrologyStat({
+    required String label,
+    required String value,
+    required String? sublabel,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,7 +609,14 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
         Text(value, style: display(24, color: AppColors.forest900)),
         if (sublabel != null) ...[
           const SizedBox(height: 3),
-          Text(sublabel, style: body(18, weight: FontWeight.w700, color: AppColors.forest700)),
+          Text(
+            sublabel,
+            style: body(
+              18,
+              weight: FontWeight.w700,
+              color: AppColors.forest700,
+            ),
+          ),
         ],
       ],
     );
@@ -484,9 +628,14 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       child: OutlineButtonX(
         label: t.compViewDetailedReport,
         expand: true,
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => CompatibilityReportScreen(reportId: widget.reportId, otherName: otherName),
-        )),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CompatibilityReportScreen(
+              reportId: widget.reportId,
+              otherName: otherName,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -495,7 +644,12 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
   /// both generate the same PDF from the already-fetched [report], never a
   /// new API call. Busy while either is generating so a repeat tap can't
   /// kick off a second PDF build.
-  Widget _pdfActionsRow(CompatibilityReport report, String myName, String otherName, AppLocalizations t) {
+  Widget _pdfActionsRow(
+    CompatibilityReport report,
+    String myName,
+    String otherName,
+    AppLocalizations t,
+  ) {
     final busy = _pdfAction != null;
     return Row(
       children: [
@@ -503,9 +657,13 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
           child: SizedBox(
             height: 48,
             child: OutlineButtonX(
-              label: _pdfAction == 'download' ? t.compGenerating : t.compDownloadPdf,
+              label: _pdfAction == 'download'
+                  ? t.compGenerating
+                  : t.compDownloadPdf,
               expand: true,
-              onPressed: busy ? null : () => _downloadPdf(report, myName, otherName),
+              onPressed: busy
+                  ? null
+                  : () => _downloadPdf(report, myName, otherName),
             ),
           ),
         ),
@@ -518,7 +676,9 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
               icon: Icons.ios_share_rounded,
               expand: true,
               loading: _pdfAction == 'share',
-              onPressed: busy ? null : () => _shareReport(report, myName, otherName),
+              onPressed: busy
+                  ? null
+                  : () => _shareReport(report, myName, otherName),
             ),
           ),
         ),
@@ -540,23 +700,47 @@ class _CompatibilityDashboardScreenState extends State<CompatibilityDashboardScr
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.hint),
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: AppColors.hint,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(disclaimer, style: body(11, color: AppColors.textMuted, height: 1.45))),
+          Expanded(
+            child: Text(
+              disclaimer,
+              style: body(11, color: AppColors.textMuted, height: 1.45),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  ({IconData icon, Color color, String label}) _statusVisual(AstrologyModuleStatus status, AppLocalizations t) {
+  ({IconData icon, Color color, String label}) _statusVisual(
+    AstrologyModuleStatus status,
+    AppLocalizations t,
+  ) {
     switch (status) {
       case AstrologyModuleStatus.calculated:
-        return (icon: Icons.check_circle_rounded, color: AppColors.forest700, label: t.compCalculated);
+        return (
+          icon: Icons.check_circle_rounded,
+          color: AppColors.forest700,
+          label: t.compCalculated,
+        );
       case AstrologyModuleStatus.reviewRequired:
-        return (icon: Icons.rate_review_outlined, color: AppColors.gold700, label: t.compReviewRequired);
+        return (
+          icon: Icons.rate_review_outlined,
+          color: AppColors.gold700,
+          label: t.compReviewRequired,
+        );
       case AstrologyModuleStatus.notCalculable:
       case AstrologyModuleStatus.unknown:
-        return (icon: Icons.remove_circle_outline_rounded, color: AppColors.hint, label: t.compNotAvailable);
+        return (
+          icon: Icons.remove_circle_outline_rounded,
+          color: AppColors.hint,
+          label: t.compNotAvailable,
+        );
     }
   }
 }

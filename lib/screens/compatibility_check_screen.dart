@@ -292,7 +292,10 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -315,11 +318,26 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 32, color: AppColors.hint),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 32,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: body(14, color: AppColors.textMuted)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             OutlineButtonX(label: t.commonRetry, onPressed: _load),
           ],
@@ -336,12 +354,27 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 150),
           children: [
-            Text(t.compYouAnd(widget.candidateName),
-                style: display(18, color: AppColors.forest900)),
+            Text(
+              t.compYouAnd(widget.candidateName),
+              style: display(
+                18,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               t.compSeeJatakaProfile,
-              style: body(13, color: AppColors.textMuted, height: 1.5),
+              style: body(
+                13,
+                height: 1.5,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             _moduleCard(context, t.compProfileCompatibility, p.profileCompatibility, t),

@@ -13,13 +13,13 @@ import '../widgets/place_field.dart';
 /// enum, in the order they should be offered. Localized at call time — the
 /// keys are the stable wire values sent to the backend.
 Map<String, String> _accuracyOptionsOf(AppLocalizations t) => {
-      'EXACT_DOCUMENT_VERIFIED': t.birthAccuracyExactDocument,
-      'EXACT_FAMILY_CONFIRMED': t.birthAccuracyExactFamily,
-      'APPROXIMATE_15_MINUTES': t.birthAccuracyApprox15,
-      'APPROXIMATE_30_MINUTES': t.birthAccuracyApprox30,
-      'APPROXIMATE_60_MINUTES': t.birthAccuracyApprox60,
-      'UNKNOWN': t.birthAccuracyUnknown,
-    };
+  'EXACT_DOCUMENT_VERIFIED': t.birthAccuracyExactDocument,
+  'EXACT_FAMILY_CONFIRMED': t.birthAccuracyExactFamily,
+  'APPROXIMATE_15_MINUTES': t.birthAccuracyApprox15,
+  'APPROXIMATE_30_MINUTES': t.birthAccuracyApprox30,
+  'APPROXIMATE_60_MINUTES': t.birthAccuracyApprox60,
+  'UNKNOWN': t.birthAccuracyUnknown,
+};
 const _accuracyKeys = [
   'EXACT_DOCUMENT_VERIFIED',
   'EXACT_FAMILY_CONFIRMED',
@@ -165,16 +165,16 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
   String get _timeIso => _timeOfBirth == null
       ? ''
       : '${_timeOfBirth!.hour.toString().padLeft(2, '0')}:'
-          '${_timeOfBirth!.minute.toString().padLeft(2, '0')}:00';
+            '${_timeOfBirth!.minute.toString().padLeft(2, '0')}:00';
 
   /// GROOM/BRIDE is derived from the existing profile gender rather than
   /// asked again — 'M' → GROOM, 'F' → BRIDE, matching how gender is stored
   /// everywhere else in this app (register/profile-edit screens).
   String? _roleFor(String gender) => switch (gender) {
-        'M' => 'GROOM',
-        'F' => 'BRIDE',
-        _ => null,
-      };
+    'M' => 'GROOM',
+    'F' => 'BRIDE',
+    _ => null,
+  };
 
   Future<void> _save() async {
     final t = AppLocalizations.of(context);
@@ -257,7 +257,10 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -268,10 +271,19 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
-              ? Center(
-                  child: Text(_loadError!,
-                      style: body(14, color: AppColors.textMuted)))
-              : _form(t),
+          ? Center(
+              child: Text(
+                _loadError!,
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
+            )
+          : _form(t),
     );
   }
 
@@ -286,7 +298,14 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       children: [
         Text(
           t.birthDisclaimer,
-          style: body(12, color: AppColors.textMuted, height: 1.5),
+          style: body(
+            12,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -329,12 +348,15 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
           child: FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.forest800,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: _saving ? null : _save,
-            child: Text(_saving ? t.birthSaving : t.birthSaveButton,
-                style: body(15, weight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              _saving ? t.birthSaving : t.birthSaveButton,
+              style: body(15, weight: FontWeight.w700, color: Colors.white),
+            ),
           ),
         ),
       ],
@@ -342,13 +364,20 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
   }
 
   Widget _label(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(label,
-            style: body(11,
-                weight: FontWeight.w700,
-                color: AppColors.gold700,
-                letterSpacing: 1.6)),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      label,
+      style: body(
+        11,
+        weight: FontWeight.w700,
+        color: context.onBrightness(
+          light: AppColors.gold700,
+          dark: AppColors.goldSoft,
+        ),
+        letterSpacing: 1.6,
+      ),
+    ),
+  );
 
   Widget _readOnlyRow({
     required IconData icon,
@@ -367,12 +396,30 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: body(11, color: AppColors.textMuted)),
+                Text(
+                  label,
+                  style: body(
+                    11,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 1),
-                Text(value,
-                    style: body(14,
-                        weight: FontWeight.w600,
-                        color: warn ? Colors.red.shade700 : AppColors.ink)),
+                Text(
+                  value,
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: warn
+                        ? Colors.red.shade700
+                        : context.onBrightness(
+                            light: AppColors.ink,
+                            dark: AppColors.darkText,
+                          ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -391,15 +438,22 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.birthDerivedAutomatically,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest700,
-                  letterSpacing: 0.6)),
+          Text(
+            t.birthDerivedAutomatically,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest700,
+              letterSpacing: 0.6,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
-            t.birthLatLon(_latitude!.toStringAsFixed(4),
-                _longitude!.toStringAsFixed(4), _timezone),
+            t.birthLatLon(
+              _latitude!.toStringAsFixed(4),
+              _longitude!.toStringAsFixed(4),
+              _timezone,
+            ),
             style: body(12, color: AppColors.forest800, height: 1.5),
           ),
         ],
@@ -420,23 +474,28 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time_rounded,
-                size: 18, color: AppColors.gold700),
+            const Icon(
+              Icons.access_time_rounded,
+              size: 18,
+              color: AppColors.gold700,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 _timeOfBirth == null
                     ? t.birthNotSet
                     : _timeOfBirth!.format(context),
-                style: body(14,
-                    weight: FontWeight.w600,
-                    color: _timeOfBirth == null
-                        ? AppColors.hint
-                        : AppColors.ink),
+                style: body(
+                  14,
+                  weight: FontWeight.w600,
+                  color: _timeOfBirth == null ? AppColors.hint : AppColors.ink,
+                ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded,
-                color: AppColors.hint),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
           ],
         ),
       ),
@@ -447,9 +506,17 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.birthTimeAccuracy,
-            style: body(12,
-                weight: FontWeight.w600, color: AppColors.forest800)),
+        Text(
+          t.birthTimeAccuracy,
+          style: body(
+            12,
+            weight: FontWeight.w600,
+            color: context.onBrightness(
+              light: AppColors.forest800,
+              dark: AppColors.forest300,
+            ),
+          ),
+        ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
@@ -462,15 +529,27 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
             child: DropdownButton<String>(
               value: _accuracy,
               isExpanded: true,
-              hint: Text(t.birthSelectAccuracy, style: body(14, color: AppColors.hint)),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.hint),
+              hint: Text(
+                t.birthSelectAccuracy,
+                style: body(14, color: AppColors.hint),
+              ),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.hint,
+              ),
               style: body(13, color: AppColors.ink),
-              items: _accuracyOptionsOf(t)
-                  .entries
-                  .map((e) => DropdownMenuItem(
+              // The field itself is always white — pin the popup to match
+              // rather than let it inherit the app's dark theme surface,
+              // which would leave this same ink-colored text unreadable
+              // when open.
+              dropdownColor: Colors.white,
+              items: _accuracyOptionsOf(t).entries
+                  .map(
+                    (e) => DropdownMenuItem(
                       value: e.key,
-                      child: Text(e.value, overflow: TextOverflow.ellipsis)))
+                      child: Text(e.value, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _accuracy = v),
             ),

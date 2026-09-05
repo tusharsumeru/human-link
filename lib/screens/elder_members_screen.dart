@@ -33,8 +33,8 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
   String _branch = 'All';
   bool _verifiedOnly = false;
 
-  late final List<Map<String, dynamic>> _all =
-      Repository.instance.communityMembers();
+  late final List<Map<String, dynamic>> _all = Repository.instance
+      .communityMembers();
 
   @override
   void dispose() {
@@ -47,7 +47,8 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
     return _all.where((m) {
       final matchBranch = _branch == 'All' || m['branch'] == _branch;
       final matchVerified = !_verifiedOnly || (m['verified'] as bool);
-      final matchSearch = q.isEmpty ||
+      final matchSearch =
+          q.isEmpty ||
           (m['name'] as String).toLowerCase().contains(q) ||
           (m['occupation'] as String).toLowerCase().contains(q) ||
           (m['gotra'] as String).toLowerCase().contains(q) ||
@@ -62,11 +63,13 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
   void _toast(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
@@ -92,11 +95,16 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
             decoration: InputDecoration(
               hintText: t.elderSearchByNameGotraOcc,
               hintStyle: body(13, color: AppColors.hint),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  size: 18, color: AppColors.hint),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: AppColors.hint,
+              ),
               isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
               filled: true,
               fillColor: Colors.white,
               enabledBorder: OutlineInputBorder(
@@ -132,12 +140,28 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                 onChanged: (v) => setState(() => _verifiedOnly = v),
               ),
               const SizedBox(width: 4),
-              Text(t.elderVerifiedMembersOnly,
-                  style: body(13,
-                      weight: FontWeight.w600, color: AppColors.label)),
+              Text(
+                t.elderVerifiedMembersOnly,
+                style: body(
+                  13,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.label,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               const Spacer(),
-              Text(t.elderShownCount(filtered.length),
-                  style: body(12, color: AppColors.textMuted)),
+              Text(
+                t.elderShownCount(filtered.length),
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -151,7 +175,13 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
     );
   }
 
-  Widget _statsBanner(int shown, int total, int verified, int pending, AppLocalizations t) {
+  Widget _statsBanner(
+    int shown,
+    int total,
+    int verified,
+    int pending,
+    AppLocalizations t,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -162,17 +192,25 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.elderRegistryKicker,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest300,
-                  letterSpacing: 1.6)),
+          Text(
+            t.elderRegistryKicker,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(t.elderCommunityMemberRegistry,
-              style: display(22, color: Colors.white)),
+          Text(
+            t.elderCommunityMemberRegistry,
+            style: display(22, color: Colors.white),
+          ),
           const SizedBox(height: 4),
-          Text(t.elderShowingOfTotal(shown),
-              style: body(13, color: AppColors.forest300)),
+          Text(
+            t.elderShowingOfTotal(shown),
+            style: body(13, color: AppColors.forest300),
+          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
@@ -198,8 +236,10 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
       ),
       child: Column(
         children: [
-          Text(value,
-              style: body(18, weight: FontWeight.w700, color: Colors.white)),
+          Text(
+            value,
+            style: body(18, weight: FontWeight.w700, color: Colors.white),
+          ),
           Text(label, style: body(11, color: AppColors.forest300)),
         ],
       ),
@@ -216,12 +256,17 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
           color: active ? AppColors.forest800 : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: active ? AppColors.forest800 : AppColors.border),
+            color: active ? AppColors.forest800 : AppColors.border,
+          ),
         ),
-        child: Text('$b (${_branchCount(b)})',
-            style: body(13,
-                weight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.label)),
+        child: Text(
+          '$b (${_branchCount(b)})',
+          style: body(
+            13,
+            weight: FontWeight.w600,
+            color: active ? Colors.white : AppColors.label,
+          ),
+        ),
       ),
     );
   }
@@ -236,7 +281,10 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             PexelsImage(
-                url: m['photo'] as String, name: m['name'] as String, size: 56),
+              url: m['photo'] as String,
+              name: m['name'] as String,
+              size: 56,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -245,39 +293,61 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(m['name'] as String,
-                            style: body(15,
-                                weight: FontWeight.w700,
-                                color: AppColors.forest900)),
+                        child: Text(
+                          m['name'] as String,
+                          style: body(
+                            15,
+                            weight: FontWeight.w700,
+                            color: AppColors.forest900,
+                          ),
+                        ),
                       ),
                       if (verified)
-                        const Icon(Icons.verified,
-                            size: 18, color: AppColors.gold500)
+                        const Icon(
+                          Icons.verified,
+                          size: 18,
+                          color: AppColors.gold500,
+                        )
                       else
-                        Pill(t.elderUnverified,
-                            bg: const Color(0xFFFEF3C7),
-                            fg: const Color(0xFFD97706),
-                            icon: Icons.error_outline_rounded),
+                        Pill(
+                          t.elderUnverified,
+                          bg: const Color(0xFFFEF3C7),
+                          fg: const Color(0xFFD97706),
+                          icon: Icons.error_outline_rounded,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                      t.elderYrsGender('${m['age']}',
-                          m['gender'] == 'M' ? t.elderMale : t.elderFemale),
-                      style: body(12, color: AppColors.textMuted)),
+                    t.elderYrsGender(
+                      '${m['age']}',
+                      m['gender'] == 'M' ? t.elderMale : t.elderFemale,
+                    ),
+                    style: body(12, color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 4),
-                  Text(m['occupation'] as String,
-                      style: body(12,
-                          weight: FontWeight.w500, color: AppColors.label)),
+                  Text(
+                    m['occupation'] as String,
+                    style: body(
+                      12,
+                      weight: FontWeight.w500,
+                      color: AppColors.label,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          size: 12, color: AppColors.hint),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 12,
+                        color: AppColors.hint,
+                      ),
                       const SizedBox(width: 3),
                       Expanded(
-                        child: Text(m['location'] as String,
-                            style: body(12, color: AppColors.textMuted)),
+                        child: Text(
+                          m['location'] as String,
+                          style: body(12, color: AppColors.textMuted),
+                        ),
                       ),
                     ],
                   ),
@@ -286,31 +356,46 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      Pill(t.elderBranchSuffix(m['branch'] as String),
-                          bg: const Color(0xFFF0FBF4),
-                          fg: AppColors.forest800),
-                      Pill(t.elderGotraSuffix(m['gotra'] as String),
-                          bg: const Color(0xFFF7F0E8), fg: AppColors.gold700),
-                      Pill(t.elderSinceYear('${m['joinedYear']}'),
-                          bg: AppColors.creamDark, fg: AppColors.gold700),
+                      Pill(
+                        t.elderBranchSuffix(m['branch'] as String),
+                        bg: const Color(0xFFF0FBF4),
+                        fg: AppColors.forest800,
+                      ),
+                      Pill(
+                        t.elderGotraSuffix(m['gotra'] as String),
+                        bg: const Color(0xFFF7F0E8),
+                        fg: AppColors.gold700,
+                      ),
+                      Pill(
+                        t.elderSinceYear('${m['joinedYear']}'),
+                        bg: AppColors.creamDark,
+                        fg: AppColors.gold700,
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  size: 20, color: AppColors.hint),
+              icon: const Icon(
+                Icons.more_vert_rounded,
+                size: 20,
+                color: AppColors.hint,
+              ),
               onSelected: (v) => _toast('$v · ${m['name']}'),
               itemBuilder: (_) => [
                 PopupMenuItem(
-                    value: t.elderViewProfile, child: Text(t.elderViewProfile)),
+                  value: t.elderViewProfile,
+                  child: Text(t.elderViewProfile),
+                ),
                 PopupMenuItem(
-                    value: t.elderPromoteToElder,
-                    child: Text(t.elderPromoteToElder)),
+                  value: t.elderPromoteToElder,
+                  child: Text(t.elderPromoteToElder),
+                ),
                 PopupMenuItem(
-                    value: t.elderSuspendMember,
-                    child: Text(t.elderSuspendMember)),
+                  value: t.elderSuspendMember,
+                  child: Text(t.elderSuspendMember),
+                ),
               ],
             ),
           ],
@@ -326,12 +411,26 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
       alignment: Alignment.center,
       child: Column(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              size: 32, color: AppColors.hint),
+          Icon(
+            Icons.error_outline_rounded,
+            size: 32,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.elderNoMembersMatchFilter,
-              style: body(14,
-                  weight: FontWeight.w600, color: AppColors.textMuted)),
+          Text(
+            t.elderNoMembersMatchFilter,
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
         ],
       ),
     );

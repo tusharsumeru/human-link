@@ -50,6 +50,32 @@ class AppColors {
 
   static const Color pageBackground = feedBg;
   static const Color cardBackground = Colors.white;
+
+  // Dark-mode counterparts — a near-black with a green undertone (not pure
+  // black) so the forest identity still reads, plus legible on-dark text/
+  // border tones. Used by [AppShellColors] and any screen converted to be
+  // theme-aware; screens still on hardcoded light [AppColors] values above
+  // are unaffected either way.
+  static const Color darkBg = Color(0xFF0E1712);
+  static const Color darkSurface = Color(0xFF16211B);
+  static const Color darkBorder = Color(0xFF2A3A31);
+  static const Color darkText = Color(0xFFEDEFEC);
+  static const Color darkTextMuted = Color(0xFFA9B3AD);
+}
+
+/// Reads the current [Brightness] once per call site so a widget can pick
+/// between an [AppColors] light value and its dark counterpart without every
+/// such widget re-deriving `Theme.of(context).brightness == Brightness.dark`
+/// itself. Deliberately tiny and additive — existing screens that don't use
+/// this are untouched; it's for screens/widgets being converted to respond
+/// to [ThemeService] (see that class's own scope note).
+extension AppBrightness on BuildContext {
+  bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
+
+  /// `light` in light mode, `dark` in dark mode — the one-liner most call
+  /// sites actually want.
+  Color onBrightness({required Color light, required Color dark}) =>
+      isDarkMode ? dark : light;
 }
 
 class AppGradients {
@@ -135,14 +161,13 @@ TextStyle display(
   Color color = AppColors.forest900,
   double? height,
   FontStyle? fontStyle,
-}) =>
-    GoogleFonts.playfairDisplay(
-      fontSize: size,
-      fontWeight: weight,
-      color: color,
-      height: height,
-      fontStyle: fontStyle,
-    );
+}) => GoogleFonts.playfairDisplay(
+  fontSize: size,
+  fontWeight: weight,
+  color: color,
+  height: height,
+  fontStyle: fontStyle,
+);
 
 /// Body font (Inter).
 TextStyle body(
@@ -151,14 +176,13 @@ TextStyle body(
   Color color = AppColors.ink,
   double? height,
   double? letterSpacing,
-}) =>
-    GoogleFonts.inter(
-      fontSize: size,
-      fontWeight: weight,
-      color: color,
-      height: height,
-      letterSpacing: letterSpacing,
-    );
+}) => GoogleFonts.inter(
+  fontSize: size,
+  fontWeight: weight,
+  color: color,
+  height: height,
+  letterSpacing: letterSpacing,
+);
 
 class AppTheme {
   AppTheme._();
@@ -179,6 +203,49 @@ class AppTheme {
         backgroundColor: AppColors.cream,
         foregroundColor: AppColors.forest800,
         elevation: 0,
+      ),
+    );
+  }
+
+  /// Real dark theme, same forest/gold identity as [light] with the seed
+  /// swapped to a lighter forest tone (`forest500`) so Material derives
+  /// legible on-dark accents instead of a colour that only worked on a light
+  /// background. Drives Material's own chrome (default AppBars, dialogs,
+  /// snackbars, switches, base text) immediately. Screens that set colors
+  /// directly from [AppColors] rather than `Theme.of(context)` won't shift —
+  /// see the scope note on [ThemeService].
+  static ThemeData dark() {
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: AppColors.darkBg,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.forest500,
+        brightness: Brightness.dark,
+        primary: AppColors.forest500,
+        secondary: AppColors.goldSoft,
+        surface: AppColors.darkSurface,
+      ),
+    );
+    final textTheme = GoogleFonts.interTextTheme(
+      base.textTheme,
+    ).apply(bodyColor: AppColors.darkText, displayColor: AppColors.darkText);
+    return base.copyWith(
+      textTheme: textTheme,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.darkSurface,
+        foregroundColor: AppColors.darkText,
+        elevation: 0,
+      ),
+      // Screens fill nearly every text field white (`fillColor: Colors.white`)
+      // regardless of theme, but leave `labelText`/`hintText` styling to
+      // Material's own default — which, on this seed-derived dark
+      // ColorScheme, renders low-contrast dark-on-dark for the floating
+      // label sitting above the white field. Pin it explicitly instead.
+      inputDecorationTheme: const InputDecorationTheme(
+        labelStyle: TextStyle(color: AppColors.darkTextMuted),
+        floatingLabelStyle: TextStyle(color: AppColors.forest300),
+        hintStyle: TextStyle(color: AppColors.darkTextMuted),
       ),
     );
   }

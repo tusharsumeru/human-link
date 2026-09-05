@@ -42,7 +42,16 @@ class FamilyTreeScreen extends StatefulWidget {
 const double _r = 40;
 const double _nodeDiameter = _r * 2;
 const double _canvasMinWidth = 900;
-const List<String> _genRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const List<String> _genRoman = [
+  'I',
+  'II',
+  'III',
+  'IV',
+  'V',
+  'VI',
+  'VII',
+  'VIII',
+];
 
 const FamilyTreeMetrics _metrics = FamilyTreeMetrics(
   nodeDiameter: _nodeDiameter,
@@ -57,14 +66,14 @@ const FamilyTreeMetrics _metrics = FamilyTreeMetrics(
 
 // The seven immediate relations the backend accepts, in display order.
 List<(String, String)> _relationsOf(AppLocalizations t) => [
-      ('father', t.ftRelationFather),
-      ('mother', t.ftRelationMother),
-      ('spouse', t.ftRelationSpouse),
-      ('brother', t.ftRelationBrother),
-      ('sister', t.ftRelationSister),
-      ('son', t.ftRelationSon),
-      ('daughter', t.ftRelationDaughter),
-    ];
+  ('father', t.ftRelationFather),
+  ('mother', t.ftRelationMother),
+  ('spouse', t.ftRelationSpouse),
+  ('brother', t.ftRelationBrother),
+  ('sister', t.ftRelationSister),
+  ('son', t.ftRelationSon),
+  ('daughter', t.ftRelationDaughter),
+];
 
 class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   List<Map<String, dynamic>> _nodes = const [];
@@ -115,17 +124,25 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       int unread = 0;
       try {
         requests = await Repository.instance.familyRequests();
-      } catch (_) {/* best-effort */}
+      } catch (_) {
+        /* best-effort */
+      }
       try {
         invites = await Repository.instance.familyInvites();
-      } catch (_) {/* best-effort */}
+      } catch (_) {
+        /* best-effort */
+      }
       try {
         unread = await Repository.instance.familyUnreadCount();
-      } catch (_) {/* best-effort */}
+      } catch (_) {
+        /* best-effort */
+      }
       List<Map<String, dynamic>> links = const [];
       try {
         links = await Repository.instance.familyRelationships();
-      } catch (_) {/* best-effort */}
+      } catch (_) {
+        /* best-effort */
+      }
       if (!mounted) return;
       final nodes = _asList(graph['nodes']);
       final edges = _asList(graph['edges']);
@@ -188,7 +205,8 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
 
   static bool _isDeceased(Map<String, dynamic> m) =>
       m['deceased'] == true || m['status'] == 'deceased';
-  static bool _isPlaceholder(Map<String, dynamic> m) => m['isPlaceholder'] == true;
+  static bool _isPlaceholder(Map<String, dynamic> m) =>
+      m['isPlaceholder'] == true;
   static bool _isSelf(Map<String, dynamic> m) => m['isSelf'] == true;
 
   /// The server-derived, viewer-relative label ("Grandfather", "Sister-in-law",
@@ -334,10 +352,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(t.ftInviteDialogTitle(name),
-            style: display(18, color: AppColors.forest900)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          t.ftInviteDialogTitle(name),
+          style: display(18, color: AppColors.forest900),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,8 +373,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Text(link,
-                  style: body(12, color: AppColors.forest800), maxLines: 2),
+              child: Text(
+                link,
+                style: body(12, color: AppColors.forest800),
+                maxLines: 2,
+              ),
             ),
           ],
         ),
@@ -424,16 +446,18 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     final name = _nameOf(link['member'], t);
     final relation = (link['relation'] ?? '').toString();
     final relOrDefault = relation.isEmpty ? t.ftRelative : relation;
-    final pendingMine = link['status'] == 'pending' && link['addedByMe'] == true;
+    final pendingMine =
+        link['status'] == 'pending' && link['addedByMe'] == true;
     final noteCtl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(pendingMine ? t.ftWithdrawRequestTitle : t.ftRemoveLinkTitle,
-            style: display(18, color: AppColors.forest900)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          pendingMine ? t.ftWithdrawRequestTitle : t.ftRemoveLinkTitle,
+          style: display(18, color: AppColors.forest900),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,15 +489,25 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t.commonKeep,
-                style: body(13,
-                    weight: FontWeight.w600, color: AppColors.forest800)),
+            child: Text(
+              t.commonKeep,
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: AppColors.forest800,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(pendingMine ? t.ftWithdraw : t.commonRemove,
-                style: body(13,
-                    weight: FontWeight.w700, color: const Color(0xFFB91C1C))),
+            child: Text(
+              pendingMine ? t.ftWithdraw : t.commonRemove,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: const Color(0xFFB91C1C),
+              ),
+            ),
           ),
         ],
       ),
@@ -482,8 +516,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     noteCtl.dispose();
     if (ok != true || !mounted) return;
     try {
-      await Repository.instance
-          .removeFamilyRelationship(id, note: note.isEmpty ? null : note);
+      await Repository.instance.removeFamilyRelationship(
+        id,
+        note: note.isEmpty ? null : note,
+      );
       if (!mounted) return;
       _toast(pendingMine ? t.ftRequestWithdrawn : t.ftRelationshipRemoved);
       // One edge gone can relabel or hide many nodes — rebuild from the server.
@@ -550,9 +586,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                         self
                             ? t.ftYou
                             : '${_relationOf(m, t)} · ${_generationLabel(memberId)}',
-                        style: body(13,
-                            weight: FontWeight.w600,
-                            color: AppColors.forest700),
+                        style: body(
+                          13,
+                          weight: FontWeight.w600,
+                          color: AppColors.forest700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _statusBadge(deceased, placeholder),
@@ -565,8 +603,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             _statusCard(deceased, placeholder),
             if (!self && path.length > 1) ...[
               const SizedBox(height: 10),
-              Text(t.ftDerivedFrom(path.join(" → ")),
-                  style: body(11, color: AppColors.hint, height: 1.4)),
+              Text(
+                t.ftDerivedFrom(path.join(" → ")),
+                style: body(11, color: AppColors.hint, height: 1.4),
+              ),
             ],
             const SizedBox(height: 14),
             if (memberId.isNotEmpty &&
@@ -618,8 +658,8 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     final (String title, String body_) = deceased
         ? (t.ftVerifiedDeceased, t.ftVerifiedDeceasedDesc)
         : placeholder
-            ? (t.ftPendingInvitation, t.ftPendingInvitationDesc)
-            : (t.ftActiveMember, t.ftActiveMemberDesc);
+        ? (t.ftPendingInvitation, t.ftPendingInvitationDesc)
+        : (t.ftActiveMember, t.ftActiveMemberDesc);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -630,8 +670,14 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: body(12, weight: FontWeight.w700, color: AppColors.forest800)),
+          Text(
+            title,
+            style: body(
+              12,
+              weight: FontWeight.w700,
+              color: AppColors.forest800,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(body_, style: body(12, color: AppColors.textMuted, height: 1.4)),
         ],
@@ -642,13 +688,25 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Widget _statusBadge(bool deceased, bool placeholder) {
     final t = AppLocalizations.of(context);
     final (String label, Color bg, Color fg, IconData icon) = deceased
-        ? (t.ftInMemoriam, const Color(0xFFE5E7EB), AppColors.textMuted,
-            Icons.local_florist_rounded)
+        ? (
+            t.ftInMemoriam,
+            const Color(0xFFE5E7EB),
+            AppColors.textMuted,
+            Icons.local_florist_rounded,
+          )
         : placeholder
-            ? (t.ftPendingInvitation, const Color(0xFFFEF3C7),
-                const Color(0xFFD97706), Icons.schedule_rounded)
-            : (t.ftActiveMember, const Color(0xFFD1FAE5),
-                const Color(0xFF065F46), Icons.check_circle_rounded);
+        ? (
+            t.ftPendingInvitation,
+            const Color(0xFFFEF3C7),
+            const Color(0xFFD97706),
+            Icons.schedule_rounded,
+          )
+        : (
+            t.ftActiveMember,
+            const Color(0xFFD1FAE5),
+            const Color(0xFF065F46),
+            Icons.check_circle_rounded,
+          );
     return Pill(label, bg: bg, fg: fg, icon: icon, fontSize: 10);
   }
 
@@ -675,11 +733,16 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     final t = AppLocalizations.of(context);
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: AppColors.forest700));
+        child: CircularProgressIndicator(color: AppColors.forest700),
+      );
     }
     if (_error.isNotEmpty) {
-      return _message(Icons.cloud_off_rounded, t.ftUnableToLoad, _error,
-          action: OutlineButtonX(label: t.commonRetry, onPressed: _load));
+      return _message(
+        Icons.cloud_off_rounded,
+        t.ftUnableToLoad,
+        _error,
+        action: OutlineButtonX(label: t.commonRetry, onPressed: _load),
+      );
     }
     // The first call to the tree lazily creates my own member node, so "empty"
     // means me and nobody else — not zero nodes.
@@ -735,7 +798,8 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                           painter: _TreePainter(
                             links: layout.links,
                             rowYs: [
-                              for (final g in layout.generations) layout.rowY(g),
+                              for (final g in layout.generations)
+                                layout.rowY(g),
                             ],
                           ),
                         ),
@@ -745,13 +809,18 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                           left: 8,
                           top: layout.rowY(layout.generations[row]) - 9,
                           child: Text(
-                              AppLocalizations.of(context).ftGenRow(row < _genRoman.length
+                            AppLocalizations.of(context).ftGenRow(
+                              row < _genRoman.length
                                   ? _genRoman[row]
-                                  : '${row + 1}'),
-                              style: body(11,
-                                  weight: FontWeight.w700,
-                                  color: AppColors.gold700,
-                                  letterSpacing: 1.5)),
+                                  : '${row + 1}',
+                            ),
+                            style: body(
+                              11,
+                              weight: FontWeight.w700,
+                              color: AppColors.gold700,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
                         ),
                       for (final id in layout.placed)
                         if (pos[id] != null && _graph!.byId[id] != null)
@@ -779,10 +848,15 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                   children: [
                     _zoomButton(Icons.add_rounded, () => _applyZoom(1.3)),
                     const SizedBox(height: 8),
-                    _zoomButton(Icons.remove_rounded, () => _applyZoom(1 / 1.3)),
+                    _zoomButton(
+                      Icons.remove_rounded,
+                      () => _applyZoom(1 / 1.3),
+                    ),
                     const SizedBox(height: 8),
-                    _zoomButton(Icons.center_focus_strong_rounded,
-                        () => setState(() => _didFit = false)),
+                    _zoomButton(
+                      Icons.center_focus_strong_rounded,
+                      () => setState(() => _didFit = false),
+                    ),
                   ],
                 ),
               ),
@@ -815,8 +889,12 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     );
   }
 
-  Widget _message(IconData icon, String title, String subtitle,
-      {Widget? action}) {
+  Widget _message(
+    IconData icon,
+    String title,
+    String subtitle, {
+    Widget? action,
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -825,17 +903,31 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
           children: [
             Icon(icon, size: 44, color: AppColors.forest300),
             const SizedBox(height: 14),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: display(20, color: AppColors.forest900)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: display(
+                20,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(subtitle,
-                textAlign: TextAlign.center,
-                style: body(13, color: AppColors.textMuted, height: 1.5)),
-            if (action != null) ...[
-              const SizedBox(height: 18),
-              action,
-            ],
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: body(
+                13,
+                height: 1.5,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
+            if (action != null) ...[const SizedBox(height: 18), action],
           ],
         ),
       ),
@@ -851,16 +943,22 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       color: const Color(0xFFFEF9EC),
       child: Row(
         children: [
-          const Icon(Icons.mark_email_unread_rounded,
-              size: 20, color: Color(0xFFD97706)),
+          const Icon(
+            Icons.mark_email_unread_rounded,
+            size: 20,
+            color: Color(0xFFD97706),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               _invites.length > 1
                   ? '$msg${t.ftMoreCount(_invites.length - 1)}'
                   : msg,
-              style: body(12,
-                  weight: FontWeight.w600, color: AppColors.forest900),
+              style: body(
+                12,
+                weight: FontWeight.w600,
+                color: AppColors.forest900,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -879,8 +977,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
       color: const Color(0xFFF3F4F6),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded,
-              size: 18, color: AppColors.textMuted),
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: AppColors.textMuted,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -897,9 +998,19 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     final t = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkSurface,
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,14 +1022,29 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(t.ftHeaderKicker,
-                        style: body(11,
-                            weight: FontWeight.w700,
-                            color: AppColors.gold700,
-                            letterSpacing: 2)),
+                    Text(
+                      t.ftHeaderKicker,
+                      style: body(
+                        11,
+                        weight: FontWeight.w700,
+                        color: context.onBrightness(
+                          light: AppColors.gold700,
+                          dark: AppColors.goldSoft,
+                        ),
+                        letterSpacing: 2,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(t.ftHeaderTitle,
-                        style: display(22, color: AppColors.forest900)),
+                    Text(
+                      t.ftHeaderTitle,
+                      style: display(
+                        22,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -934,18 +1060,34 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _actionChip(Icons.inbox_rounded, t.ftRequests, _requests.length,
-                    _openRequests),
+                _actionChip(
+                  Icons.inbox_rounded,
+                  t.ftRequests,
+                  _requests.length,
+                  _openRequests,
+                ),
                 const SizedBox(width: 8),
-                _actionChip(Icons.mark_email_unread_rounded, t.ftInvites,
-                    _invites.length, _openInvites),
+                _actionChip(
+                  Icons.mark_email_unread_rounded,
+                  t.ftInvites,
+                  _invites.length,
+                  _openInvites,
+                ),
                 const SizedBox(width: 8),
-                _actionChip(Icons.notifications_none_rounded, t.ftAlerts, _unread,
-                    _openNotifications),
+                _actionChip(
+                  Icons.notifications_none_rounded,
+                  t.ftAlerts,
+                  _unread,
+                  _openNotifications,
+                ),
                 if (_links.isNotEmpty) ...[
                   const SizedBox(width: 8),
-                  _actionChip(Icons.link_off_rounded, t.ftManageLinks, 0,
-                      _openLinks),
+                  _actionChip(
+                    Icons.link_off_rounded,
+                    t.ftManageLinks,
+                    0,
+                    _openLinks,
+                  ),
                 ],
                 if (_graph?.branchOwners.isNotEmpty ?? false) ...[
                   const SizedBox(width: 8),
@@ -966,37 +1108,65 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     );
   }
 
-  Widget _actionChip(IconData icon, String label, int count, VoidCallback onTap) {
+  Widget _actionChip(
+    IconData icon,
+    String label,
+    int count,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.onBrightness(
+            light: Colors.white,
+            dark: AppColors.darkBg,
+          ),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: AppColors.forest800),
+            Icon(
+              icon,
+              size: 15,
+              color: context.onBrightness(
+                light: AppColors.forest800,
+                dark: AppColors.forest300,
+              ),
+            ),
             const SizedBox(width: 6),
-            Text(label,
-                style: body(12,
-                    weight: FontWeight.w600, color: AppColors.forest900)),
+            Text(
+              label,
+              style: body(
+                12,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             if (count > 0) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppColors.gold700,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text('$count',
-                    style: body(10,
-                        weight: FontWeight.w700, color: Colors.white)),
+                child: Text(
+                  '$count',
+                  style: body(10, weight: FontWeight.w700, color: Colors.white),
+                ),
               ),
             ],
           ],
@@ -1024,10 +1194,10 @@ class _TreeNode extends StatelessWidget {
     final borderColor = self
         ? AppColors.gold700
         : deceased
-            ? const Color.fromARGB(255, 251, 2, 2)
-            : placeholder
-                ? const Color(0xFFD97706)
-                : AppColors.forest700;
+        ? const Color.fromARGB(255, 251, 2, 2)
+        : placeholder
+        ? const Color(0xFFD97706)
+        : AppColors.forest700;
     return Container(
       width: size,
       height: size,
@@ -1046,21 +1216,25 @@ class _TreeNode extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: photoUrl.isNotEmpty
-          ? Image.network(photoUrl,
+          ? Image.network(
+              photoUrl,
               width: size,
               height: size,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _initials(deceased))
+              errorBuilder: (_, __, ___) => _initials(deceased),
+            )
           : _initials(deceased),
     );
   }
 
   Widget _initials(bool deceased) => Text(
-        _initialsOf((member['name'] ?? '?').toString()),
-        style: body(size * 0.3,
-            weight: FontWeight.w700,
-            color: deceased ? Colors.white.withValues(alpha: 0.7) : Colors.white),
-      );
+    _initialsOf((member['name'] ?? '?').toString()),
+    style: body(
+      size * 0.3,
+      weight: FontWeight.w700,
+      color: deceased ? Colors.white.withValues(alpha: 0.7) : Colors.white,
+    ),
+  );
 
   static String _initialsOf(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -1130,8 +1304,11 @@ class _NodeWithLabel extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    body(11, weight: FontWeight.w700, color: AppColors.forest900),
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest900,
+                ),
               ),
             ),
             SizedBox(
@@ -1179,7 +1356,9 @@ class _BranchBadge extends StatelessWidget {
           color: open ? Colors.white : AppColors.gold700,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: open ? AppColors.gold700 : Colors.white, width: 1.5),
+            color: open ? AppColors.gold700 : Colors.white,
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.15),
@@ -1190,9 +1369,11 @@ class _BranchBadge extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: body(10,
-              weight: FontWeight.w800,
-              color: open ? AppColors.gold700 : Colors.white),
+          style: body(
+            10,
+            weight: FontWeight.w800,
+            color: open ? AppColors.gold700 : Colors.white,
+          ),
         ),
       ),
     );
@@ -1214,8 +1395,14 @@ class _TreePainter extends CustomPainter {
       ..color = AppColors.forest800.withValues(alpha: 0.08)
       ..strokeWidth = 1;
     for (final y in rowYs) {
-      _dashedLine(canvas, Offset(40, y), Offset(size.width - 40, y), guide,
-          dash: 4, gap: 10);
+      _dashedLine(
+        canvas,
+        Offset(40, y),
+        Offset(size.width - 40, y),
+        guide,
+        dash: 4,
+        gap: 10,
+      );
     }
 
     final spouse = Paint()
@@ -1248,8 +1435,14 @@ class _TreePainter extends CustomPainter {
           canvas.drawPath(_polyline(link.points), descent);
         case FamilyLinkKind.sibling:
           for (var i = 0; i < link.points.length - 1; i++) {
-            _dashedLine(canvas, link.points[i], link.points[i + 1], sibling,
-                dash: 6, gap: 4);
+            _dashedLine(
+              canvas,
+              link.points[i],
+              link.points[i + 1],
+              sibling,
+              dash: 6,
+              gap: 4,
+            );
           }
       }
     }
@@ -1263,8 +1456,14 @@ class _TreePainter extends CustomPainter {
     return path;
   }
 
-  void _dashedLine(Canvas canvas, Offset a, Offset b, Paint paint,
-      {double dash = 5, double gap = 4}) {
+  void _dashedLine(
+    Canvas canvas,
+    Offset a,
+    Offset b,
+    Paint paint, {
+    double dash = 5,
+    double gap = 4,
+  }) {
     final total = (b - a).distance;
     if (total == 0) return;
     final dir = (b - a) / total;
@@ -1479,8 +1678,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999)),
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
             const SizedBox(height: 12),
             Padding(
@@ -1488,13 +1688,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(t.ftAddFamilyMember,
-                        style: display(20, color: AppColors.forest900)),
+                    child: Text(
+                      t.ftAddFamilyMember,
+                      style: display(20, color: AppColors.forest900),
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded,
-                        color: AppColors.textMuted),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1541,8 +1745,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                         color: const Color(0xFFFEF2F2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(_err,
-                          style: body(12, color: const Color(0xFFB91C1C))),
+                      child: Text(
+                        _err,
+                        style: body(12, color: const Color(0xFFB91C1C)),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 18),
@@ -1550,8 +1756,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     label: _mode == _AddMode.account
                         ? t.ftSendRequest
                         : _isDeceased
-                            ? t.ftAddToFamilyTree
-                            : t.ftCreateAndInvite,
+                        ? t.ftAddToFamilyTree
+                        : t.ftCreateAndInvite,
                     icon: Icons.check_rounded,
                     expand: true,
                     loading: _saving,
@@ -1572,7 +1778,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       children: [
         _modeChip(_AddMode.account, t.ftHasAccount, Icons.badge_outlined),
         const SizedBox(width: 10),
-        _modeChip(_AddMode.profile, t.ftNewProfile, Icons.person_outline_rounded),
+        _modeChip(
+          _AddMode.profile,
+          t.ftNewProfile,
+          Icons.person_outline_rounded,
+        ),
       ],
     );
   }
@@ -1593,19 +1803,26 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             color: selected ? AppColors.forest800 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected ? AppColors.forest800 : AppColors.border,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 15,
-                  color: selected ? Colors.white : AppColors.forest800),
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? Colors.white : AppColors.forest800,
+              ),
               const SizedBox(width: 6),
-              Text(label,
-                  style: body(13,
-                      weight: FontWeight.w600,
-                      color: selected ? Colors.white : AppColors.label)),
+              Text(
+                label,
+                style: body(
+                  13,
+                  weight: FontWeight.w600,
+                  color: selected ? Colors.white : AppColors.label,
+                ),
+              ),
             ],
           ),
         ),
@@ -1642,7 +1859,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Center(
-                child: CircularProgressIndicator(color: AppColors.forest700)),
+              child: CircularProgressIndicator(color: AppColors.forest700),
+            ),
           )
         else
           for (final u in _results) _resultTile(u),
@@ -1651,7 +1869,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   }
 
   Widget _resultTile(Map<String, dynamic> u) {
-    final selected = _selected != null &&
+    final selected =
+        _selected != null &&
         _selected!['_id']?.toString() == u['_id']?.toString();
     final photo = (u['profileUrl'] ?? '').toString();
     return InkWell(
@@ -1664,8 +1883,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           color: selected ? const Color(0xFFF0F6F1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: selected ? AppColors.forest700 : AppColors.border,
-              width: selected ? 1.5 : 1),
+            color: selected ? AppColors.forest700 : AppColors.border,
+            width: selected ? 1.5 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -1675,9 +1895,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               backgroundImage: photo.isNotEmpty ? NetworkImage(photo) : null,
               child: photo.isEmpty
                   ? Text(
-                      (u['name'] ?? '?').toString().characters.first.toUpperCase(),
-                      style: body(14,
-                          weight: FontWeight.w700, color: Colors.white))
+                      (u['name'] ?? '?')
+                          .toString()
+                          .characters
+                          .first
+                          .toUpperCase(),
+                      style: body(
+                        14,
+                        weight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    )
                   : null,
             ),
             const SizedBox(width: 12),
@@ -1685,9 +1913,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text((u['name'] ?? '').toString(),
-                      style: body(14,
-                          weight: FontWeight.w700, color: AppColors.forest900)),
+                  Text(
+                    (u['name'] ?? '').toString(),
+                    style: body(
+                      14,
+                      weight: FontWeight.w700,
+                      color: AppColors.forest900,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     [
@@ -1702,8 +1935,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded,
-                  color: AppColors.forest700, size: 20),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.forest700,
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -1740,30 +1976,50 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         ),
         const SizedBox(height: 14),
         if (!_isDeceased) ...[
-          _field(t.ftPhoneOptional, _phone,
-              hint: '9876543210', keyboard: TextInputType.phone),
+          _field(
+            t.ftPhoneOptional,
+            _phone,
+            hint: '9876543210',
+            keyboard: TextInputType.phone,
+          ),
           const SizedBox(height: 4),
-          Text(t.ftPhoneLinkNote,
-              style: body(11, color: AppColors.hint, height: 1.4)),
+          Text(
+            t.ftPhoneLinkNote,
+            style: body(11, color: AppColors.hint, height: 1.4),
+          ),
           const SizedBox(height: 14),
           _dateField(t.ftDateOfBirth, _dob, () => _pickDate(true), t),
         ] else ...[
           Row(
             children: [
               Expanded(
-                  child: _dateField(
-                      t.ftDateOfBirth, _dob, () => _pickDate(true), t)),
+                child: _dateField(
+                  t.ftDateOfBirth,
+                  _dob,
+                  () => _pickDate(true),
+                  t,
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
-                  child: _dateField(
-                      t.ftDateOfDeath, _dod, () => _pickDate(false), t)),
+                child: _dateField(
+                  t.ftDateOfDeath,
+                  _dod,
+                  () => _pickDate(false),
+                  t,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
           _field(t.ftPlaceOfDeath, _placeOfDeath, hint: t.ftPlaceOfDeathHint),
           const SizedBox(height: 14),
-          _field(t.ftBiography, _biography,
-              hint: t.ftBiographyHint, maxLines: 3),
+          _field(
+            t.ftBiography,
+            _biography,
+            hint: t.ftBiographyHint,
+            maxLines: 3,
+          ),
         ],
       ],
     );
@@ -1772,14 +2028,20 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   // ── Small form widgets (mirrors the app's existing sheet styling) ──────────
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style:
-                body(12, weight: FontWeight.w700, color: AppColors.forest800)),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: body(12, weight: FontWeight.w700, color: AppColors.forest800),
+    ),
+  );
 
-  Widget _field(String label, TextEditingController c,
-      {String hint = '', TextInputType? keyboard, int maxLines = 1}) {
+  Widget _field(
+    String label,
+    TextEditingController c, {
+    String hint = '',
+    TextInputType? keyboard,
+    int maxLines = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1796,7 +2058,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   }
 
   Widget _dateField(
-      String label, String value, VoidCallback onTap, AppLocalizations t) {
+    String label,
+    String value,
+    VoidCallback onTap,
+    AppLocalizations t,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1812,12 +2078,19 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 15, color: AppColors.gold700),
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 15,
+                  color: AppColors.gold700,
+                ),
                 const SizedBox(width: 8),
-                Text(value.isEmpty ? t.ftSelect : value,
-                    style: body(14,
-                        color: value.isEmpty ? AppColors.hint : AppColors.ink)),
+                Text(
+                  value.isEmpty ? t.ftSelect : value,
+                  style: body(
+                    14,
+                    color: value.isEmpty ? AppColors.hint : AppColors.ink,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1837,28 +2110,33 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       items: items,
       onChanged: onChanged,
       style: body(14, color: AppColors.ink),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded,
-          color: AppColors.textMuted),
+      // This sheet is always white — pin the popup to match rather than let
+      // it inherit the app's dark theme surface, which would leave this
+      // same ink-colored text unreadable when open.
+      dropdownColor: Colors.white,
+      icon: const Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: AppColors.textMuted,
+      ),
       decoration: _inputDecoration(''),
     );
   }
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: body(14, color: AppColors.hint),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      );
+    hintText: hint,
+    hintStyle: body(14, color: AppColors.hint),
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+    ),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+  );
 
   Widget _genderChip(String value, String label) {
     final selected = _gender == value;
@@ -1873,12 +2151,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             color: selected ? AppColors.forest800 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected ? AppColors.forest800 : AppColors.border,
+            ),
           ),
-          child: Text(label,
-              style: body(14,
-                  weight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: selected ? Colors.white : AppColors.label,
+            ),
+          ),
         ),
       ),
     );
@@ -1900,12 +2183,17 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             color: selected ? AppColors.forest800 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected ? AppColors.forest800 : AppColors.border,
+            ),
           ),
-          child: Text(label,
-              style: body(14,
-                  weight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: selected ? Colors.white : AppColors.label,
+            ),
+          ),
         ),
       ),
     );
@@ -1941,7 +2229,9 @@ class _RequestsSheetState extends State<_RequestsSheet> {
       final sent = await Repository.instance.familySentRequests();
       if (!mounted) return;
       setState(() => _sent = sent);
-    } catch (_) {/* best-effort */}
+    } catch (_) {
+      /* best-effort */
+    }
   }
 
   Future<void> _cancel(Map<String, dynamic> r) async {
@@ -1955,7 +2245,9 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotWithdrawRequest)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).ftCouldNotWithdrawRequest),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(id));
@@ -1977,7 +2269,9 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(id));
@@ -2006,9 +2300,14 @@ class _RequestsSheetState extends State<_RequestsSheet> {
               ),
           if (_sent.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text(t.ftWaitingOnThem,
-                style: body(12,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            Text(
+              t.ftWaitingOnThem,
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: AppColors.forest800,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               t.ftWaitingOnThemDesc,
@@ -2039,13 +2338,20 @@ class _RequestsSheetState extends State<_RequestsSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name,
-              style: body(13,
-                  weight: FontWeight.w700, color: AppColors.forest900)),
+          Text(
+            name,
+            style: body(
+              13,
+              weight: FontWeight.w700,
+              color: AppColors.forest900,
+            ),
+          ),
           if (relation.isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text(t.ftAddedAsYourRelation(relation),
-                style: body(11, color: AppColors.textMuted)),
+            Text(
+              t.ftAddedAsYourRelation(relation),
+              style: body(11, color: AppColors.textMuted),
+            ),
           ],
           const SizedBox(height: 10),
           Row(
@@ -2103,8 +2409,9 @@ class _InvitesSheetState extends State<_InvitesSheet> {
         final res = await Repository.instance.acceptFamilyInvites();
         final merged = ((res['merged'] ?? 0) as num).toInt();
         if (!mounted) return;
-        setState(() => _done =
-            merged > 0 ? t.ftConnectedTreesMerged : t.ftDone);
+        setState(
+          () => _done = merged > 0 ? t.ftConnectedTreesMerged : t.ftDone,
+        );
       } else {
         await Repository.instance.declineFamilyInvites();
         if (!mounted) return;
@@ -2112,9 +2419,9 @@ class _InvitesSheetState extends State<_InvitesSheet> {
       }
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.ftCouldNotUpdateInvitations)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.ftCouldNotUpdateInvitations)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -2128,45 +2435,47 @@ class _InvitesSheetState extends State<_InvitesSheet> {
       child: _done.isNotEmpty
           ? _emptyState(t.ftAllSet, _done)
           : widget.invites.isEmpty
-              ? _emptyState(t.ftNoInvitations, t.ftNoInvitationsDesc)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final i in widget.invites)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFBF8F3),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Text((i['message'] ?? '').toString(),
-                              style: body(13, color: AppColors.forest900)),
-                        ),
+          ? _emptyState(t.ftNoInvitations, t.ftNoInvitationsDesc)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final i in widget.invites)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBF8F3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
                       ),
-                    const SizedBox(height: 6),
-                    Text(
-                      t.ftAcceptingMergesNote,
-                      style: body(11, color: AppColors.hint, height: 1.4),
+                      child: Text(
+                        (i['message'] ?? '').toString(),
+                        style: body(13, color: AppColors.forest900),
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    ForestButton(
-                      label: t.ftAcceptAndConnect,
-                      icon: Icons.link_rounded,
-                      expand: true,
-                      loading: _busy,
-                      onPressed: () => _respond(true),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlineButtonX(
-                      label: t.ftDecline,
-                      expand: true,
-                      onPressed: _busy ? null : () => _respond(false),
-                    ),
-                  ],
+                  ),
+                const SizedBox(height: 6),
+                Text(
+                  t.ftAcceptingMergesNote,
+                  style: body(11, color: AppColors.hint, height: 1.4),
                 ),
+                const SizedBox(height: 14),
+                ForestButton(
+                  label: t.ftAcceptAndConnect,
+                  icon: Icons.link_rounded,
+                  expand: true,
+                  loading: _busy,
+                  onPressed: () => _respond(true),
+                ),
+                const SizedBox(height: 8),
+                OutlineButtonX(
+                  label: t.ftDecline,
+                  expand: true,
+                  onPressed: _busy ? null : () => _respond(false),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -2210,7 +2519,9 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     setState(() => n['read'] = true);
     try {
       await Repository.instance.markFamilyNotificationRead(id);
-    } catch (_) {/* best-effort */}
+    } catch (_) {
+      /* best-effort */
+    }
   }
 
   Future<void> _markAllRead() async {
@@ -2223,7 +2534,9 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     });
     try {
       await Repository.instance.markAllFamilyNotificationsRead();
-    } catch (_) {/* best-effort */}
+    } catch (_) {
+      /* best-effort */
+    }
   }
 
   /// Answer a `relationship_request` straight from its notification — the
@@ -2247,7 +2560,9 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).ftCouldNotUpdateRequest),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy.remove(rid));
@@ -2263,25 +2578,26 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
       action: hasUnread
           ? TextButton(
               onPressed: _markAllRead,
-              child: Text(t.ftMarkAllRead,
-                  style: body(12,
-                      weight: FontWeight.w700, color: AppColors.forest700)),
+              child: Text(
+                t.ftMarkAllRead,
+                style: body(
+                  12,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest700,
+                ),
+              ),
             )
           : null,
       child: _loading
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                  child:
-                      CircularProgressIndicator(color: AppColors.forest700)),
+                child: CircularProgressIndicator(color: AppColors.forest700),
+              ),
             )
           : _items.isEmpty
-              ? _emptyState(t.ftNoNotifications, t.ftNoNotificationsDesc)
-              : Column(
-                  children: [
-                    for (final n in _items) _notificationTile(n, t),
-                  ],
-                ),
+          ? _emptyState(t.ftNoNotifications, t.ftNoNotificationsDesc)
+          : Column(children: [for (final n in _items) _notificationTile(n, t)]),
     );
   }
 
@@ -2291,7 +2607,8 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     final answered = (n['answered'] ?? '').toString();
     // Only a request is actionable; everything else is a record of something
     // that already happened.
-    final actionable = n['type'] == 'relationship_request' &&
+    final actionable =
+        n['type'] == 'relationship_request' &&
         rid.isNotEmpty &&
         answered.isEmpty;
     return InkWell(
@@ -2321,8 +2638,10 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                     ),
                   ),
                 Expanded(
-                  child: Text((n['message'] ?? '').toString(),
-                      style: body(13, color: AppColors.forest900)),
+                  child: Text(
+                    (n['message'] ?? '').toString(),
+                    style: body(13, color: AppColors.forest900),
+                  ),
                 ),
               ],
             ),
@@ -2330,8 +2649,11 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
               const SizedBox(height: 8),
               Text(
                 answered == 'accepted' ? t.ftAccepted : t.ftDeclined,
-                style: body(11,
-                    weight: FontWeight.w700, color: AppColors.forest700),
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest700,
+                ),
               ),
             ],
             if (actionable) ...[
@@ -2381,10 +2703,12 @@ class _LinksSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final accepted =
-        links.where((l) => l['status'] != 'pending').toList(growable: false);
-    final pending =
-        links.where((l) => l['status'] == 'pending').toList(growable: false);
+    final accepted = links
+        .where((l) => l['status'] != 'pending')
+        .toList(growable: false);
+    final pending = links
+        .where((l) => l['status'] == 'pending')
+        .toList(growable: false);
     return _SheetScaffold(
       title: t.ftManageRelationships,
       child: Column(
@@ -2401,9 +2725,14 @@ class _LinksSheet extends StatelessWidget {
             for (final l in accepted) _linkTile(l, t),
             if (pending.isNotEmpty) ...[
               const SizedBox(height: 14),
-              Text(t.ftNotAcceptedYet,
-                  style: body(12,
-                      weight: FontWeight.w700, color: AppColors.forest800)),
+              Text(
+                t.ftNotAcceptedYet,
+                style: body(
+                  12,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest800,
+                ),
+              ),
               const SizedBox(height: 8),
               for (final l in pending) _linkTile(l, t),
             ],
@@ -2432,14 +2761,21 @@ class _LinksSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: body(13,
-                        weight: FontWeight.w700, color: AppColors.forest900)),
+                Text(
+                  name,
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest900,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   message.isNotEmpty
                       ? message
-                      : t.ftYourRelation(relation.isEmpty ? t.ftRelative : relation),
+                      : t.ftYourRelation(
+                          relation.isEmpty ? t.ftRelative : relation,
+                        ),
                   style: body(11, color: AppColors.textMuted, height: 1.4),
                 ),
               ],
@@ -2479,8 +2815,9 @@ class _SheetScaffold extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(999)),
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(999),
+            ),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -2488,14 +2825,18 @@ class _SheetScaffold extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(title,
-                      style: display(20, color: AppColors.forest900)),
+                  child: Text(
+                    title,
+                    style: display(20, color: AppColors.forest900),
+                  ),
                 ),
                 ?action,
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppColors.textMuted),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -2532,8 +2873,10 @@ Widget _requestTile({
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(message.isNotEmpty ? message : t.ftWantsToConnect(name),
-            style: body(13, color: AppColors.forest900, height: 1.4)),
+        Text(
+          message.isNotEmpty ? message : t.ftWantsToConnect(name),
+          style: body(13, color: AppColors.forest900, height: 1.4),
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -2567,13 +2910,17 @@ Widget _emptyState(String title, String subtitle) {
       children: [
         const Icon(Icons.inbox_rounded, size: 40, color: AppColors.forest300),
         const SizedBox(height: 12),
-        Text(title,
-            textAlign: TextAlign.center,
-            style: display(18, color: AppColors.forest900)),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: display(18, color: AppColors.forest900),
+        ),
         const SizedBox(height: 6),
-        Text(subtitle,
-            textAlign: TextAlign.center,
-            style: body(13, color: AppColors.textMuted, height: 1.5)),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: body(13, color: AppColors.textMuted, height: 1.5),
+        ),
       ],
     ),
   );

@@ -71,7 +71,10 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
     final hasQuery = _search.text.trim().isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
@@ -81,13 +84,34 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
             Text(t.lineageStepLabel,
                 style: body(12,
                     weight: FontWeight.w700,
-                    color: AppColors.gold700,
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
+                    ),
                     letterSpacing: 1.4)),
             const SizedBox(height: 6),
-            Text(t.lineageTitle, style: display(28, color: AppColors.forest900)),
+            Text(
+              t.lineageTitle,
+              style: display(
+                28,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(t.lineageSubtitle,
-                style: body(13, color: AppColors.textMuted, height: 1.5)),
+            Text(
+              t.lineageSubtitle,
+              style: body(
+                13,
+                height: 1.5,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Search
@@ -121,8 +145,14 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
                       ? t.lineageResultsForQuery(_search.text.trim())
                       : t.lineagePotentialConnections,
                   results.length),
-              style:
-                  body(13, weight: FontWeight.w600, color: AppColors.forest800),
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
             ),
             const SizedBox(height: 10),
 
@@ -130,8 +160,16 @@ class _OnboardingLineageScreenState extends State<OnboardingLineageScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Center(
-                  child: Text(t.lineageNoMatches(_search.text.trim()),
-                      style: body(13, color: AppColors.textMuted)),
+                  child: Text(
+                    t.lineageNoMatches(_search.text.trim()),
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
                 ),
               )
             else

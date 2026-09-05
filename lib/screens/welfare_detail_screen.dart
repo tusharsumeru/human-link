@@ -54,22 +54,28 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                  gradient: AppGradients.forest, shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded,
-                  color: Colors.white, size: 24),
+                gradient: AppGradients.forest,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(t.welfareDhanyavaad,
-                  style: display(20, color: AppColors.forest900)),
+              child: Text(
+                t.welfareDhanyavaad,
+                style: display(20, color: AppColors.forest900),
+              ),
             ),
           ],
         ),
@@ -95,7 +101,10 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     final campaign = Repository.instance.welfareById(widget.id);
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -105,8 +114,10 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text(AppLocalizations.of(context).welfareMakeContribution,
-            style: display(18, color: Colors.white)),
+        title: Text(
+          AppLocalizations.of(context).welfareMakeContribution,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: campaign == null ? _notFound() : _form(campaign),
     );
@@ -118,10 +129,26 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
+          Icon(
+            Icons.search_off_rounded,
+            size: 36,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(t.welfareCampaignNotFound,
-              style: body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.welfareCampaignNotFound,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           ForestButton(
             label: t.welfareBackToWelfare,
@@ -162,11 +189,14 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                         ],
                       ),
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(18)),
+                        top: Radius.circular(18),
+                      ),
                     ),
                     child: Center(
-                      child: Text(c['image'] as String,
-                          style: const TextStyle(fontSize: 56)),
+                      child: Text(
+                        c['image'] as String,
+                        style: const TextStyle(fontSize: 56),
+                      ),
                     ),
                   ),
                   Padding(
@@ -176,32 +206,50 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                       children: [
                         Pill(c['category'] as String),
                         const SizedBox(height: 10),
-                        Text(c['title'] as String,
-                            style: display(18, color: AppColors.forest900)),
+                        Text(
+                          c['title'] as String,
+                          style: display(18, color: AppColors.forest900),
+                        ),
                         const SizedBox(height: 8),
-                        Text(c['description'] as String,
-                            style: body(13,
-                                color: AppColors.textMuted, height: 1.5)),
+                        Text(
+                          c['description'] as String,
+                          style: body(
+                            13,
+                            color: AppColors.textMuted,
+                            height: 1.5,
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         ProgressBar(
-                            value: goal == 0 ? 0 : raised / goal, height: 8),
+                          value: goal == 0 ? 0 : raised / goal,
+                          height: 8,
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Text(t.welfareRaised(formatLakh(raised)),
-                                style: body(13,
-                                    weight: FontWeight.w700,
-                                    color: AppColors.forest800)),
+                            Text(
+                              t.welfareRaised(formatLakh(raised)),
+                              style: body(
+                                13,
+                                weight: FontWeight.w700,
+                                color: AppColors.forest800,
+                              ),
+                            ),
                             const Spacer(),
-                            Text(t.welfarePctLabel(pct),
-                                style: body(12, color: AppColors.textMuted)),
+                            Text(
+                              t.welfarePctLabel(pct),
+                              style: body(12, color: AppColors.textMuted),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                            t.welfareDaysLeftContributors(
-                                c['daysLeft'] as int, c['backers'] as int),
-                            style: body(12, color: AppColors.hint)),
+                          t.welfareDaysLeftContributors(
+                            c['daysLeft'] as int,
+                            c['backers'] as int,
+                          ),
+                          style: body(12, color: AppColors.hint),
+                        ),
                       ],
                     ),
                   ),
@@ -217,27 +265,39 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                 color: AppColors.forest500.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                    color: AppColors.forest500.withValues(alpha: 0.35)),
+                  color: AppColors.forest500.withValues(alpha: 0.35),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.verified_user_rounded,
-                      size: 20, color: AppColors.forest700),
+                  const Icon(
+                    Icons.verified_user_rounded,
+                    size: 20,
+                    color: AppColors.forest700,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.welfareTransparencyPledge,
-                            style: body(13,
-                                weight: FontWeight.w700,
-                                color: AppColors.forest800)),
+                        Text(
+                          t.welfareTransparencyPledge,
+                          style: body(
+                            13,
+                            weight: FontWeight.w700,
+                            color: AppColors.forest800,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                            t.welfareTransparencyPledgeBody,
-                            style: body(12,
-                                color: AppColors.textMuted, height: 1.5)),
+                          t.welfareTransparencyPledgeBody,
+                          style: body(
+                            12,
+                            color: AppColors.textMuted,
+                            height: 1.5,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -256,8 +316,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                 for (final a in _presets)
                   _AmountChip(
                     label: '₹${formatIndian(a)}',
-                    selected:
-                        _amount == a && _customCtrl.text.trim().isEmpty,
+                    selected: _amount == a && _customCtrl.text.trim().isEmpty,
                     onTap: () => setState(() {
                       _amount = a;
                       _customCtrl.clear();
@@ -281,7 +340,8 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               controller: _nameCtrl,
               enabled: !_anonymous,
               decoration: _inputDecoration(
-                  _anonymous ? t.welfareAnonymous : t.welfareYourName),
+                _anonymous ? t.welfareAnonymous : t.welfareYourName,
+              ),
             ),
             const SizedBox(height: 6),
             SwitchListTile.adaptive(
@@ -289,8 +349,10 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               activeThumbColor: AppColors.forest700,
               value: _anonymous,
               onChanged: (v) => setState(() => _anonymous = v),
-              title: Text(t.welfareDonateAnonymously,
-                  style: body(13, weight: FontWeight.w600)),
+              title: Text(
+                t.welfareDonateAnonymously,
+                style: body(13, weight: FontWeight.w600),
+              ),
             ),
             const SizedBox(height: 8),
 
@@ -342,8 +404,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                   label: t.welfareDonateAmount(formatIndian(_finalAmount)),
                   icon: Icons.favorite_rounded,
                   expand: true,
-                  onPressed:
-                      _finalAmount <= 0 ? null : () => _submit(c),
+                  onPressed: _finalAmount <= 0 ? null : () => _submit(c),
                 ),
               ),
             ),
@@ -353,39 +414,46 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: body(11,
-          weight: FontWeight.w700,
-          color: AppColors.hint,
-          letterSpacing: 1.0));
+  Widget _label(String text) => Text(
+    text,
+    style: body(
+      11,
+      weight: FontWeight.w700,
+      color: context.onBrightness(
+        light: AppColors.hint,
+        dark: AppColors.darkTextMuted,
+      ),
+      letterSpacing: 1.0,
+    ),
+  );
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: body(14, color: AppColors.hint),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: AppColors.forest700, width: 1.5),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-              color: AppColors.border.withValues(alpha: 0.5)),
-        ),
-      );
+    hintText: hint,
+    hintStyle: body(14, color: AppColors.hint),
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+    ),
+    disabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+    ),
+  );
 }
 
 class _AmountChip extends StatelessWidget {
-  const _AmountChip(
-      {required this.label, required this.selected, required this.onTap});
+  const _AmountChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -404,12 +472,17 @@ class _AmountChip extends StatelessWidget {
             color: selected ? null : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected ? AppColors.forest800 : AppColors.border,
+            ),
           ),
-          child: Text(label,
-              style: body(14,
-                  weight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              14,
+              weight: FontWeight.w700,
+              color: selected ? Colors.white : AppColors.label,
+            ),
+          ),
         ),
       ),
     );
@@ -445,7 +518,8 @@ class _PayOption extends StatelessWidget {
                 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected ? AppColors.forest800 : AppColors.border,
+            ),
           ),
           child: Row(
             children: [
@@ -455,27 +529,36 @@ class _PayOption extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: selected
-                          ? AppColors.forest800
-                          : const Color(0xFFD1D5DB),
-                      width: 2),
+                    color: selected
+                        ? AppColors.forest800
+                        : const Color(0xFFD1D5DB),
+                    width: 2,
+                  ),
                 ),
                 child: selected
                     ? const Center(
                         child: CircleAvatar(
-                            radius: 5, backgroundColor: AppColors.forest800),
+                          radius: 5,
+                          backgroundColor: AppColors.forest800,
+                        ),
                       )
                     : null,
               ),
               const SizedBox(width: 12),
-              Icon(icon,
-                  size: 18,
-                  color:
-                      selected ? AppColors.forest800 : AppColors.textMuted),
+              Icon(
+                icon,
+                size: 18,
+                color: selected ? AppColors.forest800 : AppColors.textMuted,
+              ),
               const SizedBox(width: 10),
-              Text(label,
-                  style: body(14,
-                      weight: FontWeight.w500, color: AppColors.label)),
+              Text(
+                label,
+                style: body(
+                  14,
+                  weight: FontWeight.w500,
+                  color: AppColors.label,
+                ),
+              ),
             ],
           ),
         ),

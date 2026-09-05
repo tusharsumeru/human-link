@@ -65,14 +65,36 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: context.onBrightness(
+        light: AppColors.pageBackground,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
-        backgroundColor: AppColors.pageBackground,
+        backgroundColor: context.onBrightness(
+          light: AppColors.pageBackground,
+          dark: AppColors.darkSurface,
+        ),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: const Border(bottom: BorderSide(color: AppColors.border)),
+        shape: Border(
+          bottom: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
         centerTitle: true,
-        title: Text(t.convMessages, style: display(20, color: AppColors.forest700)),
+        title: Text(
+          t.convMessages,
+          style: display(
+            20,
+            color: context.onBrightness(
+              light: AppColors.forest700,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -82,8 +104,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   onRefresh: _load,
                   child: ListView.separated(
                     itemCount: _conversations.length,
-                    separatorBuilder: (_, __) => const Divider(
-                        height: 1, indent: 76, color: AppColors.border),
+                    separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        indent: 76,
+                        color: context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        )),
                     itemBuilder: (_, i) => _row(_conversations[i], t),
                   ),
                 ),
@@ -97,14 +124,37 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.forum_outlined, size: 48, color: AppColors.hint),
+            Icon(
+              Icons.forum_outlined,
+              size: 48,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(t.convNoMessagesYet,
-                style: display(16, color: AppColors.forest900)),
+            Text(
+              t.convNoMessagesYet,
+              style: display(
+                16,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(t.convStartChatHint,
-                textAlign: TextAlign.center,
-                style: body(13, color: AppColors.hint)),
+            Text(
+              t.convStartChatHint,
+              textAlign: TextAlign.center,
+              style: body(
+                13,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -128,17 +178,37 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: _InitialsAvatar(name: name, size: 46),
-      title: Text(name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: body(14,
-              weight: FontWeight.w700, color: AppColors.forest900)),
-      subtitle: Text(last.isEmpty ? t.convTapToChat : last,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: body(12,
-              weight: unread > 0 ? FontWeight.w700 : FontWeight.w400,
-              color: unread > 0 ? AppColors.forest800 : AppColors.hint)),
+      title: Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: body(
+          14,
+          weight: FontWeight.w700,
+          color: context.onBrightness(
+            light: AppColors.forest900,
+            dark: AppColors.darkText,
+          ),
+        ),
+      ),
+      subtitle: Text(
+        last.isEmpty ? t.convTapToChat : last,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: body(
+          12,
+          weight: unread > 0 ? FontWeight.w700 : FontWeight.w400,
+          color: unread > 0
+              ? context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                )
+              : context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+        ),
+      ),
       trailing: unread > 0
           ? Container(
               padding: const EdgeInsets.all(7),

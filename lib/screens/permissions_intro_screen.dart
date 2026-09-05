@@ -46,7 +46,10 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
@@ -63,9 +66,28 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
                 child: const Icon(Icons.shield_outlined, color: Colors.white, size: 28),
               ),
               const SizedBox(height: 20),
-              Text(t.permIntroTitle, style: display(24, color: AppColors.forest900)),
+              Text(
+                t.permIntroTitle,
+                style: display(
+                  24,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(t.permIntroBody, style: body(14, color: AppColors.textMuted, height: 1.5)),
+              Text(
+                t.permIntroBody,
+                style: body(
+                  14,
+                  height: 1.5,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
               const SizedBox(height: 28),
               _PermissionRow(
                 icon: Icons.photo_library_outlined,
@@ -97,7 +119,16 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
               Center(
                 child: TextButton(
                   onPressed: _requesting ? null : widget.onDone,
-                  child: Text(t.permSkip, style: body(13, color: AppColors.hint)),
+                  child: Text(
+                    t.permSkip,
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

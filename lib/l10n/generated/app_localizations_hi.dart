@@ -184,6 +184,18 @@ class AppLocalizationsHi extends AppLocalizations {
   String get registerFemale => 'महिला';
 
   @override
+  String get registerMaritalStatus => 'वैवाहिक स्थिति';
+
+  @override
+  String get registerMarried => 'विवाहित';
+
+  @override
+  String get registerUnmarried => 'अविवाहित';
+
+  @override
+  String get registerDivorced => 'तलाकशुदा';
+
+  @override
   String get registerGotra => 'गोत्र';
 
   @override
@@ -521,6 +533,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dashAllCaughtUp => 'आप पूरी तरह अपडेट हैं ✦';
 
   @override
+  String get dashFollow => 'फ़ॉलो करें';
+
+  @override
+  String get dashFollowing => 'फ़ॉलो कर रहे हैं';
+
+  @override
   String dashErrorCouldNotReachSuffix(String message, String baseUrl) {
     return '$message\n$baseUrl तक नहीं पहुंचा जा सका';
   }
@@ -614,6 +632,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get couldNotUpdateLike => 'लाइक अपडेट नहीं की जा सकी';
+
+  @override
+  String get couldNotUpdateFollow => 'फ़ॉलो स्थिति अपडेट नहीं हो सकी';
 
   @override
   String get savedToProfile => 'आपकी प्रोफ़ाइल में सहेजा गया';
@@ -802,6 +823,21 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profileHiddenFromMembers => 'अन्य सदस्यों से छिपा हुआ';
 
   @override
+  String get profileAppearance => 'रूप-रंग';
+
+  @override
+  String get profileAppearanceDesc => 'ऐप कैसा दिखे, चुनें।';
+
+  @override
+  String get themeSystem => 'सिस्टम';
+
+  @override
+  String get themeLight => 'लाइट';
+
+  @override
+  String get themeDark => 'डार्क';
+
+  @override
   String get profileCouldNotSave =>
       'इसे सहेजा नहीं जा सका। अपना कनेक्शन जांचें और पुनः प्रयास करें।';
 
@@ -983,6 +1019,21 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get editSelectBloodGroup => 'रक्त समूह चुनें';
+
+  @override
+  String get editMaritalStatus => 'वैवाहिक स्थिति';
+
+  @override
+  String get editSelectMaritalStatus => 'वैवाहिक स्थिति चुनें';
+
+  @override
+  String get editMarried => 'विवाहित';
+
+  @override
+  String get editUnmarried => 'अविवाहित';
+
+  @override
+  String get editDivorced => 'तलाकशुदा';
 
   @override
   String get editKuladevata => 'कुलदेवता';
@@ -1803,6 +1854,13 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get matGoToMyProfile => 'मेरी प्रोफ़ाइल पर जाएं';
+
+  @override
+  String get matNotForMarried => 'लागू नहीं';
+
+  @override
+  String get matNotForMarriedBody =>
+      'वैवाहिक हब केवल अविवाहित या तलाकशुदा सदस्यों के लिए है। आपने बताया था कि आप विवाहित हैं — अगर यह बदल गया है तो आप इसे अपनी प्रोफ़ाइल में बदल सकते हैं।';
 
   @override
   String get matReadyToPublish => 'प्रकाशित करने के लिए तैयार';

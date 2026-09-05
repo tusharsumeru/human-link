@@ -46,15 +46,22 @@ class ForestButton extends StatelessWidget {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 else ...[
                   Flexible(
-                    child: Text(label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: body(14,
-                            weight: FontWeight.w600, color: Colors.white)),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        14,
+                        weight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   if (icon != null) ...[
                     const SizedBox(width: 8),
@@ -73,12 +80,13 @@ class ForestButton extends StatelessWidget {
 
 /// Gold variant of [ForestButton].
 class GoldButton extends StatelessWidget {
-  const GoldButton(
-      {super.key,
-      required this.label,
-      this.onPressed,
-      this.icon,
-      this.expand = false});
+  const GoldButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.expand = false,
+  });
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
@@ -86,23 +94,24 @@ class GoldButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ForestButton(
-        label: label,
-        onPressed: onPressed,
-        icon: icon,
-        expand: expand,
-        gradient: AppGradients.gold,
-        shadow: AppShadows.goldGlow,
-      );
+    label: label,
+    onPressed: onPressed,
+    icon: icon,
+    expand: expand,
+    gradient: AppGradients.gold,
+    shadow: AppShadows.goldGlow,
+  );
 }
 
 /// Outlined secondary button.
 class OutlineButtonX extends StatelessWidget {
-  const OutlineButtonX(
-      {super.key,
-      required this.label,
-      this.onPressed,
-      this.color = AppColors.forest800,
-      this.expand = false});
+  const OutlineButtonX({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.color = AppColors.forest800,
+    this.expand = false,
+  });
   final String label;
   final VoidCallback? onPressed;
   final Color color;
@@ -117,13 +126,14 @@ class OutlineButtonX extends StatelessWidget {
         side: BorderSide(color: color, width: 1.5),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
         minimumSize: expand ? const Size.fromHeight(48) : null,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Text(label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: body(14, weight: FontWeight.w600, color: color)),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: body(14, weight: FontWeight.w600, color: color),
+      ),
     );
   }
 }
@@ -204,8 +214,10 @@ class Pill extends StatelessWidget {
             Icon(icon, size: fontSize + 2, color: fg),
             const SizedBox(width: 4),
           ],
-          Text(label,
-              style: body(fontSize, weight: FontWeight.w600, color: fg)),
+          Text(
+            label,
+            style: body(fontSize, weight: FontWeight.w600, color: fg),
+          ),
         ],
       ),
     );
@@ -235,21 +247,45 @@ class SectionHeader extends StatelessWidget {
       crossAxisAlignment: align,
       children: [
         if (eyebrow != null) ...[
-          Text(eyebrow!.toUpperCase(),
-              style: body(12,
-                  weight: FontWeight.w700,
-                  color: AppColors.gold700,
-                  letterSpacing: 1.4)),
+          Text(
+            eyebrow!.toUpperCase(),
+            style: body(
+              12,
+              weight: FontWeight.w700,
+              color: context.onBrightness(
+                light: AppColors.gold700,
+                dark: AppColors.goldSoft,
+              ),
+              letterSpacing: 1.4,
+            ),
+          ),
           const SizedBox(height: 6),
         ],
-        Text(title,
-            textAlign: center ? TextAlign.center : TextAlign.start,
-            style: display(titleSize, color: AppColors.forest900)),
+        Text(
+          title,
+          textAlign: center ? TextAlign.center : TextAlign.start,
+          style: display(
+            titleSize,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
         if (subtitle != null) ...[
           const SizedBox(height: 8),
-          Text(subtitle!,
-              textAlign: center ? TextAlign.center : TextAlign.start,
-              style: body(14, color: AppColors.textMuted, height: 1.5)),
+          Text(
+            subtitle!,
+            textAlign: center ? TextAlign.center : TextAlign.start,
+            style: body(
+              14,
+              height: 1.5,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
         ],
       ],
     );
@@ -258,12 +294,13 @@ class SectionHeader extends StatelessWidget {
 
 /// Gradient progress bar (welfare campaigns).
 class ProgressBar extends StatelessWidget {
-  const ProgressBar(
-      {super.key,
-      required this.value,
-      this.height = 8,
-      this.gradient = AppGradients.forest,
-      this.background = const Color(0xFFEDE6D8)});
+  const ProgressBar({
+    super.key,
+    required this.value,
+    this.height = 8,
+    this.gradient = AppGradients.forest,
+    this.background = const Color(0xFFEDE6D8),
+  });
   final double value; // 0..1
   final double height;
   final Gradient gradient;
@@ -279,8 +316,9 @@ class ProgressBar extends StatelessWidget {
           FractionallySizedBox(
             widthFactor: value.clamp(0, 1),
             child: Container(
-                height: height,
-                decoration: BoxDecoration(gradient: gradient)),
+              height: height,
+              decoration: BoxDecoration(gradient: gradient),
+            ),
           ),
         ],
       ),
@@ -345,13 +383,24 @@ class PercentageRing extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(pct != null ? '$pct%' : '-',
-                  style: display(size * 0.2, color: pct != null ? AppColors.forest900 : AppColors.hint)),
+              Text(
+                pct != null ? '$pct%' : '-',
+                style: display(
+                  size * 0.2,
+                  color: pct != null ? AppColors.forest900 : AppColors.hint,
+                ),
+              ),
               if (label != null) ...[
                 const SizedBox(height: 2),
-                Text(label!,
-                    textAlign: TextAlign.center,
-                    style: body(size * 0.075, weight: FontWeight.w600, color: AppColors.textMuted)),
+                Text(
+                  label!,
+                  textAlign: TextAlign.center,
+                  style: body(
+                    size * 0.075,
+                    weight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               ],
             ],
           ),

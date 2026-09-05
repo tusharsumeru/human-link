@@ -253,12 +253,25 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: context.onBrightness(
+        light: AppColors.pageBackground,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
-        backgroundColor: AppColors.pageBackground,
+        backgroundColor: context.onBrightness(
+          light: AppColors.pageBackground,
+          dark: AppColors.darkSurface,
+        ),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: const Border(bottom: BorderSide(color: AppColors.border)),
+        shape: Border(
+          bottom: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
         title: Row(
           children: [
             _InitialsAvatar(name: widget.otherName, size: 34),
@@ -268,7 +281,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 widget.otherName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: display(17, color: AppColors.forest900),
+                style: display(
+                  17,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
               ),
             ),
           ],
@@ -281,8 +300,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
                     ? Center(
-                        child: Text(t.chatSayHello,
-                            style: body(14, color: AppColors.hint)),
+                        child: Text(
+                          t.chatSayHello,
+                          style: body(
+                            14,
+                            color: context.onBrightness(
+                              light: AppColors.hint,
+                              dark: AppColors.darkTextMuted,
+                            ),
+                          ),
+                        ),
                       )
                     : ListView.builder(
                         controller: _scroll,
@@ -551,13 +578,27 @@ class _Bubble extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(time, style: body(10, color: AppColors.hint)),
+                  Text(
+                    time,
+                    style: body(
+                      10,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
                   if (mine) ...[
                     const SizedBox(width: 3),
                     Icon(
                       read ? Icons.done_all_rounded : Icons.done_rounded,
                       size: 13,
-                      color: read ? const Color(0xFF34B7F1) : AppColors.hint,
+                      color: read
+                          ? const Color(0xFF34B7F1)
+                          : context.onBrightness(
+                              light: AppColors.hint,
+                              dark: AppColors.darkTextMuted,
+                            ),
                     ),
                   ],
                 ],

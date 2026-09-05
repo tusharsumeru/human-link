@@ -184,6 +184,18 @@ class AppLocalizationsKn extends AppLocalizations {
   String get registerFemale => 'ಮಹಿಳೆ';
 
   @override
+  String get registerMaritalStatus => 'ವೈವಾಹಿಕ ಸ್ಥಿತಿ';
+
+  @override
+  String get registerMarried => 'ವಿವಾಹಿತ';
+
+  @override
+  String get registerUnmarried => 'ಅವಿವಾಹಿತ';
+
+  @override
+  String get registerDivorced => 'ವಿಚ್ಛೇದಿತ';
+
+  @override
   String get registerGotra => 'ಗೋತ್ರ';
 
   @override
@@ -520,6 +532,12 @@ class AppLocalizationsKn extends AppLocalizations {
   String get dashAllCaughtUp => 'ನೀವು ಸಂಪೂರ್ಣವಾಗಿ ಅಪ್‌ಡೇಟ್ ಆಗಿದ್ದೀರಿ ✦';
 
   @override
+  String get dashFollow => 'ಫಾಲೋ ಮಾಡಿ';
+
+  @override
+  String get dashFollowing => 'ಫಾಲೋ ಮಾಡಲಾಗಿದೆ';
+
+  @override
   String dashErrorCouldNotReachSuffix(String message, String baseUrl) {
     return '$message\n$baseUrl ತಲುಪಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
   }
@@ -613,6 +631,9 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get couldNotUpdateLike => 'ಲೈಕ್ ನವೀಕರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
+
+  @override
+  String get couldNotUpdateFollow => 'ಫಾಲೋ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
 
   @override
   String get savedToProfile => 'ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ಗೆ ಉಳಿಸಲಾಗಿದೆ';
@@ -803,6 +824,21 @@ class AppLocalizationsKn extends AppLocalizations {
   String get profileHiddenFromMembers => 'ಇತರ ಸದಸ್ಯರಿಂದ ಮರೆಮಾಡಲಾಗಿದೆ';
 
   @override
+  String get profileAppearance => 'ಗೋಚರತೆ';
+
+  @override
+  String get profileAppearanceDesc => 'ಅಪ್ಲಿಕೇಶನ್ ಹೇಗೆ ಕಾಣಬೇಕು ಎಂದು ಆಯ್ಕೆಮಾಡಿ.';
+
+  @override
+  String get themeSystem => 'ಸಿಸ್ಟಂ';
+
+  @override
+  String get themeLight => 'ಲೈಟ್';
+
+  @override
+  String get themeDark => 'ಡಾರ್ಕ್';
+
+  @override
   String get profileCouldNotSave =>
       'ಅದನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
@@ -985,6 +1021,21 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get editSelectBloodGroup => 'ರಕ್ತದ ಗುಂಪನ್ನು ಆಯ್ಕೆಮಾಡಿ';
+
+  @override
+  String get editMaritalStatus => 'ವೈವಾಹಿಕ ಸ್ಥಿತಿ';
+
+  @override
+  String get editSelectMaritalStatus => 'ವೈವಾಹಿಕ ಸ್ಥಿತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ';
+
+  @override
+  String get editMarried => 'ವಿವಾಹಿತ';
+
+  @override
+  String get editUnmarried => 'ಅವಿವಾಹಿತ';
+
+  @override
+  String get editDivorced => 'ವಿಚ್ಛೇದಿತ';
 
   @override
   String get editKuladevata => 'ಕುಲದೇವತೆ';
@@ -1809,6 +1860,13 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get matGoToMyProfile => 'ನನ್ನ ಪ್ರೊಫೈಲ್‌ಗೆ ಹೋಗಿ';
+
+  @override
+  String get matNotForMarried => 'ಅನ್ವಯಿಸುವುದಿಲ್ಲ';
+
+  @override
+  String get matNotForMarriedBody =>
+      'ವೈವಾಹಿಕ ಹಬ್ ಕೇವಲ ಅವಿವಾಹಿತ ಅಥವಾ ವಿಚ್ಛೇದಿತ ಸದಸ್ಯರಿಗೆ ಮಾತ್ರ. ನೀವು ವಿವಾಹಿತರೆಂದು ತಿಳಿಸಿದ್ದೀರಿ — ಇದು ಬದಲಾಗಿದ್ದರೆ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.';
 
   @override
   String get matReadyToPublish => 'ಪ್ರಕಟಿಸಲು ಸಿದ್ಧ';

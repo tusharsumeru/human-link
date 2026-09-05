@@ -39,11 +39,13 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
   void _toast(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
@@ -51,7 +53,10 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
     final conflict = Repository.instance.conflictById(widget.id);
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         foregroundColor: Colors.white,
@@ -61,8 +66,10 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _back,
         ),
-        title: Text(AppLocalizations.of(context).elderConflictResolution,
-            style: display(18, color: Colors.white)),
+        title: Text(
+          AppLocalizations.of(context).elderConflictResolution,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: conflict == null
           ? _notFound(AppLocalizations.of(context))
@@ -78,12 +85,26 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.help_outline_rounded,
-              size: 40, color: AppColors.hint),
+          Icon(
+            Icons.help_outline_rounded,
+            size: 40,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(t.elderConflictNotFound,
-              style: body(15,
-                  weight: FontWeight.w600, color: AppColors.textMuted)),
+          Text(
+            t.elderConflictNotFound,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           OutlineButtonX(label: t.elderBackToOverview, onPressed: _back),
         ],
@@ -93,8 +114,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
 
   List<Widget> _content(Map<String, dynamic> c, AppLocalizations t) {
     final isDuplicate = c['type'] == 'Duplicate';
-    final discussion =
-        (c['discussion'] as List).cast<Map<String, dynamic>>();
+    final discussion = (c['discussion'] as List).cast<Map<String, dynamic>>();
     return [
       // Caution banner header
       Container(
@@ -131,18 +151,26 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                           runSpacing: 6,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Pill(c['type'] as String,
-                                bg: AppColors.forest800.withValues(alpha: 0.10),
-                                fg: AppColors.forest800),
-                            Text(t.elderCaseId((c['id'] as String).toUpperCase()),
-                                style: body(11, color: AppColors.hint)),
+                            Pill(
+                              c['type'] as String,
+                              bg: AppColors.forest800.withValues(alpha: 0.10),
+                              fg: AppColors.forest800,
+                            ),
+                            Text(
+                              t.elderCaseId((c['id'] as String).toUpperCase()),
+                              style: body(11, color: AppColors.hint),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(c['subject'] as String,
-                            style: display(22, color: AppColors.forest900)),
-                        Text(t.elderBornDied('${c['born']}', '${c['died']}'),
-                            style: body(13, color: AppColors.textMuted)),
+                        Text(
+                          c['subject'] as String,
+                          style: display(22, color: AppColors.forest900),
+                        ),
+                        Text(
+                          t.elderBornDied('${c['born']}', '${c['died']}'),
+                          style: body(13, color: AppColors.textMuted),
+                        ),
                       ],
                     ),
                   ),
@@ -164,26 +192,37 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded,
-                          size: 16,
-                          color: isDuplicate
-                              ? const Color(0xFF92400E)
-                              : const Color(0xFF991B1B)),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: isDuplicate
+                            ? const Color(0xFF92400E)
+                            : const Color(0xFF991B1B),
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(c['conflictTitle'] as String,
-                            style: body(12,
-                                weight: FontWeight.w700,
-                                color: isDuplicate
-                                    ? const Color(0xFF92400E)
-                                    : const Color(0xFF991B1B))),
+                        child: Text(
+                          c['conflictTitle'] as String,
+                          style: body(
+                            12,
+                            weight: FontWeight.w700,
+                            color: isDuplicate
+                                ? const Color(0xFF92400E)
+                                : const Color(0xFF991B1B),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(c['conflictDesc'] as String,
-                      style: body(13,
-                          color: const Color(0xFF92400E), height: 1.5)),
+                  Text(
+                    c['conflictDesc'] as String,
+                    style: body(
+                      13,
+                      color: const Color(0xFF92400E),
+                      height: 1.5,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -192,29 +231,33 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
       ),
       const SizedBox(height: 16),
       // Versions (side-by-side wide / stacked mobile)
-      LayoutBuilder(builder: (context, constraints) {
-        final a = _versionCard(c['versionA'] as Map<String, dynamic>, 'A', t);
-        final b = _versionCard(c['versionB'] as Map<String, dynamic>, 'B', t);
-        if (constraints.maxWidth >= 720) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: a),
-              const SizedBox(width: 14),
-              Expanded(child: b),
-            ],
-          );
-        }
-        return Column(children: [a, const SizedBox(height: 14), b]);
-      }),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final a = _versionCard(c['versionA'] as Map<String, dynamic>, 'A', t);
+          final b = _versionCard(c['versionB'] as Map<String, dynamic>, 'B', t);
+          if (constraints.maxWidth >= 720) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: a),
+                const SizedBox(width: 14),
+                Expanded(child: b),
+              ],
+            );
+          }
+          return Column(children: [a, const SizedBox(height: 14), b]);
+        },
+      ),
       const SizedBox(height: 16),
       // Resolution actions
       AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.elderResolution,
-                style: display(18, color: AppColors.forest900)),
+            Text(
+              t.elderResolution,
+              style: display(18, color: AppColors.forest900),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
@@ -234,11 +277,16 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.shield_outlined,
-                    size: 13, color: AppColors.hint),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 13,
+                  color: AppColors.hint,
+                ),
                 const SizedBox(width: 5),
-                Text(t.elderOnlyEldersResolve,
-                    style: body(11, color: AppColors.hint)),
+                Text(
+                  t.elderOnlyEldersResolve,
+                  style: body(11, color: AppColors.hint),
+                ),
               ],
             ),
           ],
@@ -252,11 +300,16 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.forum_rounded,
-                    size: 16, color: AppColors.gold700),
+                const Icon(
+                  Icons.forum_rounded,
+                  size: 16,
+                  color: AppColors.gold700,
+                ),
                 const SizedBox(width: 8),
-                Text(t.elderDiscussionThread,
-                    style: display(17, color: AppColors.forest900)),
+                Text(
+                  t.elderDiscussionThread,
+                  style: display(17, color: AppColors.forest900),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -275,7 +328,9 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                       hintStyle: body(13, color: AppColors.hint),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       filled: true,
                       fillColor: const Color(0xFFF7F0E8),
                       enabledBorder: OutlineInputBorder(
@@ -284,8 +339,9 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.forest700),
+                        borderSide: const BorderSide(
+                          color: AppColors.forest700,
+                        ),
                       ),
                     ),
                   ),
@@ -303,8 +359,11 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     },
                     child: const Padding(
                       padding: EdgeInsets.all(13),
-                      child: Icon(Icons.send_rounded,
-                          size: 18, color: Colors.white),
+                      child: Icon(
+                        Icons.send_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -317,7 +376,11 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
     ];
   }
 
-  Widget _versionCard(Map<String, dynamic> v, String letter, AppLocalizations t) {
+  Widget _versionCard(
+    Map<String, dynamic> v,
+    String letter,
+    AppLocalizations t,
+  ) {
     final backed = v['backed'] as bool;
     final fields = (v['fields'] as List).cast<Map<String, dynamic>>();
     final evidence = (v['evidence'] as List).cast<String>();
@@ -328,7 +391,9 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: backed ? AppColors.forest800 : AppColors.border),
+        border: Border.all(
+          color: backed ? AppColors.forest800 : AppColors.border,
+        ),
         boxShadow: AppShadows.soft,
       ),
       clipBehavior: Clip.antiAlias,
@@ -342,13 +407,20 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
               color: const Color(0xFFD1FAE5),
               child: Row(
                 children: [
-                  const Icon(Icons.thumb_up_alt_rounded,
-                      size: 12, color: Color(0xFF065F46)),
+                  const Icon(
+                    Icons.thumb_up_alt_rounded,
+                    size: 12,
+                    color: Color(0xFF065F46),
+                  ),
                   const SizedBox(width: 6),
-                  Text(t.elderBackedByRecords(votes),
-                      style: body(11,
-                          weight: FontWeight.w700,
-                          color: const Color(0xFF065F46))),
+                  Text(
+                    t.elderBackedByRecords(votes),
+                    style: body(
+                      11,
+                      weight: FontWeight.w700,
+                      color: const Color(0xFF065F46),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -367,15 +439,21 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                         color: color,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(letter,
-                          style: display(18, color: Colors.white)),
+                      child: Text(
+                        letter,
+                        style: display(18, color: Colors.white),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(v['label'] as String,
-                          style: body(13,
-                              weight: FontWeight.w700,
-                              color: AppColors.forest900)),
+                      child: Text(
+                        v['label'] as String,
+                        style: body(
+                          13,
+                          weight: FontWeight.w700,
+                          color: AppColors.forest900,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -386,25 +464,35 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(f['label'] as String,
-                            style: body(12, color: AppColors.textMuted)),
+                        Text(
+                          f['label'] as String,
+                          style: body(12, color: AppColors.textMuted),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(f['value'] as String,
-                              textAlign: TextAlign.right,
-                              style: body(12,
-                                  weight: FontWeight.w600,
-                                  color: AppColors.forest900)),
+                          child: Text(
+                            f['value'] as String,
+                            textAlign: TextAlign.right,
+                            style: body(
+                              12,
+                              weight: FontWeight.w600,
+                              color: AppColors.forest900,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 const Divider(height: 20, color: AppColors.border),
-                Text(t.elderEvidence,
-                    style: body(10,
-                        weight: FontWeight.w700,
-                        color: AppColors.hint,
-                        letterSpacing: 1.2)),
+                Text(
+                  t.elderEvidence,
+                  style: body(
+                    10,
+                    weight: FontWeight.w700,
+                    color: AppColors.hint,
+                    letterSpacing: 1.2,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -413,7 +501,9 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     for (final e in evidence)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF7F0E8),
                           borderRadius: BorderRadius.circular(8),
@@ -422,12 +512,17 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.description_outlined,
-                                size: 12, color: AppColors.gold700),
+                            const Icon(
+                              Icons.description_outlined,
+                              size: 12,
+                              color: AppColors.gold700,
+                            ),
                             const SizedBox(width: 6),
                             Flexible(
-                              child: Text(e,
-                                  style: body(11, color: AppColors.label)),
+                              child: Text(
+                                e,
+                                style: body(11, color: AppColors.label),
+                              ),
                             ),
                           ],
                         ),
@@ -445,20 +540,27 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                   child: Row(
                     children: [
                       PexelsImage(
-                          url: v['submittedPhoto'] as String,
-                          name: v['submittedBy'] as String,
-                          size: 32),
+                        url: v['submittedPhoto'] as String,
+                        name: v['submittedBy'] as String,
+                        size: 32,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(v['submittedBy'] as String,
-                                style: body(11,
-                                    weight: FontWeight.w600,
-                                    color: AppColors.forest900)),
-                            Text(t.elderSubmittedThisVersion,
-                                style: body(10, color: AppColors.hint)),
+                            Text(
+                              v['submittedBy'] as String,
+                              style: body(
+                                11,
+                                weight: FontWeight.w600,
+                                color: AppColors.forest900,
+                              ),
+                            ),
+                            Text(
+                              t.elderSubmittedThisVersion,
+                              style: body(10, color: AppColors.hint),
+                            ),
                           ],
                         ),
                       ),
@@ -471,9 +573,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                   icon: Icons.thumb_up_alt_outlined,
                   expand: true,
                   gradient: backed ? AppGradients.forest : AppGradients.gold,
-                  shadow: backed
-                      ? AppShadows.forestGlow
-                      : AppShadows.goldGlow,
+                  shadow: backed ? AppShadows.forestGlow : AppShadows.goldGlow,
                   onPressed: () =>
                       _toast(t.elderYouSupported(v['label'] as String)),
                 ),
@@ -492,9 +592,10 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PexelsImage(
-              url: d['photo'] as String,
-              name: d['author'] as String,
-              size: 38),
+            url: d['photo'] as String,
+            name: d['author'] as String,
+            size: 38,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -508,19 +609,27 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(d['author'] as String,
-                              style: body(13,
-                                  weight: FontWeight.w700,
-                                  color: AppColors.forest900)),
-                          Pill(d['role'] as String,
-                              bg: const Color(0xFFD1FAE5),
-                              fg: const Color(0xFF065F46),
-                              fontSize: 10),
+                          Text(
+                            d['author'] as String,
+                            style: body(
+                              13,
+                              weight: FontWeight.w700,
+                              color: AppColors.forest900,
+                            ),
+                          ),
+                          Pill(
+                            d['role'] as String,
+                            bg: const Color(0xFFD1FAE5),
+                            fg: const Color(0xFF065F46),
+                            fontSize: 10,
+                          ),
                         ],
                       ),
                     ),
-                    Text(d['time'] as String,
-                        style: body(10, color: AppColors.hint)),
+                    Text(
+                      d['time'] as String,
+                      style: body(10, color: AppColors.hint),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -532,8 +641,10 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Text(d['text'] as String,
-                      style: body(12, color: AppColors.label, height: 1.5)),
+                  child: Text(
+                    d['text'] as String,
+                    style: body(12, color: AppColors.label, height: 1.5),
+                  ),
                 ),
               ],
             ),

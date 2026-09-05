@@ -12,9 +12,11 @@ import 'matrimonial_list_screen.dart';
 ///
 /// `GET /api/matrimonial/eligibility` is the single source of truth for who
 /// gets in — the same check the browse endpoint enforces server-side, so this
-/// screen can never let someone through the API would refuse. Three gates, in
+/// screen can never let someone through the API would refuse. Four gates, in
 /// the order the member has to clear them:
 ///
+///   0. marital status ('unmarried'/'divorced' — a 'married' member is
+///      turned away outright, no path forward from here),
 ///   1. age within the permitted range (derived from their date of birth),
 ///   2. every required profile field filled in,
 ///   3. the profile has been published.
@@ -69,15 +71,17 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
     try {
       await Repository.instance.publishMatrimonialProfile();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(t.matProfileLive),
-      ));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.matProfileLive)));
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is ApiException ? e.message : t.matCouldNotPublish),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is ApiException ? e.message : t.matCouldNotPublish),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -128,11 +132,24 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
     final status = (e['status'] ?? 'none').toString();
     final missing = ((e['missing'] as List?) ?? const [])
         .whereType<Map>()
-        .map((m) => (
-              key: (m['key'] ?? '').toString(),
-              label: (m['label'] ?? m['key'] ?? '').toString(),
-            ))
+        .map(
+          (m) => (
+            key: (m['key'] ?? '').toString(),
+            label: (m['label'] ?? m['key'] ?? '').toString(),
+          ),
+        )
         .toList();
+
+    // Gate 0 — marital status. Absent on an older backend that predates this
+    // field, so only a literal `false` blocks — never its mere absence.
+    if (e['maritalStatusEligible'] == false) {
+      return _Panel(
+        icon: Icons.info_outline_rounded,
+        title: t.matNotForMarried,
+        message: t.matNotForMarriedBody,
+        action: (t.matGoToMyProfile, _goToProfile),
+      );
+    }
 
     // Gate 1 — age. Nothing else matters until this passes, so it's the only
     // thing shown; listing 20 missing fields to a 16-year-old would be noise.
@@ -142,7 +159,11 @@ class _MatrimonialGateScreenState extends State<MatrimonialGateScreen> {
         title: age == null ? t.matAddDob : t.matNotAvailable,
         message: age == null
             ? t.matAgeRangeAddDob('${range['min']}', '${range['max']}')
-            : t.matAgeRangeYourAge('${range['min']}', '${range['max']}', '$age'),
+            : t.matAgeRangeYourAge(
+                '${range['min']}',
+                '${range['max']}',
+                '$age',
+              ),
         action: age == null ? (t.matGoToMyProfile, _goToProfile) : null,
       );
     }
@@ -208,17 +229,25 @@ class _ChecklistPanel extends StatelessWidget {
   // server reads off the user document; everything else lives on the
   // matrimonial profile.
   static const _userFieldKeys = {
-    'name', 'dob', 'gender', 'gotra', 'native', 'occupation', 'profileUrl',
+    'name',
+    'dob',
+    'gender',
+    'gotra',
+    'native',
+    'occupation',
+    'profileUrl',
   };
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final complete = missing.isEmpty;
-    final fromProfile =
-        missing.where((m) => _userFieldKeys.contains(m.key)).toList();
-    final fromMatrimonial =
-        missing.where((m) => !_userFieldKeys.contains(m.key)).toList();
+    final fromProfile = missing
+        .where((m) => _userFieldKeys.contains(m.key))
+        .toList();
+    final fromMatrimonial = missing
+        .where((m) => !_userFieldKeys.contains(m.key))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -236,18 +265,18 @@ class _ChecklistPanel extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.favorite_rounded,
-                      color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
-                  Text(t.matHubTitle,
-                      style: display(17, color: Colors.white)),
+                  Text(t.matHubTitle, style: display(17, color: Colors.white)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                complete
-                    ? t.matProfileCompletePublish
-                    : t.matCompleteToEnter,
+                complete ? t.matProfileCompletePublish : t.matCompleteToEnter,
                 style: body(13, color: Colors.white70, height: 1.4),
               ),
             ],
@@ -258,15 +287,30 @@ class _ChecklistPanel extends StatelessWidget {
         if (!complete) ...[
           Row(
             children: [
-              Text(t.matStillToFill,
-                  style: body(11,
-                      weight: FontWeight.w700,
-                      color: AppColors.gold700,
-                      letterSpacing: 1.6)),
+              Text(
+                t.matStillToFill,
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
+                  letterSpacing: 1.6,
+                ),
+              ),
               const Spacer(),
-              Text(t.matRemaining(missing.length),
-                  style: body(12,
-                      weight: FontWeight.w600, color: AppColors.textMuted)),
+              Text(
+                t.matRemaining(missing.length),
+                style: body(
+                  12,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -274,29 +318,43 @@ class _ChecklistPanel extends StatelessWidget {
           // Grouped by the form that fixes them, so tapping a button always
           // leads to the fields listed directly above it.
           if (fromProfile.isNotEmpty) ...[
-            _groupHeading(t.matInYourProfile),
-            ...fromProfile.map((m) => _row(m.label)),
+            _groupHeading(context, t.matInYourProfile),
+            ...fromProfile.map((m) => _row(context, m.label)),
             const SizedBox(height: 10),
             _button(t.matEditMyProfile, onEditProfile, filled: true),
             const SizedBox(height: 18),
           ],
           if (fromMatrimonial.isNotEmpty) ...[
-            _groupHeading(t.matInYourMatrimonialDetails),
-            ...fromMatrimonial.map((m) => _row(m.label)),
+            _groupHeading(context, t.matInYourMatrimonialDetails),
+            ...fromMatrimonial.map((m) => _row(context, m.label)),
             const SizedBox(height: 10),
-            _button(t.matAddMatrimonialDetails, onEditMatrimonial,
-                filled: fromProfile.isEmpty),
+            _button(
+              t.matAddMatrimonialDetails,
+              onEditMatrimonial,
+              filled: fromProfile.isEmpty,
+            ),
           ],
         ] else ...[
           Row(
             children: [
-              const Icon(Icons.check_circle_rounded,
-                  size: 20, color: AppColors.forest600),
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 20,
+                color: AppColors.forest600,
+              ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(t.matAllDetailsFilledIn,
-                    style: body(14,
-                        weight: FontWeight.w600, color: AppColors.forest900)),
+                child: Text(
+                  t.matAllDetailsFilledIn,
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -307,13 +365,14 @@ class _ChecklistPanel extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.forest800,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: submitting ? null : onSubmit,
               child: Text(
-                  submitting ? t.matPublishing : t.matPublishMyProfile,
-                  style: body(14,
-                      weight: FontWeight.w700, color: Colors.white)),
+                submitting ? t.matPublishing : t.matPublishMyProfile,
+                style: body(14, weight: FontWeight.w700, color: Colors.white),
+              ),
             ),
           ),
         ],
@@ -321,32 +380,62 @@ class _ChecklistPanel extends StatelessWidget {
         const SizedBox(height: 14),
         Text(
           t.matOptionalAadhaarNote,
-          style: body(12, color: AppColors.textMuted, height: 1.4),
+          style: body(
+            12,
+            height: 1.4,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _groupHeading(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: body(13,
-                weight: FontWeight.w700, color: AppColors.forest900)),
-      );
-
-  Widget _row(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 2),
-        child: Row(
-          children: [
-            const Icon(Icons.radio_button_unchecked,
-                size: 17, color: AppColors.hint),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(label, style: body(14, color: AppColors.ink)),
-            ),
-          ],
+  Widget _groupHeading(BuildContext context, String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: body(
+        13,
+        weight: FontWeight.w700,
+        color: context.onBrightness(
+          light: AppColors.forest900,
+          dark: AppColors.darkText,
         ),
-      );
+      ),
+    ),
+  );
+
+  Widget _row(BuildContext context, String label) => Padding(
+    padding: const EdgeInsets.only(bottom: 8, left: 2),
+    child: Row(
+      children: [
+        Icon(
+          Icons.radio_button_unchecked,
+          size: 17,
+          color: context.onBrightness(
+            light: AppColors.hint,
+            dark: AppColors.darkTextMuted,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _button(String label, VoidCallback onTap, {required bool filled}) =>
       SizedBox(
@@ -356,23 +445,31 @@ class _ChecklistPanel extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.forest800,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: onTap,
-                child: Text(label,
-                    style: body(14,
-                        weight: FontWeight.w700, color: Colors.white)),
+                child: Text(
+                  label,
+                  style: body(14, weight: FontWeight.w700, color: Colors.white),
+                ),
               )
             : OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.forest800),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: onTap,
-                child: Text(label,
-                    style: body(14,
-                        weight: FontWeight.w700, color: AppColors.forest800)),
+                child: Text(
+                  label,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
               ),
       );
 }
@@ -403,19 +500,38 @@ class _Panel extends StatelessWidget {
           Container(
             width: 66,
             height: 66,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.creamDark,
+              color: context.onBrightness(
+                light: AppColors.creamDark,
+                dark: AppColors.darkSurface,
+              ),
             ),
             child: Icon(icon, size: 30, color: AppColors.forest700),
           ),
           const SizedBox(height: 16),
-          Text(title, style: display(18, color: AppColors.forest900)),
+          Text(
+            title,
+            style: display(
+              18,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: body(14, color: AppColors.textMuted, height: 1.45),
+            style: body(
+              14,
+              height: 1.45,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
           if (action != null) ...[
             const SizedBox(height: 20),
@@ -425,13 +541,15 @@ class _Panel extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.forest800,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(horizontal: 26),
                 ),
                 onPressed: action!.$2,
-                child: Text(action!.$1,
-                    style: body(14,
-                        weight: FontWeight.w700, color: Colors.white)),
+                child: Text(
+                  action!.$1,
+                  style: body(14, weight: FontWeight.w700, color: Colors.white),
+                ),
               ),
             ),
           ],

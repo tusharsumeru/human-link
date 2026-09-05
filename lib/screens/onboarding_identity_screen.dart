@@ -44,8 +44,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text(AppLocalizations.of(context).identityErrorCapture('$e'))),
+          content: Text(
+            AppLocalizations.of(context).identityErrorCapture('$e'),
+          ),
+        ),
       );
     }
   }
@@ -59,13 +61,15 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
     if (user != null) {
       if (_selfie != null) {
         final bytes = await File(_selfie!.path).readAsBytes();
-        photoUrl = await Repository.instance
-            .uploadImage(phone: user.phone, type: 'selfie', bytes: bytes);
+        photoUrl = await Repository.instance.uploadImage(
+          phone: user.phone,
+          type: 'selfie',
+          bytes: bytes,
+        );
       }
-      await auth.updateUser(user.copyWith(
-        photoPath: _selfie?.path,
-        photoUrl: photoUrl,
-      ));
+      await auth.updateUser(
+        user.copyWith(photoPath: _selfie?.path, photoUrl: photoUrl),
+      );
     }
     if (!mounted) return;
     setState(() => _saving = false);
@@ -76,23 +80,51 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           children: [
             const OnboardingStepHeader(current: 1),
             const SizedBox(height: 22),
-            Text(t.identityStepLabel,
-                style: body(12,
-                    weight: FontWeight.w700,
-                    color: AppColors.gold700,
-                    letterSpacing: 1.4)),
+            Text(
+              t.identityStepLabel,
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+                letterSpacing: 1.4,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(t.identityTitle, style: display(28, color: AppColors.forest900)),
+            Text(
+              t.identityTitle,
+              style: display(
+                28,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(t.identitySubtitle,
-                style: body(13, color: AppColors.textMuted, height: 1.5)),
+            Text(
+              t.identitySubtitle,
+              style: body(
+                13,
+                height: 1.5,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 18),
             AppCard(
               child: DigilockerCard(description: t.identityDigilockerDesc),
@@ -102,10 +134,14 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.identitySelfieVerification,
-                      style: body(12,
-                          weight: FontWeight.w600,
-                          color: AppColors.forest800)),
+                  Text(
+                    t.identitySelfieVerification,
+                    style: body(
+                      12,
+                      weight: FontWeight.w600,
+                      color: AppColors.forest800,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   _selfieTile(t),
                 ],
@@ -135,8 +171,9 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color:
-              done ? AppColors.forest600.withValues(alpha: 0.08) : Colors.white,
+          color: done
+              ? AppColors.forest600.withValues(alpha: 0.08)
+              : Colors.white,
           border: Border.all(
             color: done ? AppColors.forest600 : AppColors.border,
             width: 1.5,
@@ -154,8 +191,11 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
               ),
               child: done
                   ? Image.file(File(_selfie!.path), fit: BoxFit.cover)
-                  : const Icon(Icons.camera_alt_outlined,
-                      size: 24, color: AppColors.gold700),
+                  : const Icon(
+                      Icons.camera_alt_outlined,
+                      size: 24,
+                      color: AppColors.gold700,
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -163,24 +203,33 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      done
-                          ? t.identitySelfieCaptured
-                          : t.identitySelfiePrompt,
-                      style: body(13,
-                          weight: FontWeight.w600, color: AppColors.ink)),
+                    done ? t.identitySelfieCaptured : t.identitySelfiePrompt,
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
                   if (!done) ...[
                     const SizedBox(height: 2),
-                    Text(t.identityOpenCamera,
-                        style: body(11,
-                            weight: FontWeight.w600,
-                            color: AppColors.forest700)),
+                    Text(
+                      t.identityOpenCamera,
+                      style: body(
+                        11,
+                        weight: FontWeight.w600,
+                        color: AppColors.forest700,
+                      ),
+                    ),
                   ],
                 ],
               ),
             ),
             if (done)
-              const Icon(Icons.check_circle,
-                  size: 20, color: AppColors.forest700),
+              const Icon(
+                Icons.check_circle,
+                size: 20,
+                color: AppColors.forest700,
+              ),
           ],
         ),
       ),
@@ -204,12 +253,20 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined,
-                  size: 16, color: AppColors.gold500),
+              const Icon(
+                Icons.shield_outlined,
+                size: 16,
+                color: AppColors.gold500,
+              ),
               const SizedBox(width: 8),
-              Text(t.identityTrustSecurity,
-                  style: body(13,
-                      weight: FontWeight.w700, color: AppColors.gold500)),
+              Text(
+                t.identityTrustSecurity,
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: AppColors.gold500,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -221,8 +278,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                   Icon(icon, size: 14, color: AppColors.forest500),
                   const SizedBox(width: 8),
                   Expanded(
-                    child:
-                        Text(text, style: body(12, color: AppColors.forest300)),
+                    child: Text(
+                      text,
+                      style: body(12, color: AppColors.forest300),
+                    ),
                   ),
                 ],
               ),
@@ -231,7 +290,6 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
       ),
     );
   }
-
 }
 
 /// Shared 3-dot step progress header used by the onboarding flow.
@@ -244,7 +302,11 @@ class OnboardingStepHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final labels = [t.onboardStepIdentity, t.onboardStepLineage, t.onboardStepHeritage];
+    final labels = [
+      t.onboardStepIdentity,
+      t.onboardStepLineage,
+      t.onboardStepHeritage,
+    ];
     return Column(
       children: [
         Row(
@@ -260,14 +322,24 @@ class OnboardingStepHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (int i = 0; i < 3; i++)
-              Text(labels[i],
-                  style: body(11,
-                      weight: (i + 1) == current
-                          ? FontWeight.w700
-                          : FontWeight.w400,
-                      color: (i + 1) == current
-                          ? AppColors.forest800
-                          : AppColors.textMuted)),
+              Text(
+                labels[i],
+                style: body(
+                  11,
+                  weight: (i + 1) == current
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                  color: (i + 1) == current
+                      ? context.onBrightness(
+                          light: AppColors.forest800,
+                          dark: AppColors.forest300,
+                        )
+                      : context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                ),
+              ),
           ],
         ),
       ],
@@ -290,10 +362,14 @@ class OnboardingStepHeader extends StatelessWidget {
       ),
       child: done
           ? const Icon(Icons.check, size: 16, color: Colors.white)
-          : Text('$step',
-              style: body(13,
-                  weight: FontWeight.w700,
-                  color: active ? Colors.white : AppColors.hint)),
+          : Text(
+              '$step',
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: active ? Colors.white : AppColors.hint,
+              ),
+            ),
     );
   }
 
@@ -332,9 +408,10 @@ class OnboardingField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: body(12,
-                weight: FontWeight.w600, color: AppColors.forest800)),
+        Text(
+          label,
+          style: body(12, weight: FontWeight.w600, color: AppColors.forest800),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -345,16 +422,20 @@ class OnboardingField extends StatelessWidget {
             hintStyle: body(14, color: AppColors.hint),
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.forest700, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.forest700,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -383,9 +464,10 @@ class OnboardingDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: body(12,
-                weight: FontWeight.w600, color: AppColors.forest800)),
+        Text(
+          label,
+          style: body(12, weight: FontWeight.w600, color: AppColors.forest800),
+        ),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -398,9 +480,16 @@ class OnboardingDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down,
-                  color: AppColors.forest700),
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: AppColors.forest700,
+              ),
               style: body(14, color: AppColors.ink),
+              // The field itself is always white — pin the popup to match
+              // rather than let it inherit the app's dark theme surface,
+              // which would leave this same ink-colored text unreadable
+              // when open.
+              dropdownColor: Colors.white,
               items: [
                 for (final it in items)
                   DropdownMenuItem(value: it, child: Text(it)),

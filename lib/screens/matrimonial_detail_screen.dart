@@ -65,7 +65,10 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
     final candidate = _candidate;
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -75,14 +78,16 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text(AppLocalizations.of(context).matCandidateProfile,
-            style: display(18, color: Colors.white)),
+        title: Text(
+          AppLocalizations.of(context).matCandidateProfile,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : candidate == null
-              ? _notFound()
-              : _CandidateDetail(candidate: candidate),
+          ? _notFound()
+          : _CandidateDetail(candidate: candidate),
     );
   }
 
@@ -92,10 +97,26 @@ class _MatrimonialDetailScreenState extends State<MatrimonialDetailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
+          Icon(
+            Icons.search_off_rounded,
+            size: 36,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(t.matProfileNotFound,
-              style: body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.matProfileNotFound,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           ForestButton(
             label: t.matBackToHub,
@@ -134,61 +155,74 @@ class _CandidateDetail extends StatelessWidget {
                 title: t.matMatchSummary,
                 icon: Icons.favorite_rounded,
                 child: DiscoveryMatchDetail(
-                    discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?),
+                  discoveryMatch: c['discoveryMatch'] as Map<String, dynamic>?,
+                ),
               ),
               const SizedBox(height: 14),
             ],
             _section(
               title: t.matProfessional,
               icon: Icons.business_center_outlined,
-              child: _KeyValueGrid(pairs: [
-                (t.matEducation, c['education'] as String),
-                (t.matCompany, c['company'] as String),
-                (t.matDesignation, c['designation'] as String),
-                (t.matAnnualIncome, c['income'] as String),
-              ]),
+              child: _KeyValueGrid(
+                pairs: [
+                  (t.matEducation, c['education'] as String),
+                  (t.matCompany, c['company'] as String),
+                  (t.matDesignation, c['designation'] as String),
+                  (t.matAnnualIncome, c['income'] as String),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _section(
               title: t.matPersonal,
               icon: Icons.person_outline_rounded,
-              child: _KeyValueGrid(pairs: [
-                (t.matHeight, c['height'] as String),
-                (t.matComplexion, c['complexion'] as String),
-                (t.matFamilyType, c['familyType'] as String),
-              ]),
+              child: _KeyValueGrid(
+                pairs: [
+                  (t.matHeight, c['height'] as String),
+                  (t.matComplexion, c['complexion'] as String),
+                  (t.matFamilyType, c['familyType'] as String),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _section(
               title: t.matFamily,
               icon: Icons.groups_outlined,
-              child: _KeyValueColumn(pairs: [
-                (t.matFather, c['fatherOccupation'] as String),
-                (t.matMother, c['motherOccupation'] as String),
-                (t.matSiblings, c['siblings'] as String),
-              ]),
+              child: _KeyValueColumn(
+                pairs: [
+                  (t.matFather, c['fatherOccupation'] as String),
+                  (t.matMother, c['motherOccupation'] as String),
+                  (t.matSiblings, c['siblings'] as String),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _section(
               title: t.matHoroscope,
               icon: Icons.star_outline_rounded,
               iconColor: AppColors.gold700,
-              child: _KeyValueGrid(pairs: [
-                (t.matStarNakshatra, c['star'] as String),
-                (t.matRashi, c['rashi'] as String),
-                (t.matMangal,
+              child: _KeyValueGrid(
+                pairs: [
+                  (t.matStarNakshatra, c['star'] as String),
+                  (t.matRashi, c['rashi'] as String),
+                  (
+                    t.matMangal,
                     // The API sends a real boolean; null means "not answered".
-                    c['mangal'] == true ? t.matMangalik : t.matNonMangalik),
-                (t.matGotraSurname, c['gotraSurname'] as String),
-                (t.matTimeOfBirth, c['timeOfBirth'] as String),
-              ]),
+                    c['mangal'] == true ? t.matMangalik : t.matNonMangalik,
+                  ),
+                  (t.matGotraSurname, c['gotraSurname'] as String),
+                  (t.matTimeOfBirth, c['timeOfBirth'] as String),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _section(
               title: t.matAbout,
               icon: Icons.notes_rounded,
-              child: Text(c['about'] as String,
-                  style: body(13, color: AppColors.textMuted, height: 1.6)),
+              child: Text(
+                c['about'] as String,
+                style: body(13, color: AppColors.textMuted, height: 1.6),
+              ),
             ),
             if ((c['interests'] as List?)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 14),
@@ -201,8 +235,11 @@ class _CandidateDetail extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     for (final i in (c['interests'] as List))
-                      Pill(_titleCase(i.toString()),
-                          bg: const Color(0xFFF7F0E8), fg: AppColors.gold700),
+                      Pill(
+                        _titleCase(i.toString()),
+                        bg: const Color(0xFFF7F0E8),
+                        fg: AppColors.gold700,
+                      ),
                   ],
                 ),
               ),
@@ -301,8 +338,10 @@ class _PhotoHeader extends StatelessWidget {
                 top: 14,
                 left: 14,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(999),
@@ -310,13 +349,20 @@ class _PhotoHeader extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.verified,
-                          size: 14, color: AppColors.gold500),
+                      const Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: AppColors.gold500,
+                      ),
                       const SizedBox(width: 5),
-                      Text(AppLocalizations.of(context).matVerified,
-                          style: body(11,
-                              weight: FontWeight.w700,
-                              color: AppColors.forest800)),
+                      Text(
+                        AppLocalizations.of(context).matVerified,
+                        style: body(
+                          11,
+                          weight: FontWeight.w700,
+                          color: AppColors.forest800,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -328,16 +374,23 @@ class _PhotoHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${c['name']}, ${c['age']}',
-                      style: display(24, color: Colors.white)),
+                  Text(
+                    '${c['name']}, ${c['age']}',
+                    style: display(24, color: Colors.white),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          size: 14, color: AppColors.forest300),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: AppColors.forest300,
+                      ),
                       const SizedBox(width: 4),
-                      Text('${c['location']} · ${c['height']}',
-                          style: body(13, color: AppColors.forest300)),
+                      Text(
+                        '${c['location']} · ${c['height']}',
+                        style: body(13, color: AppColors.forest300),
+                      ),
                     ],
                   ),
                 ],
@@ -356,21 +409,23 @@ class _KeyValueGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      const spacing = 12.0;
-      final colWidth = (constraints.maxWidth - spacing) / 2;
-      return Wrap(
-        spacing: spacing,
-        runSpacing: 12,
-        children: [
-          for (final (label, value) in pairs)
-            SizedBox(
-              width: colWidth,
-              child: _KeyValue(label: label, value: value),
-            ),
-        ],
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final colWidth = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 12,
+          children: [
+            for (final (label, value) in pairs)
+              SizedBox(
+                width: colWidth,
+                child: _KeyValue(label: label, value: value),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -402,13 +457,15 @@ class _KeyValue extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: body(11,
-                weight: FontWeight.w600, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: body(11, weight: FontWeight.w600, color: AppColors.textMuted),
+        ),
         const SizedBox(height: 3),
-        Text(value,
-            style:
-                body(13, weight: FontWeight.w600, color: AppColors.forest900)),
+        Text(
+          value,
+          style: body(13, weight: FontWeight.w600, color: AppColors.forest900),
+        ),
       ],
     );
   }
@@ -436,14 +493,18 @@ class _ExpectationsList extends StatelessWidget {
                   color: Color(0xFFD1FAE5),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_rounded,
-                    size: 12, color: Color(0xFF065F46)),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 12,
+                  color: Color(0xFF065F46),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(items[i],
-                    style:
-                        body(13, color: AppColors.textMuted, height: 1.5)),
+                child: Text(
+                  items[i],
+                  style: body(13, color: AppColors.textMuted, height: 1.5),
+                ),
               ),
             ],
           ),
@@ -464,10 +525,11 @@ class _Footer extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(t.matPremiumProfileTitle,
-            style: display(18, color: AppColors.forest900)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          t.matPremiumProfileTitle,
+          style: display(18, color: AppColors.forest900),
+        ),
         content: Text(
           t.matPremiumProfileBody,
           style: body(13, color: AppColors.textMuted, height: 1.5),
@@ -486,18 +548,20 @@ class _Footer extends StatelessWidget {
   // pushes CompatibilityScreen (and only then, on a further tap inside it,
   // an actual calculation) once the member confirms Continue there.
   void _checkCompatibility(BuildContext context, String myProfileId) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => CompatibilityCheckScreen(
-        myProfileId: myProfileId,
-        // candidate['id'] is the matrimonial *profile's* own id (what
-        // /api/matrimonial/:id routes on) — compatibility, like every other
-        // endpoint, is keyed on the account id, which is candidate['userId'].
-        candidateProfileId: (candidate['userId'] ?? '').toString(),
-        candidateName: (candidate['name'] ?? '').toString(),
-        candidateGender: (candidate['gender'] ?? '').toString(),
-        discoveryMatch: candidate['discoveryMatch'] as Map<String, dynamic>?,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompatibilityCheckScreen(
+          myProfileId: myProfileId,
+          // candidate['id'] is the matrimonial *profile's* own id (what
+          // /api/matrimonial/:id routes on) — compatibility, like every other
+          // endpoint, is keyed on the account id, which is candidate['userId'].
+          candidateProfileId: (candidate['userId'] ?? '').toString(),
+          candidateName: (candidate['name'] ?? '').toString(),
+          candidateGender: (candidate['gender'] ?? '').toString(),
+          discoveryMatch: candidate['discoveryMatch'] as Map<String, dynamic>?,
+        ),
       ),
-    ));
+    );
   }
 
   @override

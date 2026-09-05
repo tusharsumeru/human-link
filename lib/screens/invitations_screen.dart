@@ -132,12 +132,14 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _all;
     return _all
-        .where((m) =>
-            m.name.toLowerCase().contains(q) ||
-            m.area.toLowerCase().contains(q) ||
-            m.city.toLowerCase().contains(q) ||
-            m.gotra.toLowerCase().contains(q) ||
-            m.samajId.toLowerCase().contains(q))
+        .where(
+          (m) =>
+              m.name.toLowerCase().contains(q) ||
+              m.area.toLowerCase().contains(q) ||
+              m.city.toLowerCase().contains(q) ||
+              m.gotra.toLowerCase().contains(q) ||
+              m.samajId.toLowerCase().contains(q),
+        )
         .toList();
   }
 
@@ -149,8 +151,9 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   }
 
   /// The selected members, in the order they were picked.
-  List<InvitationMember> get _selected =>
-      [for (final id in _order) _byId(id)].whereType<InvitationMember>().toList();
+  List<InvitationMember> get _selected => [
+    for (final id in _order) _byId(id),
+  ].whereType<InvitationMember>().toList();
 
   /// The selected members in *visiting* order.
   ///
@@ -255,10 +258,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   List<LatLng> get _routeLine {
     final plan = _plan;
     if (plan != null && plan.geometry.length >= 2) return plan.geometry;
-    return [
-      ?_origin,
-      for (final m in _orderedStops) m.point,
-    ];
+    return [?_origin, for (final m in _orderedStops) m.point];
   }
 
   void _fitRoute() {
@@ -320,8 +320,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         SnackBar(
           backgroundColor: AppColors.forest800,
           behavior: SnackBarBehavior.floating,
-          content:
-              Text(msg, style: body(13, weight: FontWeight.w600, color: Colors.white)),
+          content: Text(
+            msg,
+            style: body(13, weight: FontWeight.w600, color: Colors.white),
+          ),
         ),
       );
   }
@@ -379,9 +381,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       // so an empty list is about their addresses, not about this screen.
       return _message(
         icon: Icons.person_pin_circle_outlined,
-        title: _query.isEmpty
-            ? t.invNoMembersYet
-            : t.invNoMembersMatch(_query),
+        title: _query.isEmpty ? t.invNoMembersYet : t.invNoMembersMatch(_query),
         detail: _query.isEmpty
             ? t.invNoMembersYetDetail
             : t.invSearchMatchesDetail,
@@ -400,28 +400,68 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: [
-          Text(t.invSmartPlanner,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.gold700,
-                  letterSpacing: 2)),
+          Text(
+            t.invSmartPlanner,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: context.onBrightness(
+                light: AppColors.gold700,
+                dark: AppColors.goldSoft,
+              ),
+              letterSpacing: 2,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(t.invRoutePlanner, style: display(22, color: AppColors.forest900)),
+          Text(
+            t.invRoutePlanner,
+            style: display(
+              22,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(t.invSelectFamiliesSubtitle,
-              style: body(12, color: AppColors.textMuted)),
+          Text(
+            t.invSelectFamiliesSubtitle,
+            style: body(
+              12,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           if (_count > _all.length) ...[
             const SizedBox(height: 6),
             Text(
               t.invShowingNearest(_all.length, _count),
-              style: body(11, color: AppColors.gold700, height: 1.4),
+              style: body(
+                11,
+                height: 1.4,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 12),
           _originPicker(t),
           if (_planError.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(_planError, style: body(11, color: AppColors.gold700)),
+            Text(
+              _planError,
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+              ),
+            ),
           ],
           const SizedBox(height: 12),
           _searchField(t),
@@ -430,8 +470,16 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30),
               child: Center(
-                child: Text(t.invNoMembersMatch(_query),
-                    style: body(13, color: AppColors.hint)),
+                child: Text(
+                  t.invNoMembersMatch(_query),
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.hint,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
+                ),
               ),
             ),
           for (final m in visible)
@@ -443,8 +491,9 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                 // Position in the planned route, not in the taps.
                 stopNumber: ordered.indexWhere((s) => s.id == m.id) + 1,
                 legKm: legs[m.id],
-                distanceKmFromOrigin:
-                    _origin == null ? null : distanceKm(_origin!, m.point),
+                distanceKmFromOrigin: _origin == null
+                    ? null
+                    : distanceKm(_origin!, m.point),
                 onToggle: () => _toggle(m.id),
               ),
             ),
@@ -457,69 +506,77 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   /// is also the position the map is sorted around. The only control here is
   /// taking a fresh fix after moving.
   Widget _originPicker(AppLocalizations t) {
-  final origin = _gpsOrigin;
+    final origin = _gpsOrigin;
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        t.invStartFrom,
-        style: body(
-          10,
-          weight: FontWeight.w700,
-          color: AppColors.textMuted,
-          letterSpacing: 1.4,
-        ),
-      ),
-
-      const SizedBox(height: 6),
-
-      Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.my_location_rounded,
-                  size: 14,
-                  color: AppColors.forest700,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    _locating
-                        ? t.invLocating
-                        : origin == null
-                            ? t.invWaitingForLocation
-                            : t.invCurrentLocation(
-                                origin.latitude.toStringAsFixed(4),
-                                origin.longitude.toStringAsFixed(4)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(12, color: AppColors.ink),
-                  ),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t.invStartFrom,
+          style: body(
+            10,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
             ),
+            letterSpacing: 1.4,
           ),
-          TextButton.icon(
-            onPressed: _locating ? null : _refreshLocation,
-            icon: _locating
-                ? const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded, size: 16),
-            label: Text(t.invUpdate, style: body(12)),
-          ),
-        ],
-      ),
-    ],
-  );
-}
+        ),
 
+        const SizedBox(height: 6),
 
+        Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.my_location_rounded,
+                    size: 14,
+                    color: AppColors.forest700,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      _locating
+                          ? t.invLocating
+                          : origin == null
+                          ? t.invWaitingForLocation
+                          : t.invCurrentLocation(
+                              origin.latitude.toStringAsFixed(4),
+                              origin.longitude.toStringAsFixed(4),
+                            ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        12,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _locating ? null : _refreshLocation,
+              icon: _locating
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 16),
+              label: Text(t.invUpdate, style: body(12)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _searchField(AppLocalizations t) {
     return TextField(
@@ -542,8 +599,10 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                   setState(() => _query = '');
                 },
               ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border),
@@ -568,16 +627,40 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 34, color: AppColors.hint),
+            Icon(
+              icon,
+              size: 34,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: body(14,
-                    weight: FontWeight.w700, color: AppColors.forest900)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: body(
+                14,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(detail,
-                textAlign: TextAlign.center,
-                style: body(12, color: AppColors.textMuted, height: 1.4)),
+            Text(
+              detail,
+              textAlign: TextAlign.center,
+              style: body(
+                12,
+                height: 1.4,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             TextButton(onPressed: _load, child: Text(action)),
           ],
@@ -619,7 +702,8 @@ class _MapPanel extends StatelessWidget {
             options: MapOptions(
               // Centred on where the round starts, else on the first stop, else
               // on Bengaluru — the community's centre.
-              initialCenter: origin ??
+              initialCenter:
+                  origin ??
                   (stops.isNotEmpty
                       ? stops.first.point
                       : const LatLng(12.97, 77.59)),
@@ -671,8 +755,11 @@ class _MapPanel extends StatelessWidget {
                     loading
                         ? AppLocalizations.of(context).invLoadingMap
                         : AppLocalizations.of(context).invSelectFamiliesToPlan,
-                    style:
-                        body(13, weight: FontWeight.w600, color: AppColors.hint),
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: AppColors.hint,
+                    ),
                   ),
                 ),
               ),
@@ -704,8 +791,11 @@ class _OriginPin extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: Icon(isGps ? Icons.my_location_rounded : Icons.home_rounded,
-          size: 16, color: Colors.white),
+      child: Icon(
+        isGps ? Icons.my_location_rounded : Icons.home_rounded,
+        size: 16,
+        color: Colors.white,
+      ),
     );
   }
 }
@@ -730,8 +820,10 @@ class _NumberedPin extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: Text('$number',
-          style: body(13, weight: FontWeight.w800, color: Colors.white)),
+      child: Text(
+        '$number',
+        style: body(13, weight: FontWeight.w800, color: Colors.white),
+      ),
     );
   }
 }
@@ -765,11 +857,11 @@ class _MemberCard extends StatelessWidget {
     final away = distanceKmFromOrigin;
     final distance = selected && leg != null
         ? (stopNumber == 1
-            ? t.invFromTheStart(_km(leg))
-            : t.invFromStopN(_km(leg), stopNumber - 1))
+              ? t.invFromTheStart(_km(leg))
+              : t.invFromStopN(_km(leg), stopNumber - 1))
         : away == null
-            ? ''
-            : t.invAway(_km(away));
+        ? ''
+        : t.invAway(_km(away));
     return [member.locality, distance].where((s) => s.isNotEmpty).join(' · ');
   }
 
@@ -799,9 +891,14 @@ class _MemberCard extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: selected && stopNumber > 0
-                    ? Text('$stopNumber',
-                        style: body(12,
-                            weight: FontWeight.w800, color: Colors.white))
+                    ? Text(
+                        '$stopNumber',
+                        style: body(
+                          12,
+                          weight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      )
                     : null,
               ),
               const SizedBox(width: 10),
@@ -817,28 +914,39 @@ class _MemberCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(member.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: body(14,
-                            weight: FontWeight.w700,
-                            color: AppColors.forest900)),
+                    Text(
+                      member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        14,
+                        weight: FontWeight.w700,
+                        color: AppColors.forest900,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(member.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: body(12, color: AppColors.textMuted)),
+                    Text(
+                      member.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(12, color: AppColors.textMuted),
+                    ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 12, color: AppColors.hint),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
+                          color: AppColors.hint,
+                        ),
                         const SizedBox(width: 2),
                         Flexible(
-                          child: Text(_localityLine(t),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: body(11, color: AppColors.hint)),
+                          child: Text(
+                            _localityLine(t),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: body(11, color: AppColors.hint),
+                          ),
                         ),
                       ],
                     ),
@@ -858,8 +966,11 @@ class _MemberCard extends StatelessWidget {
                       : Border.all(color: const Color(0xFFD1D5DB), width: 2),
                 ),
                 child: selected
-                    ? const Icon(Icons.check_rounded,
-                        size: 16, color: Colors.white)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      )
                     : null,
               ),
             ],
@@ -868,8 +979,10 @@ class _MemberCard extends StatelessWidget {
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.only(left: 36),
-              child: Text(member.addressLine,
-                  style: body(11, color: AppColors.textMuted, height: 1.3)),
+              child: Text(
+                member.addressLine,
+                style: body(11, color: AppColors.textMuted, height: 1.3),
+              ),
             ),
           ],
           // Only members who chose to publish their number have one here.
@@ -879,8 +992,11 @@ class _MemberCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 36),
               child: Row(
                 children: [
-                  const Icon(Icons.call_outlined,
-                      size: 12, color: AppColors.hint),
+                  const Icon(
+                    Icons.call_outlined,
+                    size: 12,
+                    color: AppColors.hint,
+                  ),
                   const SizedBox(width: 4),
                   Text(member.phone, style: body(11, color: AppColors.hint)),
                 ],
@@ -912,8 +1028,9 @@ class _SummaryBar extends StatelessWidget {
     if (planning) return t.invOptimisingRoute;
     final p = plan;
     if (p == null || p.stops.isEmpty) return t.invPickFamilies;
-    final km =
-        p.totalKm < 10 ? p.totalKm.toStringAsFixed(1) : p.totalKm.round().toString();
+    final km = p.totalKm < 10
+        ? p.totalKm.toStringAsFixed(1)
+        : p.totalKm.round().toString();
     final mins = p.totalMinutes;
     final time = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}m' : '${mins}m';
     return '$km km · $time${p.isEstimate ? t.invStraightLineEstimate : ''}';
@@ -940,27 +1057,39 @@ class _SummaryBar extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.groups_rounded,
-                          size: 15, color: AppColors.forest700),
+                      const Icon(
+                        Icons.groups_rounded,
+                        size: 15,
+                        color: AppColors.forest700,
+                      ),
                       const SizedBox(width: 5),
-                      Text('$stops ${stops == 1 ? t.invStop : t.invStops}',
-                          style: body(14,
-                              weight: FontWeight.w700,
-                              color: AppColors.forest900)),
+                      Text(
+                        '$stops ${stops == 1 ? t.invStop : t.invStops}',
+                        style: body(
+                          14,
+                          weight: FontWeight.w700,
+                          color: AppColors.forest900,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(planning ? Icons.sync_rounded : Icons.route_rounded,
-                          size: 13, color: AppColors.textMuted),
+                      Icon(
+                        planning ? Icons.sync_rounded : Icons.route_rounded,
+                        size: 13,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 5),
                       Flexible(
-                        child: Text(_tripLine(t),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: body(11, color: AppColors.textMuted)),
+                        child: Text(
+                          _tripLine(t),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: body(11, color: AppColors.textMuted),
+                        ),
                       ),
                     ],
                   ),

@@ -32,7 +32,8 @@ class CompatibilityReportScreen extends StatefulWidget {
   final String otherName;
 
   @override
-  State<CompatibilityReportScreen> createState() => _CompatibilityReportScreenState();
+  State<CompatibilityReportScreen> createState() =>
+      _CompatibilityReportScreenState();
 }
 
 class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
@@ -47,61 +48,61 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
   }
 
   Future<void> _load() async {
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
-  try {
-    final report =
-        await Repository.instance.compatibilityReport(widget.reportId);
-
-    final languageCode =
-        Localizations.localeOf(context).languageCode;
-
-    String translatedDisclaimer = report.disclaimer;
-
-    if (languageCode == 'kn' || languageCode == 'hi') {
-      translatedDisclaimer =
-          await TranslationService.instance.translate(
-        text: report.disclaimer,
-        targetLanguage: languageCode,
+    try {
+      final report = await Repository.instance.compatibilityReport(
+        widget.reportId,
       );
+
+      final languageCode = Localizations.localeOf(context).languageCode;
+
+      String translatedDisclaimer = report.disclaimer;
+
+      if (languageCode == 'kn' || languageCode == 'hi') {
+        translatedDisclaimer = await TranslationService.instance.translate(
+          text: report.disclaimer,
+          targetLanguage: languageCode,
+        );
+      }
+
+      debugPrint('Original: ${report.disclaimer}');
+      debugPrint('Translated: $translatedDisclaimer');
+
+      if (!mounted) return;
+
+      setState(() {
+        _report = report;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = e is ApiException
+            ? e.message
+            : AppLocalizations.of(context).compReportLoadError;
+        _loading = false;
+      });
     }
-
-    debugPrint('Original: ${report.disclaimer}');
-    debugPrint('Translated: $translatedDisclaimer');
-
-    if (!mounted) return;
-
-    setState(() {
-      _report = report;
-      _loading = false;
-    });
-  } catch (e) {
-    if (!mounted) return;
-
-    setState(() {
-      _error = e is ApiException
-          ? e.message
-          : AppLocalizations.of(context).compReportLoadError;
-      _loading = false;
-    });
   }
-}
-
-
-
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final myName = context.watch<AuthService>().user?.name ?? t.compYou;
-    final otherName =
-        widget.otherName.trim().isNotEmpty ? widget.otherName.trim() : t.compThisMember;
+    final otherName = widget.otherName.trim().isNotEmpty
+        ? widget.otherName.trim()
+        : t.compThisMember;
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -113,15 +114,15 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _errorState(_error!, t)
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
-                    children: [
-                      _header(myName, otherName, t),
-                      const SizedBox(height: 16),
-                      CompatibilityReportView(report: _report!),
-                    ],
-                  ),
+            ? _errorState(_error!, t)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+                children: [
+                  _header(myName, otherName, t),
+                  const SizedBox(height: 16),
+                  CompatibilityReportView(report: _report!),
+                ],
+              ),
       ),
     );
   }
@@ -133,11 +134,26 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 32, color: AppColors.hint),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 32,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: body(14, color: AppColors.textMuted)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             OutlineButtonX(label: t.compTryAgain, onPressed: _load),
           ],
@@ -157,16 +173,28 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
               color: Color(0xFFFCEBDD),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.favorite_rounded, size: 26, color: AppColors.gold700),
+            child: const Icon(
+              Icons.favorite_rounded,
+              size: 26,
+              color: AppColors.gold700,
+            ),
           ),
           const SizedBox(height: 14),
-          Text(t.compReportTitle,
-              style: display(20, color: AppColors.forest900),
-              textAlign: TextAlign.center),
+          Text(
+            t.compReportTitle,
+            style: display(20, color: AppColors.forest900),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 6),
-          Text('$myName × $otherName',
-              style: body(14, weight: FontWeight.w600, color: AppColors.textMuted),
-              textAlign: TextAlign.center),
+          Text(
+            '$myName × $otherName',
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

@@ -72,8 +72,7 @@ class _ElderVerificationDetailScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -87,19 +86,28 @@ class _ElderVerificationDetailScreenState
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(title,
-                  style: display(18, color: AppColors.forest900)),
+              child: Text(
+                title,
+                style: display(18, color: AppColors.forest900),
+              ),
             ),
           ],
         ),
-        content: Text(message,
-            style: body(13, color: AppColors.textMuted, height: 1.5)),
+        content: Text(
+          message,
+          style: body(13, color: AppColors.textMuted, height: 1.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.ftClose,
-                style: body(13,
-                    weight: FontWeight.w600, color: AppColors.forest700)),
+            child: Text(
+              t.ftClose,
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: AppColors.forest700,
+              ),
+            ),
           ),
           ForestButton(
             label: t.elderBackToQueue,
@@ -119,7 +127,10 @@ class _ElderVerificationDetailScreenState
     final req = Repository.instance.verificationById(widget.id);
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -129,8 +140,10 @@ class _ElderVerificationDetailScreenState
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text(t.elderVerificationDetail,
-            style: display(18, color: Colors.white)),
+        title: Text(
+          t.elderVerificationDetail,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: req == null ? _notFound(t) : _detail(req, t),
       bottomNavigationBar: req == null ? null : _footer(req, t),
@@ -142,10 +155,25 @@ class _ElderVerificationDetailScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.search_off_rounded, size: 36, color: AppColors.hint),
+          Icon(
+            Icons.search_off_rounded,
+            size: 36,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(t.elderVerificationNotFound,
-              style: body(14, color: AppColors.hint)),
+          Text(
+            t.elderVerificationNotFound,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           OutlineButtonX(
             label: t.elderBackToQueue,
@@ -186,7 +214,11 @@ class _ElderVerificationDetailScreenState
               _row(t.elderClaimingFrom, req['claimingFrom'] as String),
               _row(t.elderClaimingAncestor, req['claimingAncestor'] as String),
               _row(t.elderStatedRelation, req['relation'] as String),
-              _row(t.elderSubmittedOnLabel, req['submittedOn'] as String, last: true),
+              _row(
+                t.elderSubmittedOnLabel,
+                req['submittedOn'] as String,
+                last: true,
+              ),
             ],
           ),
         ),
@@ -200,25 +232,37 @@ class _ElderVerificationDetailScreenState
             children: [
               Row(
                 children: [
-                  Text(t.elderAadhaarStatusLabel,
-                      style: body(12,
-                          weight: FontWeight.w600,
-                          color: AppColors.textMuted)),
+                  Text(
+                    t.elderAadhaarStatusLabel,
+                    style: body(
+                      12,
+                      weight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
                   const Spacer(),
-                  Pill(aadhaar,
-                      bg: aadhaarColor.withValues(alpha: 0.14),
-                      fg: aadhaarColor),
+                  Pill(
+                    aadhaar,
+                    bg: aadhaarColor.withValues(alpha: 0.14),
+                    fg: aadhaarColor,
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(t.elderPhoneColon('${req['phone']}'),
-                  style: body(12, color: AppColors.hint)),
+              Text(
+                t.elderPhoneColon('${req['phone']}'),
+                style: body(12, color: AppColors.hint),
+              ),
               const SizedBox(height: 14),
-              Text(t.elderSubmittedDocuments,
-                  style: body(10,
-                      weight: FontWeight.w700,
-                      color: AppColors.hint,
-                      letterSpacing: 0.8)),
+              Text(
+                t.elderSubmittedDocuments,
+                style: body(
+                  10,
+                  weight: FontWeight.w700,
+                  color: AppColors.hint,
+                  letterSpacing: 0.8,
+                ),
+              ),
               const SizedBox(height: 8),
               for (final doc in documents)
                 Padding(
@@ -231,17 +275,27 @@ class _ElderVerificationDetailScreenState
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle_rounded,
-                            size: 16, color: AppColors.forest700),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 16,
+                          color: AppColors.forest700,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(doc,
-                              style: body(12,
-                                  weight: FontWeight.w500,
-                                  color: AppColors.label)),
+                          child: Text(
+                            doc,
+                            style: body(
+                              12,
+                              weight: FontWeight.w500,
+                              color: AppColors.label,
+                            ),
+                          ),
                         ),
-                        Pill(t.elderReceived,
-                            bg: _low.withValues(alpha: 0.14), fg: _low),
+                        Pill(
+                          t.elderReceived,
+                          bg: _low.withValues(alpha: 0.14),
+                          fg: _low,
+                        ),
                       ],
                     ),
                   ),
@@ -271,8 +325,13 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _header(Map<String, dynamic> req, Color riskColor, Color aadhaarColor,
-      String genderLabel, AppLocalizations t) {
+  Widget _header(
+    Map<String, dynamic> req,
+    Color riskColor,
+    Color aadhaarColor,
+    String genderLabel,
+    AppLocalizations t,
+  ) {
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -290,8 +349,9 @@ class _ElderVerificationDetailScreenState
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(18)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -310,10 +370,16 @@ class _ElderVerificationDetailScreenState
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    Pill(_riskLabel(req['riskLevel'] as String, t),
-                        bg: riskColor, fg: Colors.white),
-                    Pill(t.elderAadhaarPrefix('${req['aadhaarStatus']}'),
-                        bg: aadhaarColor, fg: Colors.white),
+                    Pill(
+                      _riskLabel(req['riskLevel'] as String, t),
+                      bg: riskColor,
+                      fg: Colors.white,
+                    ),
+                    Pill(
+                      t.elderAadhaarPrefix('${req['aadhaarStatus']}'),
+                      bg: aadhaarColor,
+                      fg: Colors.white,
+                    ),
                   ],
                 ),
               ),
@@ -324,13 +390,19 @@ class _ElderVerificationDetailScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(req['name'] as String,
-                        style: display(20, color: Colors.white)),
+                    Text(
+                      req['name'] as String,
+                      style: display(20, color: Colors.white),
+                    ),
                     const SizedBox(height: 2),
                     Text(
-                        t.elderYrsGenderGotra(
-                            '${req['age']}', genderLabel, req['gotra'] as String),
-                        style: body(12, color: AppColors.forest300)),
+                      t.elderYrsGenderGotra(
+                        '${req['age']}',
+                        genderLabel,
+                        req['gotra'] as String,
+                      ),
+                      style: body(12, color: AppColors.forest300),
+                    ),
                   ],
                 ),
               ),
@@ -340,12 +412,22 @@ class _ElderVerificationDetailScreenState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _factRow(Icons.work_outline_rounded, t.elderOccupation,
-                    req['occupation'] as String),
-                _factRow(Icons.location_on_outlined, t.elderLocation,
-                    req['location'] as String),
-                _factRow(Icons.phone_outlined, t.elderPhoneMasked,
-                    req['phone'] as String, last: true),
+                _factRow(
+                  Icons.work_outline_rounded,
+                  t.elderOccupation,
+                  req['occupation'] as String,
+                ),
+                _factRow(
+                  Icons.location_on_outlined,
+                  t.elderLocation,
+                  req['location'] as String,
+                ),
+                _factRow(
+                  Icons.phone_outlined,
+                  t.elderPhoneMasked,
+                  req['phone'] as String,
+                  last: true,
+                ),
               ],
             ),
           ),
@@ -354,8 +436,12 @@ class _ElderVerificationDetailScreenState
     );
   }
 
-  Widget _factRow(IconData icon, String label, String value,
-      {bool last = false}) {
+  Widget _factRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool last = false,
+  }) {
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 12),
       child: Row(
@@ -375,12 +461,16 @@ class _ElderVerificationDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: body(11, color: AppColors.hint)),
+                Text(label, style: body(11, color: AppColors.hint)),
                 const SizedBox(height: 1),
-                Text(value,
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.forest900)),
+                Text(
+                  value,
+                  style: body(
+                    13,
+                    weight: FontWeight.w600,
+                    color: AppColors.forest900,
+                  ),
+                ),
               ],
             ),
           ),
@@ -402,18 +492,21 @@ class _ElderVerificationDetailScreenState
           Icon(Icons.shield_rounded, size: 20, color: riskColor),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(t.elderRiskAssessment(_riskLabel(risk, t)),
-                style: body(13, weight: FontWeight.w700, color: riskColor)),
+            child: Text(
+              t.elderRiskAssessment(_riskLabel(risk, t)),
+              style: body(13, weight: FontWeight.w700, color: riskColor),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _section(
-      {required IconData icon,
-      required String title,
-      required Widget child}) {
+  Widget _section({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,8 +516,10 @@ class _ElderVerificationDetailScreenState
               Icon(icon, size: 18, color: AppColors.forest700),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(title,
-                    style: display(16, color: AppColors.forest900)),
+                child: Text(
+                  title,
+                  style: display(16, color: AppColors.forest900),
+                ),
               ),
             ],
           ),
@@ -441,14 +536,17 @@ class _ElderVerificationDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: body(11, color: AppColors.hint)),
+          Text(label, style: body(11, color: AppColors.hint)),
           const SizedBox(height: 2),
-          Text(value,
-              style: body(13,
-                  weight: FontWeight.w600,
-                  color: AppColors.forest900,
-                  height: 1.4)),
+          Text(
+            value,
+            style: body(
+              13,
+              weight: FontWeight.w600,
+              color: AppColors.forest900,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -465,38 +563,48 @@ class _ElderVerificationDetailScreenState
           color: approved ? _low.withValues(alpha: 0.06) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: approved
-                  ? _low.withValues(alpha: 0.35)
-                  : const Color(0xFFE5E7EB)),
+            color: approved
+                ? _low.withValues(alpha: 0.35)
+                : const Color(0xFFE5E7EB),
+          ),
         ),
         child: Row(
           children: [
             Icon(
-                approved
-                    ? Icons.check_circle_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                size: 20,
-                color: color),
+              approved
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              size: 20,
+              color: color,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(v['name'] as String,
-                      style: body(13,
-                          weight: FontWeight.w600,
-                          color: AppColors.forest900)),
+                  Text(
+                    v['name'] as String,
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: AppColors.forest900,
+                    ),
+                  ),
                   const SizedBox(height: 1),
-                  Text(v['role'] as String,
-                      style: body(11, color: AppColors.hint)),
+                  Text(
+                    v['role'] as String,
+                    style: body(11, color: AppColors.hint),
+                  ),
                 ],
               ),
             ),
-            Pill(v['status'] as String,
-                bg: approved
-                    ? _low.withValues(alpha: 0.14)
-                    : const Color(0xFFF3F4F6),
-                fg: approved ? _low : AppColors.textMuted),
+            Pill(
+              v['status'] as String,
+              bg: approved
+                  ? _low.withValues(alpha: 0.14)
+                  : const Color(0xFFF3F4F6),
+              fg: approved ? _low : AppColors.textMuted,
+            ),
           ],
         ),
       ),
@@ -511,9 +619,8 @@ class _ElderVerificationDetailScreenState
         color: caution ? const Color(0xFFFFF5F5) : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-            color: caution
-                ? _high.withValues(alpha: 0.4)
-                : AppColors.border),
+          color: caution ? _high.withValues(alpha: 0.4) : AppColors.border,
+        ),
         boxShadow: AppShadows.soft,
       ),
       child: Column(
@@ -522,14 +629,20 @@ class _ElderVerificationDetailScreenState
           Row(
             children: [
               Icon(
-                  caution
-                      ? Icons.warning_amber_rounded
-                      : Icons.sticky_note_2_outlined,
-                  size: 18,
-                  color: color),
+                caution
+                    ? Icons.warning_amber_rounded
+                    : Icons.sticky_note_2_outlined,
+                size: 18,
+                color: color,
+              ),
               const SizedBox(width: 8),
-              Text(t.elderCommitteeNotes,
-                  style: display(15, color: caution ? _high : AppColors.forest900)),
+              Text(
+                t.elderCommitteeNotes,
+                style: display(
+                  15,
+                  color: caution ? _high : AppColors.forest900,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -541,9 +654,14 @@ class _ElderVerificationDetailScreenState
                   : const Color(0xFFF7F0E8),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(notes,
-                style: body(13,
-                    color: caution ? _high : AppColors.label, height: 1.5)),
+            child: Text(
+              notes,
+              style: body(
+                13,
+                color: caution ? _high : AppColors.label,
+                height: 1.5,
+              ),
+            ),
           ),
         ],
       ),
@@ -590,8 +708,10 @@ class _ElderVerificationDetailScreenState
                   Icons.help_outline_rounded,
                   _medium,
                 ),
-                icon: const Icon(Icons.help_outline_rounded,
-                    color: AppColors.gold700),
+                icon: const Icon(
+                  Icons.help_outline_rounded,
+                  color: AppColors.gold700,
+                ),
               ),
               const SizedBox(width: 4),
               OutlineButtonX(

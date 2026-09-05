@@ -27,13 +27,13 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
     'healthcare',
   ];
   static String _categoryLabel(String key, AppLocalizations t) => switch (key) {
-        'infrastructure' => t.welfareCategoryInfrastructure,
-        'culturalHeritage' => t.welfareCategoryCulturalHeritage,
-        'education' => t.welfareCategoryEducation,
-        'emergency' => t.welfareCategoryEmergency,
-        'healthcare' => t.welfareCategoryHealthcare,
-        _ => key,
-      };
+    'infrastructure' => t.welfareCategoryInfrastructure,
+    'culturalHeritage' => t.welfareCategoryCulturalHeritage,
+    'education' => t.welfareCategoryEducation,
+    'emergency' => t.welfareCategoryEmergency,
+    'healthcare' => t.welfareCategoryHealthcare,
+    _ => key,
+  };
   static const _emojis = ['🏛️', '🪔', '🎓', '❤️', '🏥'];
 
   final _titleCtrl = TextEditingController();
@@ -66,22 +66,28 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                  gradient: AppGradients.forest, shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded,
-                  color: Colors.white, size: 24),
+                gradient: AppGradients.forest,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(t.welfareCampaignSubmitted,
-                  style: display(20, color: AppColors.forest900)),
+              child: Text(
+                t.welfareCampaignSubmitted,
+                style: display(20, color: AppColors.forest900),
+              ),
             ),
           ],
         ),
@@ -106,7 +112,10 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -116,8 +125,10 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: _back,
         ),
-        title: Text(t.welfareLaunchNewCampaign,
-            style: display(18, color: Colors.white)),
+        title: Text(
+          t.welfareLaunchNewCampaign,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -139,15 +150,23 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t.welfareTransparencyNoteTitle,
-                          style: body(13,
-                              weight: FontWeight.w700,
-                              color: const Color(0xFF92400E))),
+                      Text(
+                        t.welfareTransparencyNoteTitle,
+                        style: body(
+                          13,
+                          weight: FontWeight.w700,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                          t.welfareTransparencyNoteBody,
-                          style: body(12,
-                              color: const Color(0xFFB45309), height: 1.5)),
+                        t.welfareTransparencyNoteBody,
+                        style: body(
+                          12,
+                          color: const Color(0xFFB45309),
+                          height: 1.5,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -160,8 +179,7 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _titleCtrl,
-            decoration:
-                _dec(t.welfareCampaignTitleHint),
+            decoration: _dec(t.welfareCampaignTitleHint),
           ),
           const SizedBox(height: 16),
 
@@ -169,13 +187,21 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _category,
+            // The field itself is always white — pin the popup to match
+            // rather than let it inherit the app's dark theme surface, which
+            // would leave this same label-colored item text unreadable when
+            // open.
+            dropdownColor: Colors.white,
             decoration: _dec(''),
             items: [
               for (final c in _categoryKeys)
                 DropdownMenuItem(
-                    value: c,
-                    child: Text(_categoryLabel(c, t),
-                        style: body(14, color: AppColors.label))),
+                  value: c,
+                  child: Text(
+                    _categoryLabel(c, t),
+                    style: body(14, color: AppColors.label),
+                  ),
+                ),
             ],
             onChanged: (v) => setState(() => _category = v ?? _category),
           ),
@@ -216,9 +242,17 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(t.welfareDurationDays(_duration.round()),
-                  style: body(13,
-                      weight: FontWeight.w700, color: AppColors.forest800)),
+              Text(
+                t.welfareDurationDays(_duration.round()),
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: context.onBrightness(
+                    light: AppColors.forest800,
+                    dark: AppColors.forest300,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -246,15 +280,20 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
               color: AppColors.forest500.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: AppColors.forest500.withValues(alpha: 0.35)),
+                color: AppColors.forest500.withValues(alpha: 0.35),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.welfareVerificationChecklist,
-                    style: body(13,
-                        weight: FontWeight.w700,
-                        color: AppColors.forest800)),
+                Text(
+                  t.welfareVerificationChecklist,
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 for (final item in [
                   t.welfareCheckCommunityBenefit,
@@ -264,12 +303,17 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
                 ]) ...[
                   Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded,
-                          size: 15, color: AppColors.forest700),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 15,
+                        color: AppColors.forest700,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(item,
-                            style: body(12, color: AppColors.forest800)),
+                        child: Text(
+                          item,
+                          style: body(12, color: AppColors.forest800),
+                        ),
                       ),
                     ],
                   ),
@@ -294,31 +338,41 @@ class _NewCampaignScreenState extends State<NewCampaignScreen> {
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: body(13, weight: FontWeight.w600, color: AppColors.label));
+  Widget _label(String text) => Text(
+    text,
+    style: body(
+      13,
+      weight: FontWeight.w600,
+      color: context.onBrightness(
+        light: AppColors.label,
+        dark: AppColors.darkText,
+      ),
+    ),
+  );
 
   InputDecoration _dec(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: body(14, color: AppColors.hint),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: AppColors.forest700, width: 1.5),
-        ),
-      );
+    hintText: hint,
+    hintStyle: body(14, color: AppColors.hint),
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+    ),
+  );
 }
 
 class _EmojiChip extends StatelessWidget {
-  const _EmojiChip(
-      {required this.emoji, required this.selected, required this.onTap});
+  const _EmojiChip({
+    required this.emoji,
+    required this.selected,
+    required this.onTap,
+  });
   final String emoji;
   final bool selected;
   final VoidCallback onTap;
@@ -340,8 +394,9 @@ class _EmojiChip extends StatelessWidget {
                 : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border,
-                width: selected ? 2 : 1),
+              color: selected ? AppColors.forest800 : AppColors.border,
+              width: selected ? 2 : 1,
+            ),
           ),
           child: Text(emoji, style: const TextStyle(fontSize: 26)),
         ),

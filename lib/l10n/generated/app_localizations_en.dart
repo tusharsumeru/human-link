@@ -183,6 +183,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registerFemale => 'Female';
 
   @override
+  String get registerMaritalStatus => 'Marital Status';
+
+  @override
+  String get registerMarried => 'Married';
+
+  @override
+  String get registerUnmarried => 'Unmarried';
+
+  @override
+  String get registerDivorced => 'Divorced';
+
+  @override
   String get registerGotra => 'Gotra';
 
   @override
@@ -514,6 +526,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashAllCaughtUp => 'You\'re all caught up ✦';
 
   @override
+  String get dashFollow => 'Follow';
+
+  @override
+  String get dashFollowing => 'Following';
+
+  @override
   String dashErrorCouldNotReachSuffix(String message, String baseUrl) {
     return '$message\nCould not reach $baseUrl';
   }
@@ -607,6 +625,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get couldNotUpdateLike => 'Could not update like';
+
+  @override
+  String get couldNotUpdateFollow => 'Could not update follow status';
 
   @override
   String get savedToProfile => 'Saved to your profile';
@@ -795,6 +816,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileHiddenFromMembers => 'Hidden from other members';
 
   @override
+  String get profileAppearance => 'Appearance';
+
+  @override
+  String get profileAppearanceDesc => 'Choose how the app looks.';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
   String get profileCouldNotSave =>
       'Couldn\'t save that. Check your connection and try again.';
 
@@ -976,6 +1012,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editSelectBloodGroup => 'Select blood group';
+
+  @override
+  String get editMaritalStatus => 'Marital status';
+
+  @override
+  String get editSelectMaritalStatus => 'Select marital status';
+
+  @override
+  String get editMarried => 'Married';
+
+  @override
+  String get editUnmarried => 'Unmarried';
+
+  @override
+  String get editDivorced => 'Divorced';
 
   @override
   String get editKuladevata => 'Kuladevata';
@@ -1793,6 +1844,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matGoToMyProfile => 'Go to my profile';
+
+  @override
+  String get matNotForMarried => 'Not applicable';
+
+  @override
+  String get matNotForMarriedBody =>
+      'The matrimonial hub is only for unmarried or divorced members. You told us you\'re married — you can change this in your profile if that\'s changed.';
 
   @override
   String get matReadyToPublish => 'Ready to publish';

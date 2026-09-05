@@ -68,6 +68,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   // crashing DropdownButtonFormField.
   String? _bloodGroup;
 
+  // Same reasoning as [_bloodGroup] — an unset or unrecognized value just
+  // starts unselected rather than crashing DropdownButtonFormField.
+  String? _maritalStatus;
+  static const _maritalStatusOptions = ['unmarried', 'divorced', 'married'];
+
   // Kuladevata lives on a separate backend resource (Parampara profile, see
   // ../data/models/parampara.dart) fetched asynchronously — unlike the rest
   // of this screen's fields, it isn't available synchronously from
@@ -107,6 +112,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final existingBloodGroup = (u?.bloodGroup ?? '').trim();
     _bloodGroup = kBloodGroups.contains(existingBloodGroup)
         ? existingBloodGroup
+        : null;
+    final existingMaritalStatus = (u?.maritalStatus ?? '').trim();
+    _maritalStatus = _maritalStatusOptions.contains(existingMaritalStatus)
+        ? existingMaritalStatus
         : null;
     _native = TextEditingController(text: u?.native ?? '');
     _occupation = TextEditingController(text: u?.occupation ?? '');
@@ -337,6 +346,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         name: _name.text.trim(),
         gotra: _gotra ?? '',
         bloodGroup: _bloodGroup,
+        maritalStatus: _maritalStatus,
         native: _native.text.trim(),
         occupation: _occupation.text.trim(),
         bio: _bio.text.trim(),
@@ -389,7 +399,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final t = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -417,6 +430,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   : null,
             ),
             _genderField(t),
+            _maritalStatusField(t),
             _dobField(t),
             _bloodGroupField(t),
             _gotraField(t),
@@ -475,7 +489,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             Text(
               t.editAadhaarOptionalNote,
               textAlign: TextAlign.center,
-              style: body(12, color: AppColors.textMuted, height: 1.4),
+              style: body(
+                12,
+                height: 1.4,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
           ],
         ),
@@ -531,7 +552,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           textAlign: TextAlign.center,
           style: body(
             12,
-            color: _photoUrl.isEmpty ? AppColors.gold700 : AppColors.textMuted,
+            color: _photoUrl.isEmpty
+                ? context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  )
+                : context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
             weight: _photoUrl.isEmpty ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -546,8 +575,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       style: body(
         11,
         weight: FontWeight.w700,
-        color: AppColors.gold700,
+        color: context.onBrightness(
+          light: AppColors.gold700,
+          dark: AppColors.goldSoft,
+        ),
         letterSpacing: 1.6,
+      ),
+    ),
+  );
+
+  /// Per-field caption sitting above a box, never floating onto its border —
+  /// unlike Material's `labelText`, which shrinks onto the border line and
+  /// reads poorly wherever it lands half on the white fill and half on the
+  /// page background (worse still in dark mode, where that same color also
+  /// has to work against the dark page).
+  Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: body(
+        12,
+        weight: FontWeight.w600,
+        color: context.onBrightness(
+          light: AppColors.label,
+          dark: AppColors.darkText,
+        ),
       ),
     ),
   );
@@ -583,7 +635,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               style: body(13, weight: FontWeight.w600),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.forest800,
+              foregroundColor: context.onBrightness(
+                light: AppColors.forest800,
+                dark: AppColors.forest300,
+              ),
               side: const BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -594,7 +649,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           const SizedBox(height: 6),
           Text(
             status,
-            style: body(11, color: AppColors.textMuted, height: 1.4),
+            style: body(
+              11,
+              height: 1.4,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
         ],
       ),
@@ -612,27 +674,32 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: TextFormField(
-        controller: c,
-        maxLines: maxLines,
-        maxLength: maxLength,
-        keyboardType: keyboardType,
-        validator: validator,
-        style: body(14, color: AppColors.ink),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(label),
+          TextFormField(
+            controller: c,
+            maxLines: maxLines,
+            maxLength: maxLength,
+            keyboardType: keyboardType,
+            validator: validator,
+            style: body(14, color: AppColors.ink),
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -640,32 +707,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _gotraField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        initialValue: _gotra,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.hint,
-        ),
-        style: body(14, color: AppColors.ink),
-        decoration: InputDecoration(
-          labelText: t.editGotra,
-          hintText: t.editSelectGotra,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.editGotra),
+          DropdownButtonFormField<String>(
+            initialValue: _gotra,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            // The field itself is always white — pin the popup to match
+            // rather than let it inherit the app's dark theme surface (which
+            // would leave this same ink-colored text unreadable when open).
+            dropdownColor: Colors.white,
+            decoration: InputDecoration(
+              hintText: t.editSelectGotra,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            items: _gotraOptions
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (v) => setState(() => _gotra = v),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-        ),
-        items: _gotraOptions
-            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-            .toList(),
-        onChanged: (v) => setState(() => _gotra = v),
+        ],
       ),
     );
   }
@@ -673,32 +749,84 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _bloodGroupField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        initialValue: _bloodGroup,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.hint,
-        ),
-        style: body(14, color: AppColors.ink),
-        decoration: InputDecoration(
-          labelText: t.editBloodGroup,
-          hintText: t.editSelectBloodGroup,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.editBloodGroup),
+          DropdownButtonFormField<String>(
+            initialValue: _bloodGroup,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            dropdownColor: Colors.white,
+            decoration: InputDecoration(
+              hintText: t.editSelectBloodGroup,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            items: kBloodGroups
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (v) => setState(() => _bloodGroup = v),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+        ],
+      ),
+    );
+  }
+
+  /// Decides matrimonial-hub access — a married member never sees it, so a
+  /// change here can widen or close off that tab the moment this save lands.
+  Widget _maritalStatusField(AppLocalizations t) {
+    final labels = {
+      'unmarried': t.editUnmarried,
+      'divorced': t.editDivorced,
+      'married': t.editMarried,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.editMaritalStatus),
+          DropdownButtonFormField<String>(
+            initialValue: _maritalStatus,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            dropdownColor: Colors.white,
+            decoration: InputDecoration(
+              hintText: t.editSelectMaritalStatus,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            items: _maritalStatusOptions
+                .map((v) => DropdownMenuItem(value: v, child: Text(labels[v]!)))
+                .toList(),
+            onChanged: (v) => setState(() => _maritalStatus = v),
           ),
-        ),
-        items: kBloodGroups
-            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-            .toList(),
-        onChanged: (v) => setState(() => _bloodGroup = v),
+        ],
       ),
     );
   }
@@ -708,39 +836,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _kuladevataField(AppLocalizations t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        initialValue: _kuladevata ?? _kuladevataNotSet,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.hint,
-        ),
-        style: body(14, color: AppColors.ink),
-        decoration: InputDecoration(
-          labelText: t.editKuladevata,
-          hintText: t.editSelectKuladevata,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.editKuladevata),
+          DropdownButtonFormField<String>(
+            initialValue: _kuladevata ?? _kuladevataNotSet,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            dropdownColor: Colors.white,
+            decoration: InputDecoration(
+              hintText: t.editSelectKuladevata,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: _kuladevataNotSet,
+                child: Text(
+                  t.editNotSet,
+                  style: body(14, color: AppColors.hint),
+                ),
+              ),
+              for (final k in _kuladevataOptions)
+                DropdownMenuItem(value: k, child: Text(k)),
+            ],
+            onChanged: (v) => setState(
+              () => _kuladevata = (v == null || v == _kuladevataNotSet)
+                  ? null
+                  : v,
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-        ),
-        items: [
-          DropdownMenuItem(
-            value: _kuladevataNotSet,
-            child: Text(t.editNotSet, style: body(14, color: AppColors.hint)),
-          ),
-          for (final k in _kuladevataOptions)
-            DropdownMenuItem(value: k, child: Text(k)),
         ],
-        onChanged: (v) => setState(
-          () => _kuladevata = (v == null || v == _kuladevataNotSet) ? null : v,
-        ),
       ),
     );
   }
@@ -750,13 +889,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Text(t.editGender, style: body(14, color: AppColors.label)),
+          Text(
+            t.editGender,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(width: 16),
           for (final (value, label) in [('M', t.editMale), ('F', t.editFemale)])
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
-                label: Text(label, style: body(13)),
+                label: Text(
+                  label,
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
                 selected: _gender == value,
                 onSelected: (_) => setState(() => _gender = value),
                 selectedColor: AppColors.forest300,
@@ -771,51 +928,56 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final age = _age;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        onTap: _pickDob,
-        borderRadius: BorderRadius.circular(12),
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: t.editDobHelpText,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                _dobIso.isEmpty ? t.editNotSet : _dobIso,
-                style: body(
-                  14,
-                  color: _dobIso.isEmpty ? AppColors.hint : AppColors.ink,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.editDobHelpText),
+          InkWell(
+            onTap: _pickDob,
+            borderRadius: BorderRadius.circular(12),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
               ),
-              const Spacer(),
-              if (age != null)
-                Text(
-                  t.editAgeYears(age),
-                  style: body(
-                    12,
-                    weight: FontWeight.w600,
-                    color: AppColors.textMuted,
+              child: Row(
+                children: [
+                  Text(
+                    _dobIso.isEmpty ? t.editNotSet : _dobIso,
+                    style: body(
+                      14,
+                      color: _dobIso.isEmpty ? AppColors.hint : AppColors.ink,
+                    ),
                   ),
-                ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.calendar_today_rounded,
-                size: 16,
-                color: AppColors.hint,
+                  const Spacer(),
+                  if (age != null)
+                    Text(
+                      t.editAgeYears(age),
+                      style: body(
+                        12,
+                        weight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.calendar_today_rounded,
+                    size: 16,
+                    color: AppColors.hint,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

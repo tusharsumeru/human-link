@@ -325,7 +325,10 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -340,7 +343,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: Text(_error!, style: body(14, color: AppColors.textMuted)),
+              child: Text(
+                _error!,
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
             )
           : _form(),
     );
@@ -500,7 +512,14 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           Text(
             t.matSavedAsDraftNote,
             textAlign: TextAlign.center,
-            style: body(12, color: AppColors.textMuted, height: 1.4),
+            style: body(
+              12,
+              height: 1.4,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
         ],
       ),
@@ -514,14 +533,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
       style: body(
         11,
         weight: FontWeight.w700,
-        color: AppColors.gold700,
+        color: context.onBrightness(
+          light: AppColors.gold700,
+          dark: AppColors.goldSoft,
+        ),
         letterSpacing: 1.6,
       ),
     ),
   );
 
-  InputDecoration _dec(String label, String? hint) => InputDecoration(
-    labelText: label,
+  InputDecoration _dec(String? hint) => InputDecoration(
     hintText: hint,
     filled: true,
     fillColor: Colors.white,
@@ -535,6 +556,23 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     ),
   );
 
+  /// Per-field caption sitting above a box, never floating onto its border —
+  /// the same look [_choice]/[_enumChoice]/[_complexionField] already use for
+  /// their own labels, just applied to the plain text/dropdown fields too.
+  Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: body(
+        13,
+        color: context.onBrightness(
+          light: AppColors.label,
+          dark: AppColors.darkText,
+        ),
+      ),
+    ),
+  );
+
   Widget _text(
     String key,
     String label, {
@@ -543,12 +581,18 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     int? maxLength,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
-    child: TextFormField(
-      controller: _c[key],
-      maxLines: maxLines,
-      maxLength: maxLength,
-      style: body(14, color: AppColors.ink),
-      decoration: _dec(label, hint),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _fieldLabel(label),
+        TextFormField(
+          controller: _c[key],
+          maxLines: maxLines,
+          maxLength: maxLength,
+          style: body(14, color: AppColors.ink),
+          decoration: _dec(hint),
+        ),
+      ],
     ),
   );
 
@@ -558,29 +602,41 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   /// just constrained to digits only.
   Widget _siblingsField(AppLocalizations t) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
-    child: TextFormField(
-      controller: _c['siblings'],
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      style: body(14, color: AppColors.ink),
-      decoration: _dec(t.matSiblings, t.matSiblingsHint),
-      validator: (v) {
-        if (v == null || v.trim().isEmpty) return null;
-        final n = int.tryParse(v.trim());
-        if (n == null || n < 0 || n > 20) return t.matSiblingsRangeError;
-        return null;
-      },
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _fieldLabel(t.matSiblings),
+        TextFormField(
+          controller: _c['siblings'],
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: body(14, color: AppColors.ink),
+          decoration: _dec(t.matSiblingsHint),
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return null;
+            final n = int.tryParse(v.trim());
+            if (n == null || n < 0 || n > 20) return t.matSiblingsRangeError;
+            return null;
+          },
+        ),
+      ],
     ),
   );
 
   Widget _multiline(TextEditingController c, String label, {String? hint}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 14),
-        child: TextFormField(
-          controller: c,
-          maxLines: 3,
-          style: body(14, color: AppColors.ink),
-          decoration: _dec(label, hint),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _fieldLabel(label),
+            TextFormField(
+              controller: c,
+              maxLines: 3,
+              style: body(14, color: AppColors.ink),
+              decoration: _dec(hint),
+            ),
+          ],
         ),
       );
 
@@ -595,7 +651,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: body(13, color: AppColors.label)),
+          Text(
+            label,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -603,7 +668,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             children: [
               for (final o in options)
                 ChoiceChip(
-                  label: Text(o, style: body(13)),
+                  label: Text(
+                    o,
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   selected: selected == o,
                   onSelected: (_) => onPick(o),
                   selectedColor: AppColors.forest300,
@@ -632,7 +706,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.matComplexion, style: body(13, color: AppColors.label)),
+          Text(
+            t.matComplexion,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 10,
@@ -667,7 +750,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: body(13, color: AppColors.label)),
+          Text(
+            label,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -675,7 +767,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             children: [
               for (final entry in wireToLabel.entries)
                 ChoiceChip(
-                  label: Text(entry.value, style: body(13)),
+                  label: Text(
+                    entry.value,
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   selected: selectedWire == entry.key,
                   onSelected: (_) => onPickWire(entry.key),
                   selectedColor: AppColors.forest300,
@@ -698,22 +799,32 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        initialValue: selectedWire.isEmpty ? null : selectedWire,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.hint,
-        ),
-        style: body(14, color: AppColors.ink),
-        decoration: _dec(label, null),
-        items: [
-          for (final entry in wireToLabel.entries)
-            DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(label),
+          DropdownButtonFormField<String>(
+            initialValue: selectedWire.isEmpty ? null : selectedWire,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            // The field itself is always white — pin the popup to match
+            // rather than let it inherit the app's dark theme surface (which
+            // would leave this same ink-colored text unreadable when open).
+            dropdownColor: Colors.white,
+            decoration: _dec(null),
+            items: [
+              for (final entry in wireToLabel.entries)
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+            ],
+            onChanged: (v) {
+              if (v != null) onPickWire(v);
+            },
+          ),
         ],
-        onChanged: (v) {
-          if (v != null) onPickWire(v);
-        },
       ),
     );
   }
@@ -732,19 +843,27 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        initialValue: selected,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.hint,
-        ),
-        style: body(14, color: AppColors.ink),
-        decoration: _dec(label, hint),
-        items: [
-          for (final o in options) DropdownMenuItem(value: o, child: Text(o)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(label),
+          DropdownButtonFormField<String>(
+            initialValue: selected,
+            isExpanded: true,
+            icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.hint,
+            ),
+            style: body(14, color: AppColors.ink),
+            dropdownColor: Colors.white,
+            decoration: _dec(hint),
+            items: [
+              for (final o in options)
+                DropdownMenuItem(value: o, child: Text(o)),
+            ],
+            onChanged: onPick,
+          ),
         ],
-        onChanged: onPick,
       ),
     );
   }
@@ -765,7 +884,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (label.isNotEmpty) ...[
-            Text(label, style: body(13, color: AppColors.label)),
+            Text(
+              label,
+              style: body(
+                13,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 6),
           ],
           Wrap(
@@ -774,7 +902,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             children: [
               for (final entry in wireToLabel.entries)
                 FilterChip(
-                  label: Text(entry.value, style: body(13)),
+                  label: Text(
+                    entry.value,
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   selected: selectedWires.contains(entry.key),
                   onSelected: (on) => setState(() {
                     if (on) {
@@ -802,42 +939,54 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: TextFormField(
-              initialValue: _heightFeet?.toString() ?? '',
-              keyboardType: TextInputType.number,
-              style: body(14, color: AppColors.ink),
-              decoration: _dec(t.matHeightFeet, t.matHeightFeetHint),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                final n = int.tryParse(v.trim());
-                if (n == null) return t.matEnterNumberInCm;
-                if (n < 3 || n > 8) return t.matHeightFeetRangeError;
-                return null;
-              },
-              onChanged: (v) => setState(() {
-                _heightFeet = int.tryParse(v.trim());
-                _recomputeHeightCm();
-              }),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _fieldLabel(t.matHeightFeet),
+                TextFormField(
+                  initialValue: _heightFeet?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+                  style: body(14, color: AppColors.ink),
+                  decoration: _dec(t.matHeightFeetHint),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final n = int.tryParse(v.trim());
+                    if (n == null) return t.matEnterNumberInCm;
+                    if (n < 3 || n > 8) return t.matHeightFeetRangeError;
+                    return null;
+                  },
+                  onChanged: (v) => setState(() {
+                    _heightFeet = int.tryParse(v.trim());
+                    _recomputeHeightCm();
+                  }),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: TextFormField(
-              initialValue: _heightInches?.toString() ?? '',
-              keyboardType: TextInputType.number,
-              style: body(14, color: AppColors.ink),
-              decoration: _dec(t.matHeightInches, t.matHeightInchesHint),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                final n = int.tryParse(v.trim());
-                if (n == null) return t.matEnterNumberInCm;
-                if (n < 0 || n > 11) return t.matHeightInchesRangeError;
-                return null;
-              },
-              onChanged: (v) => setState(() {
-                _heightInches = int.tryParse(v.trim());
-                _recomputeHeightCm();
-              }),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _fieldLabel(t.matHeightInches),
+                TextFormField(
+                  initialValue: _heightInches?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+                  style: body(14, color: AppColors.ink),
+                  decoration: _dec(t.matHeightInchesHint),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final n = int.tryParse(v.trim());
+                    if (n == null) return t.matEnterNumberInCm;
+                    if (n < 0 || n > 11) return t.matHeightInchesRangeError;
+                    return null;
+                  },
+                  onChanged: (v) => setState(() {
+                    _heightInches = int.tryParse(v.trim());
+                    _recomputeHeightCm();
+                  }),
+                ),
+              ],
             ),
           ),
         ],
@@ -862,18 +1011,22 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   /// birth, accuracy) — kept out of this form since it's its own concern with
   /// its own backend resource, not another matrimonial-profile field.
   Widget _compatibilityBirthDetailsLink(AppLocalizations t) {
+    final color = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.forest300,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OutlinedButton.icon(
         onPressed: () => context.push('/matrimonial/birth-details'),
-        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+        icon: Icon(Icons.auto_awesome_rounded, size: 16, color: color),
         label: Text(
           t.matAddBirthDetailsLink,
-          style: body(13, weight: FontWeight.w600),
+          style: body(13, weight: FontWeight.w600, color: color),
         ),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.forest700,
-          side: const BorderSide(color: AppColors.forest700),
+          foregroundColor: color,
+          side: BorderSide(color: color),
           padding: const EdgeInsets.symmetric(vertical: 12),
           minimumSize: const Size.fromHeight(46),
           shape: RoundedRectangleBorder(
@@ -889,18 +1042,22 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   /// for the same reason birth details get one: a distinct concern with its
   /// own backend resource.
   Widget _compatibilityConsentLink(AppLocalizations t) {
+    final color = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.forest300,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OutlinedButton.icon(
         onPressed: () => context.push('/matrimonial/compatibility-consent'),
-        icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+        icon: Icon(Icons.privacy_tip_outlined, size: 16, color: color),
         label: Text(
           t.matManageConsentLink,
-          style: body(13, weight: FontWeight.w600),
+          style: body(13, weight: FontWeight.w600, color: color),
         ),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.forest700,
-          side: const BorderSide(color: AppColors.forest700),
+          foregroundColor: color,
+          side: BorderSide(color: color),
           padding: const EdgeInsets.symmetric(vertical: 12),
           minimumSize: const Size.fromHeight(46),
           shape: RoundedRectangleBorder(
@@ -915,24 +1072,37 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: TextFormField(
-              initialValue: _partnerAgeMin?.toString() ?? '',
-              keyboardType: TextInputType.number,
-              style: body(14, color: AppColors.ink),
-              decoration: _dec(t.matPartnerAgeFrom, null),
-              onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _fieldLabel(t.matPartnerAgeFrom),
+                TextFormField(
+                  initialValue: _partnerAgeMin?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+                  style: body(14, color: AppColors.ink),
+                  decoration: _dec(null),
+                  onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: TextFormField(
-              initialValue: _partnerAgeMax?.toString() ?? '',
-              keyboardType: TextInputType.number,
-              style: body(14, color: AppColors.ink),
-              decoration: _dec(t.matPartnerAgeTo, null),
-              onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _fieldLabel(t.matPartnerAgeTo),
+                TextFormField(
+                  initialValue: _partnerAgeMax?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+                  style: body(14, color: AppColors.ink),
+                  decoration: _dec(null),
+                  onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
+                ),
+              ],
             ),
           ),
         ],

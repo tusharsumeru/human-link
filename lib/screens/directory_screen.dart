@@ -44,7 +44,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   bool _mapView = false;
 
   bool _nearbyLoading = false;
-bool _nearbyMode = false;
+  bool _nearbyMode = false;
 
   List<Map<String, dynamic>> _members = const [];
   bool _loading = true;
@@ -76,73 +76,66 @@ bool _nearbyMode = false;
     }
   }
 
-  
-  
-
-Future<void> _loadNearbyMembers() async {
-  setState(() {
-    _nearbyMode = true;
-    _nearbyLoading = true;
-  });
-
-  try {
-    // Get current device GPS location.
-    final origin = await currentLatLng();
-
-    if (!mounted) return;
-
-    // Same API used by InvitationsScreen.
-    final data = await Repository.instance.invitationMap(
-      origin,
-      q: _search,
-      page: 1,
-      limit: 100,
-    );
-
-    if (!mounted) return;
-
+  Future<void> _loadNearbyMembers() async {
     setState(() {
-      _members = data.members.map((m) {
-        return {
-          'id': m.id,
-          'name': m.name,
-          'profileUrl': m.profileUrl,
-          'gotra': m.gotra,
-          'native': m.native,
-          'phone': m.phone,
-
-          // Not available in InvitationMember.
-          'userName': '',
-          'occupation': '',
-          'branch': '',
-        };
-      }).toList();
-
       _nearbyMode = true;
-      _nearbyLoading = false;
-    });
-  } on LocationFailure catch (e) {
-    if (!mounted) return;
-
-    setState(() {
-      _nearbyLoading = false;
+      _nearbyLoading = true;
     });
 
-    _toast(context, e.message);
-  } catch (e) {
-    if (!mounted) return;
+    try {
+      // Get current device GPS location.
+      final origin = await currentLatLng();
 
-    setState(() {
-      _nearbyLoading = false;
-    });
+      if (!mounted) return;
 
-    _toast(context, 'Unable to load nearby members');
+      // Same API used by InvitationsScreen.
+      final data = await Repository.instance.invitationMap(
+        origin,
+        q: _search,
+        page: 1,
+        limit: 100,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _members = data.members.map((m) {
+          return {
+            'id': m.id,
+            'name': m.name,
+            'profileUrl': m.profileUrl,
+            'gotra': m.gotra,
+            'native': m.native,
+            'phone': m.phone,
+
+            // Not available in InvitationMember.
+            'userName': '',
+            'occupation': '',
+            'branch': '',
+          };
+        }).toList();
+
+        _nearbyMode = true;
+        _nearbyLoading = false;
+      });
+    } on LocationFailure catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _nearbyLoading = false;
+      });
+
+      _toast(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _nearbyLoading = false;
+      });
+
+      _toast(context, 'Unable to load nearby members');
+    }
   }
-}
-
-
-
-
 
   String _str(Map m, String k) => (m[k] ?? '').toString().trim();
 
@@ -171,11 +164,14 @@ Future<void> _loadNearbyMembers() async {
   /// excluding the user themselves.
   List<Map<String, dynamic>> _suggested(String? myGotra) {
     if (myGotra == null || myGotra.isEmpty) return const [];
-    final myUser = (context.read<AuthService>().user?.userName ?? '').toLowerCase();
+    final myUser = (context.read<AuthService>().user?.userName ?? '')
+        .toLowerCase();
     return _filtered
-        .where((m) =>
-            _str(m, 'gotra').toLowerCase() == myGotra.toLowerCase() &&
-            (myUser.isEmpty || _str(m, 'userName').toLowerCase() != myUser))
+        .where(
+          (m) =>
+              _str(m, 'gotra').toLowerCase() == myGotra.toLowerCase() &&
+              (myUser.isEmpty || _str(m, 'userName').toLowerCase() != myUser),
+        )
         .take(4)
         .toList();
   }
@@ -230,20 +226,17 @@ Future<void> _loadNearbyMembers() async {
             ),
           ),
           Expanded(
-  child: _loading || _nearbyLoading
-      ? const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.forest700,
-            strokeWidth: 2,
+            child: _loading || _nearbyLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.forest700,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : _mapView
+                ? _MapView(filtered: filtered, branchCoords: _branchCoords)
+                : _content(filtered),
           ),
-        )
-      : _mapView
-          ? _MapView(
-              filtered: filtered,
-              branchCoords: _branchCoords,
-            )
-          : _content(filtered),
-),
         ],
       ),
     );
@@ -263,10 +256,15 @@ Future<void> _loadNearbyMembers() async {
               isDense: true,
               hintText: t.dirSearchHint,
               hintStyle: body(14, color: AppColors.hint),
-              prefixIcon:
-                  const Icon(Icons.search_rounded, size: 18, color: AppColors.hint),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: AppColors.hint,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               filled: true,
               fillColor: Colors.white,
               enabledBorder: OutlineInputBorder(
@@ -275,7 +273,10 @@ Future<void> _loadNearbyMembers() async {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.forest700,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -290,7 +291,11 @@ Future<void> _loadNearbyMembers() async {
               color: AppColors.forest700,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.tune_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ],
@@ -298,20 +303,17 @@ Future<void> _loadNearbyMembers() async {
   }
 
   void _setMode(_Mode m) => setState(() {
-        _mode = m;
-        _mapView = false;
-      });
+    _mode = m;
+    _mapView = false;
+  });
 
-Widget _filterRow() {
-  final t = AppLocalizations.of(context);
+  Widget _filterRow() {
+    final t = AppLocalizations.of(context);
 
-  return Row(
-    children: [
-      Expanded(
-        child: _chip(
-          t.dirAllMembers,
-          !_nearbyMode,
-          () async {
+    return Row(
+      children: [
+        Expanded(
+          child: _chip(t.dirAllMembers, !_nearbyMode, () async {
             if (_nearbyMode) {
               setState(() {
                 _nearbyMode = false;
@@ -320,20 +322,13 @@ Widget _filterRow() {
 
               await _load();
             }
-          },
+          }),
         ),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: _chip(
-  t.dirNearbyMe,
-  _nearbyMode,
-  _loadNearbyMembers,
-),
-      ),
-    ],
-  );
-}
+        const SizedBox(width: 8),
+        Expanded(child: _chip(t.dirNearbyMe, _nearbyMode, _loadNearbyMembers)),
+      ],
+    );
+  }
 
   Widget _mapChip(AppLocalizations t) {
     return GestureDetector(
@@ -344,18 +339,26 @@ Widget _filterRow() {
           color: _mapView ? AppColors.forest700 : const Color(0xFFFCEBDD),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: _mapView ? AppColors.forest700 : const Color(0xFFEBC9AE)),
+            color: _mapView ? AppColors.forest700 : const Color(0xFFEBC9AE),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.map_outlined,
-                size: 14, color: _mapView ? Colors.white : AppColors.gold700),
+            Icon(
+              Icons.map_outlined,
+              size: 14,
+              color: _mapView ? Colors.white : AppColors.gold700,
+            ),
             const SizedBox(width: 5),
-            Text(t.dirMapView,
-                style: body(13,
-                    weight: FontWeight.w700,
-                    color: _mapView ? Colors.white : AppColors.gold700)),
+            Text(
+              t.dirMapView,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: _mapView ? Colors.white : AppColors.gold700,
+              ),
+            ),
           ],
         ),
       ),
@@ -370,53 +373,65 @@ Widget _filterRow() {
         decoration: BoxDecoration(
           color: active ? AppColors.forest700 : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border:
-              Border.all(color: active ? AppColors.forest700 : AppColors.border),
+          border: Border.all(
+            color: active ? AppColors.forest700 : AppColors.border,
+          ),
         ),
-        child: Text(label,
-            style: body(13,
-                weight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.label)),
+        child: Text(
+          label,
+          style: body(
+            13,
+            weight: FontWeight.w600,
+            color: active ? Colors.white : AppColors.label,
+          ),
+        ),
       ),
     );
   }
 
   // ── Content ─────────────────────────────────────────────────────────────────
-Widget _content(List<Map<String, dynamic>> filtered) {
-  if (filtered.isEmpty) {
-    return _empty();
-  }
+  Widget _content(List<Map<String, dynamic>> filtered) {
+    if (filtered.isEmpty) {
+      return _empty();
+    }
 
-  return ListView(
-    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-    children: [
-      _sectionHeader(
-        AppLocalizations.of(context).dirAllMembers,
-      ),
-      const SizedBox(height: 10),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+      children: [
+        _sectionHeader(AppLocalizations.of(context).dirAllMembers),
+        const SizedBox(height: 10),
 
-      for (final member in filtered) ...[
-        _RowCard(
-          member: member,
-          onConnect: _connect,
-          onView: _openMember,
-        ),
-        const SizedBox(height: 8),
+        for (final member in filtered) ...[
+          _RowCard(member: member, onConnect: _connect, onView: _openMember),
+          const SizedBox(height: 8),
+        ],
       ],
-    ],
-  );
-}
-
+    );
+  }
 
   Widget _sectionHeader(String title, {String? trailing}) {
     return Row(
       children: [
-        Text(title, style: display(18, color: AppColors.forest900)),
+        Text(
+          title,
+          style: display(
+            18,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
         const Spacer(),
         if (trailing != null)
-          Text(trailing,
-              style: body(12,
-                  weight: FontWeight.w600, color: AppColors.forest700)),
+          Text(
+            trailing,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: AppColors.forest700,
+            ),
+          ),
       ],
     );
   }
@@ -427,20 +442,44 @@ Widget _content(List<Map<String, dynamic>> filtered) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.groups_outlined, size: 40, color: AppColors.hint),
+          Icon(
+            Icons.groups_outlined,
+            size: 40,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(_search.isEmpty ? t.dirNoMembersYet : t.dirNoMembersFound,
-              style: display(16, color: AppColors.forest900)),
+          Text(
+            _search.isEmpty ? t.dirNoMembersYet : t.dirNoMembersFound,
+            style: display(
+              16,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(t.dirMembersAppearHere,
-              textAlign: TextAlign.center,
-              style: body(13, color: AppColors.textMuted)),
+          Text(
+            t.dirMembersAppearHere,
+            textAlign: TextAlign.center,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _connect(Map<String, dynamic> member) => connectMember(context, member);
+  Future<void> _connect(Map<String, dynamic> member) =>
+      connectMember(context, member);
 
   // Tap a member → show their full details, fetched fresh via GET /api/user/:id.
   void _openMember(Map<String, dynamic> member) =>
@@ -449,7 +488,13 @@ Widget _content(List<Map<String, dynamic>> filtered) {
 
 // Known branch cities that have map coordinates; used to derive a member's
 // area from their free-text native place.
-const _knownBranches = ['Kundapura', 'Kumta', 'Mangaluru', 'Bengaluru', 'Udupi'];
+const _knownBranches = [
+  'Kundapura',
+  'Kumta',
+  'Mangaluru',
+  'Bengaluru',
+  'Udupi',
+];
 
 String _branchOf(Map m) {
   final branch = (m['branch'] ?? '').toString().trim();
@@ -472,8 +517,11 @@ String _placeOf(Map m, AppLocalizations t) {
 }
 
 class _NearbyCard extends StatelessWidget {
-  const _NearbyCard(
-      {required this.member, required this.onConnect, required this.onView});
+  const _NearbyCard({
+    required this.member,
+    required this.onConnect,
+    required this.onView,
+  });
   final Map<String, dynamic> member;
   final void Function(Map<String, dynamic>) onConnect;
   final void Function(Map<String, dynamic>) onView;
@@ -486,77 +534,94 @@ class _NearbyCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => onView(member),
       child: Container(
-      width: 182,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PexelsImage(
+        width: 182,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PexelsImage(
               url: (member['profileUrl'] ?? '').toString(),
               name: name,
               size: 44,
-              radius: BorderRadius.circular(12)),
-          const SizedBox(height: 10),
-          Text(name,
+              radius: BorderRadius.circular(12),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
-          const SizedBox(height: 2),
-          if (gotra.isNotEmpty)
-            Text(t.dirGotraSuffix(gotra),
+              style: body(
+                14,
+                weight: FontWeight.w700,
+                color: AppColors.forest900,
+              ),
+            ),
+            const SizedBox(height: 2),
+            if (gotra.isNotEmpty)
+              Text(
+                t.dirGotraSuffix(gotra),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: body(11, color: AppColors.textMuted)),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.location_on_outlined,
-                  size: 11, color: AppColors.hint),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Text(_placeOf(member, t),
+                style: body(11, color: AppColors.textMuted),
+              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 11,
+                  color: AppColors.hint,
+                ),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(
+                    _placeOf(member, t),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: body(11, color: AppColors.hint)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _MiniButton(
-                  label: t.dirMessage,
-                  filled: false,
-                  onTap: () => openMemberChat(context, member),
+                    style: body(11, color: AppColors.hint),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _MiniButton(
-                  label: t.dirConnect,
-                  filled: true,
-                  onTap: () => onConnect(member),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniButton(
+                    label: t.dirMessage,
+                    filled: false,
+                    onTap: () => openMemberChat(context, member),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _MiniButton(
+                    label: t.dirConnect,
+                    filled: true,
+                    onTap: () => onConnect(member),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SuggestedCard extends StatelessWidget {
-  const _SuggestedCard(
-      {required this.member, required this.onConnect, required this.onView});
+  const _SuggestedCard({
+    required this.member,
+    required this.onConnect,
+    required this.onView,
+  });
   final Map<String, dynamic> member;
   final void Function(Map<String, dynamic>) onConnect;
   final void Function(Map<String, dynamic>) onView;
@@ -587,18 +652,30 @@ class _SuggestedCard extends StatelessWidget {
               color: const Color(0xFFF0FBF4),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(t.dirSameGotra,
-                style: body(9,
-                    weight: FontWeight.w700,
-                    color: AppColors.forest700,
-                    letterSpacing: 1)),
+            child: Text(
+              t.dirSameGotra,
+              style: body(
+                9,
+                weight: FontWeight.w700,
+                color: AppColors.forest700,
+                letterSpacing: 1,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
-          Text(name,
-              style: body(15, weight: FontWeight.w700, color: AppColors.forest900)),
+          Text(
+            name,
+            style: body(
+              15,
+              weight: FontWeight.w700,
+              color: AppColors.forest900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(reason,
-              style: body(12, color: AppColors.textMuted, height: 1.4)),
+          Text(
+            reason,
+            style: body(12, color: AppColors.textMuted, height: 1.4),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -617,8 +694,11 @@ class _SuggestedCard extends StatelessWidget {
                     color: const Color(0xFFF0FBF4),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.person_add_alt_1_outlined,
-                      size: 18, color: AppColors.forest700),
+                  child: const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    size: 18,
+                    color: AppColors.forest700,
+                  ),
                 ),
               ),
             ],
@@ -651,12 +731,19 @@ class _CommunityMapCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(t.dirCommunityMap,
-                    style: body(14,
-                        weight: FontWeight.w700, color: AppColors.forest900)),
+                Text(
+                  t.dirCommunityMap,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest900,
+                  ),
+                ),
                 const Spacer(),
-                Text(t.dirMembersCount(count),
-                    style: body(11, color: AppColors.textMuted)),
+                Text(
+                  t.dirMembersCount(count),
+                  style: body(11, color: AppColors.textMuted),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -667,18 +754,17 @@ class _CommunityMapCard extends StatelessWidget {
                 color: const Color(0xFFE8EFE8),
                 child: Stack(
                   children: [
-                    const Positioned(
-                        left: 40, top: 40, child: _MapDot()),
-                    const Positioned(
-                        right: 60, bottom: 40, child: _MapDot()),
-                    const Positioned(
-                        left: 120, bottom: 24, child: _MapDot()),
+                    const Positioned(left: 40, top: 40, child: _MapDot()),
+                    const Positioned(right: 60, bottom: 40, child: _MapDot()),
+                    const Positioned(left: 120, bottom: 24, child: _MapDot()),
                     Positioned(
                       left: 12,
                       bottom: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
@@ -686,13 +772,20 @@ class _CommunityMapCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(t.dirExploreRegion,
-                                style: body(12,
-                                    weight: FontWeight.w600,
-                                    color: AppColors.forest800)),
+                            Text(
+                              t.dirExploreRegion,
+                              style: body(
+                                12,
+                                weight: FontWeight.w600,
+                                color: AppColors.forest800,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.open_in_full_rounded,
-                                size: 12, color: AppColors.forest700),
+                            const Icon(
+                              Icons.open_in_full_rounded,
+                              size: 12,
+                              color: AppColors.forest700,
+                            ),
                           ],
                         ),
                       ),
@@ -716,14 +809,19 @@ class _MapDot extends StatelessWidget {
       width: 12,
       height: 12,
       decoration: const BoxDecoration(
-          color: AppColors.forest700, shape: BoxShape.circle),
+        color: AppColors.forest700,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
 
 class _MiniButton extends StatelessWidget {
-  const _MiniButton(
-      {required this.label, required this.filled, required this.onTap});
+  const _MiniButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
   final String label;
   final bool filled;
   final VoidCallback onTap;
@@ -743,11 +841,15 @@ class _MiniButton extends StatelessWidget {
         // Scale the label down if the card is narrow, so it never truncates.
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(label,
-              maxLines: 1,
-              style: body(12,
-                  weight: FontWeight.w700,
-                  color: filled ? Colors.white : AppColors.forest800)),
+          child: Text(
+            label,
+            maxLines: 1,
+            style: body(
+              12,
+              weight: FontWeight.w700,
+              color: filled ? Colors.white : AppColors.forest800,
+            ),
+          ),
         ),
       ),
     );
@@ -757,26 +859,29 @@ class _MiniButton extends StatelessWidget {
 // ── Grouped list (By Area / Gotra / Occupation) ───────────────────────────────
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList(
-      {required this.members,
-      required this.mode,
-      required this.onConnect,
-      required this.onView});
+  const _GroupedList({
+    required this.members,
+    required this.mode,
+    required this.onConnect,
+    required this.onView,
+  });
   final List<Map<String, dynamic>> members;
   final _Mode mode;
   final void Function(Map<String, dynamic>) onConnect;
   final void Function(Map<String, dynamic>) onView;
 
   String _key(Map m, AppLocalizations t) => switch (mode) {
-        _Mode.area => _branchOf(m),
-        _Mode.gotra => (m['gotra'] ?? '').toString().trim().isEmpty
-            ? t.dirGroupOther
-            : (m['gotra']).toString(),
-        _Mode.occupation => (m['occupation'] ?? '').toString().trim().isEmpty
-            ? t.dirGroupNotSpecified
-            : (m['occupation']).toString(),
-        _Mode.all => 'All',
-      };
+    _Mode.area => _branchOf(m),
+    _Mode.gotra =>
+      (m['gotra'] ?? '').toString().trim().isEmpty
+          ? t.dirGroupOther
+          : (m['gotra']).toString(),
+    _Mode.occupation =>
+      (m['occupation'] ?? '').toString().trim().isEmpty
+          ? t.dirGroupNotSpecified
+          : (m['occupation']).toString(),
+    _Mode.all => 'All',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -793,11 +898,18 @@ class _GroupedList extends StatelessWidget {
         for (final k in keys) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
-            child: Text('${k.toUpperCase()}  ·  ${grouped[k]!.length}',
-                style: body(11,
-                    weight: FontWeight.w700,
-                    color: AppColors.gold700,
-                    letterSpacing: 1.5)),
+            child: Text(
+              '${k.toUpperCase()}  ·  ${grouped[k]!.length}',
+              style: body(
+                11,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+                letterSpacing: 1.5,
+              ),
+            ),
           ),
           for (final m in grouped[k]!) ...[
             _RowCard(member: m, onConnect: onConnect, onView: onView),
@@ -810,8 +922,11 @@ class _GroupedList extends StatelessWidget {
 }
 
 class _RowCard extends StatelessWidget {
-  const _RowCard(
-      {required this.member, required this.onConnect, required this.onView});
+  const _RowCard({
+    required this.member,
+    required this.onConnect,
+    required this.onView,
+  });
   final Map<String, dynamic> member;
   final void Function(Map<String, dynamic>) onConnect;
   final void Function(Map<String, dynamic>) onView;
@@ -834,25 +949,33 @@ class _RowCard extends StatelessWidget {
       child: Row(
         children: [
           PexelsImage(
-              url: (member['profileUrl'] ?? '').toString(),
-              name: name,
-              size: 46,
-              radius: BorderRadius.circular(12)),
+            url: (member['profileUrl'] ?? '').toString(),
+            name: name,
+            size: 46,
+            radius: BorderRadius.circular(12),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(14,
-                        weight: FontWeight.w700, color: AppColors.forest900)),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest900,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(12, color: AppColors.textMuted)),
+                Text(
+                  sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(12, color: AppColors.textMuted),
+                ),
               ],
             ),
           ),
@@ -866,8 +989,11 @@ class _RowCard extends StatelessWidget {
                 color: const Color(0xFFF0FBF4),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.person_add_alt_1_outlined,
-                  size: 18, color: AppColors.forest700),
+              child: const Icon(
+                Icons.person_add_alt_1_outlined,
+                size: 18,
+                color: AppColors.forest700,
+              ),
             ),
           ),
         ],
@@ -879,7 +1005,11 @@ class _RowCard extends StatelessWidget {
 // ── Member detail sheet ───────────────────────────────────────────────────────
 
 class MemberSheet extends StatefulWidget {
-  const MemberSheet({super.key, required this.initial, required this.onConnect});
+  const MemberSheet({
+    super.key,
+    required this.initial,
+    required this.onConnect,
+  });
   final Map<String, dynamic> initial;
   final void Function(Map<String, dynamic>) onConnect;
 
@@ -896,9 +1026,12 @@ class _MemberSheetState extends State<MemberSheet> {
     // Refresh from GET /api/user/:id (fuller bio/occupation than the list row).
     final id = (widget.initial['id'] ?? '').toString();
     if (id.isNotEmpty) {
-      Repository.instance.userById(id).then((full) {
-        if (mounted) setState(() => _m = {..._m, ...full});
-      }).catchError((_) {});
+      Repository.instance
+          .userById(id)
+          .then((full) {
+            if (mounted) setState(() => _m = {..._m, ...full});
+          })
+          .catchError((_) {});
     }
   }
 
@@ -908,7 +1041,8 @@ class _MemberSheetState extends State<MemberSheet> {
     await Clipboard.setData(ClipboardData(text: _s('phone')));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).dirNumberCopied)));
+      SnackBar(content: Text(AppLocalizations.of(context).dirNumberCopied)),
+    );
   }
 
   @override
@@ -931,18 +1065,20 @@ class _MemberSheetState extends State<MemberSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(999)),
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 PexelsImage(
-                    url: _s('profileUrl'),
-                    name: name,
-                    size: 64,
-                    radius: BorderRadius.circular(16)),
+                  url: _s('profileUrl'),
+                  name: name,
+                  size: 64,
+                  radius: BorderRadius.circular(16),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -951,21 +1087,28 @@ class _MemberSheetState extends State<MemberSheet> {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: display(20, color: AppColors.forest900)),
+                            child: Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: display(20, color: AppColors.forest900),
+                            ),
                           ),
                           if (verified) ...[
                             const SizedBox(width: 6),
-                            const Icon(Icons.verified,
-                                size: 18, color: AppColors.forest600),
+                            const Icon(
+                              Icons.verified,
+                              size: 18,
+                              color: AppColors.forest600,
+                            ),
                           ],
                         ],
                       ),
                       if (userName.isNotEmpty)
-                        Text('@$userName',
-                            style: body(12, color: AppColors.textMuted)),
+                        Text(
+                          '@$userName',
+                          style: body(12, color: AppColors.textMuted),
+                        ),
                     ],
                   ),
                 ),
@@ -982,8 +1125,12 @@ class _MemberSheetState extends State<MemberSheet> {
             // the server sends `phone: ''` for everyone else, so an empty
             // string here means "withheld", not "missing".
             if (_s('phone').isNotEmpty)
-              _detail(Icons.phone_outlined, t.dirPhone, _s('phone'),
-                  onTap: _copyPhone),
+              _detail(
+                Icons.phone_outlined,
+                t.dirPhone,
+                _s('phone'),
+                onTap: _copyPhone,
+              ),
             // Only members who turned "Share with members" on in their profile
             // reach here with a number: the directory and /api/user/:id send
             // `phone: ''` for everyone else, so a missing row is that member's
@@ -1044,9 +1191,14 @@ class _MemberSheetState extends State<MemberSheet> {
               children: [
                 Text(t.dirPhone, style: body(11, color: AppColors.textMuted)),
                 const SizedBox(height: 1),
-                Text(phone,
-                    style: body(14,
-                        weight: FontWeight.w600, color: AppColors.ink)),
+                Text(
+                  phone,
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1063,8 +1215,11 @@ class _MemberSheetState extends State<MemberSheet> {
             borderRadius: BorderRadius.circular(8),
             child: const Padding(
               padding: EdgeInsets.all(6),
-              child:
-                  Icon(Icons.copy_rounded, size: 18, color: AppColors.forest700),
+              child: Icon(
+                Icons.copy_rounded,
+                size: 18,
+                color: AppColors.forest700,
+              ),
             ),
           ),
         ],
@@ -1072,8 +1227,12 @@ class _MemberSheetState extends State<MemberSheet> {
     );
   }
 
-  Widget _detail(IconData icon, String label, String value,
-      {VoidCallback? onTap}) {
+  Widget _detail(
+    IconData icon,
+    String label,
+    String value, {
+    VoidCallback? onTap,
+  }) {
     final row = Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1087,8 +1246,14 @@ class _MemberSheetState extends State<MemberSheet> {
               children: [
                 Text(label, style: body(11, color: AppColors.textMuted)),
                 const SizedBox(height: 1),
-                Text(value,
-                    style: body(14, weight: FontWeight.w600, color: AppColors.ink)),
+                Text(
+                  value,
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1126,12 +1291,14 @@ class _MapView extends StatelessWidget {
     branchCoords.forEach((branch, coord) {
       final count = counts[branch] ?? 0;
       if (count == 0) return;
-      markers.add(Marker(
-        point: coord,
-        width: 70,
-        height: 70,
-        child: _BranchMarker(branch: branch, count: count),
-      ));
+      markers.add(
+        Marker(
+          point: coord,
+          width: 70,
+          height: 70,
+          child: _BranchMarker(branch: branch, count: count),
+        ),
+      );
     });
 
     return Padding(
@@ -1158,9 +1325,14 @@ class _MapView extends StatelessWidget {
                 child: Container(
                   color: const Color(0xFFF0FBF4),
                   alignment: Alignment.center,
-                  child: Text(AppLocalizations.of(context).dirNoMembersToPlace,
-                      style: body(14,
-                          weight: FontWeight.w600, color: AppColors.hint)),
+                  child: Text(
+                    AppLocalizations.of(context).dirNoMembersToPlace,
+                    style: body(
+                      14,
+                      weight: FontWeight.w600,
+                      color: AppColors.hint,
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -1196,8 +1368,10 @@ class _BranchMarker extends StatelessWidget {
             ],
           ),
           alignment: Alignment.center,
-          child: Text('$count',
-              style: body(15, weight: FontWeight.w700, color: Colors.white)),
+          child: Text(
+            '$count',
+            style: body(15, weight: FontWeight.w700, color: Colors.white),
+          ),
         ),
         const SizedBox(height: 2),
         Container(
@@ -1207,8 +1381,10 @@ class _BranchMarker extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: AppColors.border),
           ),
-          child: Text(branch,
-              style: body(8, weight: FontWeight.w700, color: AppColors.forest800)),
+          child: Text(
+            branch,
+            style: body(8, weight: FontWeight.w700, color: AppColors.forest800),
+          ),
         ),
       ],
     );
@@ -1218,19 +1394,24 @@ class _BranchMarker extends StatelessWidget {
 void _toast(BuildContext context, String msg) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(msg, style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 1),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(msg, style: body(13, color: Colors.white)),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
 }
 
 // "Connect" → call the member. A number only reaches this device when that
 // member turned "Share with members" on; the server sends `phone: ''` to
 // everyone else. So an empty value here is that member's answer, not missing
 // data — say so rather than opening an empty dialer.
-Future<void> connectMember(BuildContext context, Map<String, dynamic> member) async {
+Future<void> connectMember(
+  BuildContext context,
+  Map<String, dynamic> member,
+) async {
   final messenger = ScaffoldMessenger.of(context);
   final t = AppLocalizations.of(context);
   final name = (member['name'] ?? '').toString().trim();
@@ -1246,19 +1427,24 @@ Future<void> connectMember(BuildContext context, Map<String, dynamic> member) as
     try {
       final fresh = await Repository.instance.userById(id);
       phone = (fresh['phone'] ?? '').toString().trim();
-    } catch (_) {/* keep the caller's copy */}
+    } catch (_) {
+      /* keep the caller's copy */
+    }
   }
   if (!context.mounted) return;
 
   if (phone.isEmpty) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
           t.dirPhoneDisabled(name.isEmpty ? t.dirThisMember : name),
-          style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 3),
-    ));
+          style: body(13, color: Colors.white),
+        ),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
     return;
   }
 
@@ -1269,20 +1455,27 @@ Future<void> connectMember(BuildContext context, Map<String, dynamic> member) as
     if (!ok) throw Exception('no dialer');
   } catch (_) {
     if (!context.mounted) return;
-    messenger.showSnackBar(SnackBar(
-      content: Text(t.dirCouldNotOpenDialer(phone),
-          style: body(13, color: Colors.white)),
-      backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
-    ));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          t.dirCouldNotOpenDialer(phone),
+          style: body(13, color: Colors.white),
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }
 
 // Tap a member → show their full details, fetched fresh via GET /api/user/:id.
 // `onConnect` defaults to [connectMember] (dial their number); pass a custom
 // one only when a screen needs different "Connect" behaviour.
-void showMemberProfile(BuildContext context, Map<String, dynamic> member,
-    {void Function(Map<String, dynamic>)? onConnect}) {
+void showMemberProfile(
+  BuildContext context,
+  Map<String, dynamic> member, {
+  void Function(Map<String, dynamic>)? onConnect,
+}) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -1305,11 +1498,15 @@ void openMemberChat(BuildContext context, Map<String, dynamic> member) {
   final name = (member['name'] ?? '').toString().trim();
   final userName = (member['userName'] ?? '').toString().trim();
   final defaultName = AppLocalizations.of(context).dirDefaultMemberName;
-  Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => ChatScreen(
-      otherUserId: id,
-      otherName: name.isNotEmpty ? name : (userName.isEmpty ? defaultName : userName),
-      otherAvatarUrl: (member['profileUrl'] ?? '').toString(),
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => ChatScreen(
+        otherUserId: id,
+        otherName: name.isNotEmpty
+            ? name
+            : (userName.isEmpty ? defaultName : userName),
+        otherAvatarUrl: (member['profileUrl'] ?? '').toString(),
+      ),
     ),
-  ));
+  );
 }

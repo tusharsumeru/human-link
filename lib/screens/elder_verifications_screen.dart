@@ -62,8 +62,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
   Widget build(BuildContext context) {
     final all = Repository.instance.verifications();
     final filtered = all.where((r) {
-      final matchRisk =
-          _riskFilter == 'All' || r['riskLevel'] == _riskFilter;
+      final matchRisk = _riskFilter == 'All' || r['riskLevel'] == _riskFilter;
       final matchAadhaar =
           _aadhaarFilter == 'All' || r['aadhaarStatus'] == _aadhaarFilter;
       return matchRisk && matchAadhaar;
@@ -82,7 +81,13 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Text(
               t.elderPendingClaims(filtered.length),
-              style: display(18, color: AppColors.forest900),
+              style: display(
+                18,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -103,11 +108,18 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.elderRiskLevel,
-            style: body(11,
-                weight: FontWeight.w700,
-                color: AppColors.gold700,
-                letterSpacing: 1.2)),
+        Text(
+          t.elderRiskLevel,
+          style: body(
+            11,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.gold700,
+              dark: AppColors.goldSoft,
+            ),
+            letterSpacing: 1.2,
+          ),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -122,11 +134,18 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           ],
         ),
         const SizedBox(height: 14),
-        Text(t.elderAadhaarStatus,
-            style: body(11,
-                weight: FontWeight.w700,
-                color: AppColors.gold700,
-                letterSpacing: 1.2)),
+        Text(
+          t.elderAadhaarStatus,
+          style: body(
+            11,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.gold700,
+              dark: AppColors.goldSoft,
+            ),
+            letterSpacing: 1.2,
+          ),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -144,8 +163,11 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     );
   }
 
-  Widget _chip(String label,
-      {required bool selected, required VoidCallback onTap}) {
+  Widget _chip(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: selected ? AppColors.forest800 : Colors.transparent,
       borderRadius: BorderRadius.circular(999),
@@ -157,12 +179,27 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-                color: selected ? AppColors.forest800 : AppColors.border),
+              color: selected
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
+            ),
           ),
-          child: Text(label,
-              style: body(12,
-                  weight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.label)),
+          child: Text(
+            label,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: selected
+                  ? Colors.white
+                  : context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
+            ),
+          ),
         ),
       ),
     );
@@ -202,18 +239,27 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(r['name'] as String,
-                              style: display(16, color: AppColors.forest900)),
+                          child: Text(
+                            r['name'] as String,
+                            style: display(16, color: AppColors.forest900),
+                          ),
                         ),
-                        Pill(_riskLabel(risk, t),
-                            bg: riskColor.withValues(alpha: 0.14),
-                            fg: riskColor),
+                        Pill(
+                          _riskLabel(risk, t),
+                          bg: riskColor.withValues(alpha: 0.14),
+                          fg: riskColor,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(t.elderAgeGenderGotra(
-                        '${r['age']}', genderLabel, r['gotra'] as String),
-                        style: body(12, color: AppColors.textMuted)),
+                    Text(
+                      t.elderAgeGenderGotra(
+                        '${r['age']}',
+                        genderLabel,
+                        r['gotra'] as String,
+                      ),
+                      style: body(12, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
@@ -226,13 +272,23 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Text(t.elderVouchesLabel,
-                  style: body(11,
-                      weight: FontWeight.w600, color: AppColors.textMuted)),
+              Text(
+                t.elderVouchesLabel,
+                style: body(
+                  11,
+                  weight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
               const Spacer(),
-              Text(t.elderVouchesOfRequired(vouches, required),
-                  style: body(11,
-                      weight: FontWeight.w700, color: AppColors.forest700)),
+              Text(
+                t.elderVouchesOfRequired(vouches, required),
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -240,11 +296,16 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Pill(t.elderAadhaarPrefix(aadhaar),
-                  bg: aadhaarColor.withValues(alpha: 0.14), fg: aadhaarColor),
+              Pill(
+                t.elderAadhaarPrefix(aadhaar),
+                bg: aadhaarColor.withValues(alpha: 0.14),
+                fg: aadhaarColor,
+              ),
               const Spacer(),
-              Text(t.elderSubmittedOn('${r['submittedOn']}'),
-                  style: body(11, color: AppColors.hint)),
+              Text(
+                t.elderSubmittedOn('${r['submittedOn']}'),
+                style: body(11, color: AppColors.hint),
+              ),
             ],
           ),
         ],
@@ -256,11 +317,15 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(),
-            style: body(10, weight: FontWeight.w600, color: AppColors.hint)),
+        Text(
+          label.toUpperCase(),
+          style: body(10, weight: FontWeight.w600, color: AppColors.hint),
+        ),
         const SizedBox(height: 2),
-        Text(value,
-            style: body(12, weight: FontWeight.w600, color: AppColors.label)),
+        Text(
+          value,
+          style: body(12, weight: FontWeight.w600, color: AppColors.label),
+        ),
       ],
     );
   }
@@ -270,10 +335,26 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          const Icon(Icons.schedule_rounded, size: 36, color: AppColors.hint),
+          Icon(
+            Icons.schedule_rounded,
+            size: 36,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(t.elderNoRequestsMatchFilter,
-              style: body(14, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.elderNoRequestsMatchFilter,
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
         ],
       ),
     );

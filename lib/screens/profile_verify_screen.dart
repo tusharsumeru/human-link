@@ -35,7 +35,10 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         foregroundColor: Colors.white,
@@ -55,12 +58,27 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
         children: [
-          Text(t.verifyIdentityHeading,
-              style: display(24, color: AppColors.forest900)),
+          Text(
+            t.verifyIdentityHeading,
+            style: display(
+              24,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             t.verifyIdentitySubtitle,
-            style: body(13, color: AppColors.textMuted, height: 1.5),
+            style: body(
+              13,
+              height: 1.5,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           AppCard(

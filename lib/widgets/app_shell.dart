@@ -14,15 +14,20 @@ import 'pexels_image.dart';
 
 /// Avatar for the logged-in user: prefers the uploaded photo (remote URL, then
 /// local file), falling back to name initials.
-Widget userAvatar(AppUser user,
-    {double size = 40, Color? borderColor, double borderWidth = 0}) {
+Widget userAvatar(
+  AppUser user, {
+  double size = 40,
+  Color? borderColor,
+  double borderWidth = 0,
+}) {
   if (user.photoUrl.isNotEmpty) {
     return PexelsImage(
-        url: user.photoUrl,
-        name: user.name,
-        size: size,
-        borderColor: borderColor,
-        borderWidth: borderWidth);
+      url: user.photoUrl,
+      name: user.name,
+      size: size,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+    );
   }
   if (user.photoPath.isNotEmpty) {
     return Container(
@@ -32,7 +37,9 @@ Widget userAvatar(AppUser user,
         shape: BoxShape.circle,
         border: borderWidth > 0
             ? Border.all(
-                color: borderColor ?? AppColors.forest700, width: borderWidth)
+                color: borderColor ?? AppColors.forest700,
+                width: borderWidth,
+              )
             : null,
       ),
       clipBehavior: Clip.antiAlias,
@@ -40,11 +47,12 @@ Widget userAvatar(AppUser user,
     );
   }
   return AvatarImage(
-      avatarKey: user.avatar,
-      name: user.name,
-      size: size,
-      borderColor: borderColor,
-      borderWidth: borderWidth);
+    avatarKey: user.avatar,
+    name: user.name,
+    size: size,
+    borderColor: borderColor,
+    borderWidth: borderWidth,
+  );
 }
 
 class NavDest {
@@ -57,25 +65,23 @@ class NavDest {
 /// Member sidebar/nav items. Labels are localized at call time (not `const`)
 /// since they depend on the active [AppLocalizations].
 List<NavDest> memberNavOf(AppLocalizations t) => [
-      NavDest(Icons.grid_view_rounded, t.navDashboard, '/dashboard'),
-      NavDest(Icons.park_rounded, t.navFamilyTree, '/family-tree'),
-      NavDest(Icons.navigation_rounded, t.navInvitations, '/invitations'),
-      NavDest(Icons.map_rounded, t.navDirectory, '/directory'),
-      NavDest(Icons.favorite_rounded, t.navMatrimonial, '/matrimonial'),
-      NavDest(Icons.groups_rounded, t.navWelfare, '/welfare'),
-      NavDest(Icons.temple_hindu_rounded, t.navPurohit, '/purohit'),
-    ];
+  NavDest(Icons.grid_view_rounded, t.navDashboard, '/dashboard'),
+  NavDest(Icons.park_rounded, t.navFamilyTree, '/family-tree'),
+  NavDest(Icons.navigation_rounded, t.navInvitations, '/invitations'),
+  NavDest(Icons.map_rounded, t.navDirectory, '/directory'),
+  NavDest(Icons.favorite_rounded, t.navMatrimonial, '/matrimonial'),
+  NavDest(Icons.groups_rounded, t.navWelfare, '/welfare'),
+  NavDest(Icons.temple_hindu_rounded, t.navPurohit, '/purohit'),
+];
 
 List<NavDest> elderNavOf(AppLocalizations t) => [
-      NavDest(Icons.park_rounded, t.navLineageTree, '/elder'),
-      NavDest(
-          Icons.shield_rounded, t.navMemberRequests, '/elder/verifications'),
-      NavDest(Icons.inventory_2_rounded, t.navArchives, '/elder/archive'),
-      NavDest(Icons.groups_rounded, t.navCommunity, '/elder/members'),
-      NavDest(
-          Icons.forum_rounded, t.navModeration, '/elder/conflict/ck-1'),
-      NavDest(Icons.settings_rounded, t.navSettings, '/elder/events'),
-    ];
+  NavDest(Icons.park_rounded, t.navLineageTree, '/elder'),
+  NavDest(Icons.shield_rounded, t.navMemberRequests, '/elder/verifications'),
+  NavDest(Icons.inventory_2_rounded, t.navArchives, '/elder/archive'),
+  NavDest(Icons.groups_rounded, t.navCommunity, '/elder/members'),
+  NavDest(Icons.forum_rounded, t.navModeration, '/elder/conflict/ck-1'),
+  NavDest(Icons.settings_rounded, t.navSettings, '/elder/events'),
+];
 
 /// The authenticated app frame: a forest sidebar drawer, a translucent top bar
 /// with bell + avatar, and a mobile bottom nav — ported from SidebarLayout +
@@ -104,7 +110,13 @@ class AppShell extends StatelessWidget {
     final user = auth.user;
     final isElder = user?.isElder ?? false;
     final t = AppLocalizations.of(context);
-    final nav = isElder ? elderNavOf(t) : memberNavOf(t);
+    var nav = isElder ? elderNavOf(t) : memberNavOf(t);
+    // A married member never sees the matrimonial hub — the marital status
+    // question at registration (and Edit Profile) decides this, not
+    // anything server-enforced.
+    if (user?.maritalStatus == 'married') {
+      nav = nav.where((d) => d.route != '/matrimonial').toList();
+    }
 
     final body = Padding(padding: padding, child: child);
 
@@ -127,41 +139,69 @@ class AppShell extends StatelessWidget {
         }
       },
       child: Scaffold(
-      drawer: _Sidebar(nav: nav, isElder: isElder),
-      appBar: AppBar(
-        backgroundColor: AppColors.pageBackground,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        shape: const Border(bottom: BorderSide(color: AppColors.border)),
-        centerTitle: true,
-        title: Text(title,
-            style: display(20, color: AppColors.forest700)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.forum_outlined, color: AppColors.forest700),
-            tooltip: t.navMessages,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ConversationsScreen()),
-            ),
-          ),
-          if (user != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12, left: 4),
-              child: GestureDetector(
-                onTap: () => context.push('/profile/me'),
-                child: userAvatar(
-                  user,
-                  size: 34,
-                  borderColor:
-                      isElder ? AppColors.gold500 : AppColors.forest700,
-                  borderWidth: 2,
-                ),
+        drawer: _Sidebar(nav: nav, isElder: isElder),
+        appBar: AppBar(
+          // No explicit backgroundColor/foregroundColor — inherits
+          // Theme.of(context).appBarTheme, which AppTheme.light()/dark() each
+          // set appropriately, so this bar actually goes dark in dark mode
+          // instead of staying a hardcoded-white strip above a dark page.
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: Border(
+            bottom: BorderSide(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
               ),
             ),
-        ],
-      ),
+          ),
+          centerTitle: true,
+          title: Text(
+            title,
+            style: display(
+              20,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.forum_outlined,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.darkText,
+                ),
+              ),
+              tooltip: t.navMessages,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ConversationsScreen()),
+              ),
+            ),
+            if (user != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 12, left: 4),
+                child: GestureDetector(
+                  onTap: () => context.push('/profile/me'),
+                  child: userAvatar(
+                    user,
+                    size: 34,
+                    borderColor: isElder
+                        ? AppColors.gold500
+                        : AppColors.forest700,
+                    borderWidth: 2,
+                  ),
+                ),
+              ),
+          ],
+        ),
         floatingActionButton: floatingActionButton,
-        bottomNavigationBar: _BottomBar(isElder: isElder, current: currentRoute),
+        bottomNavigationBar: _BottomBar(
+          isElder: isElder,
+          current: currentRoute,
+        ),
         body: scrollable ? SingleChildScrollView(child: body) : body,
       ),
     );
@@ -186,8 +226,7 @@ class _LanguagePicker extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
-          Text(t.commonLanguage,
-              style: body(12, color: Colors.white54)),
+          Text(t.commonLanguage, style: body(12, color: Colors.white54)),
           const Spacer(),
           for (final (loc, label) in _options)
             Padding(
@@ -196,8 +235,10 @@ class _LanguagePicker extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 onTap: () => locale.setLocale(loc),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: locale.locale == loc
                         ? AppColors.gold500.withValues(alpha: 0.22)
@@ -209,12 +250,16 @@ class _LanguagePicker extends StatelessWidget {
                           : Colors.white24,
                     ),
                   ),
-                  child: Text(label,
-                      style: body(11,
-                          weight: FontWeight.w600,
-                          color: locale.locale == loc
-                              ? AppColors.gold500
-                              : Colors.white70)),
+                  child: Text(
+                    label,
+                    style: body(
+                      11,
+                      weight: FontWeight.w600,
+                      color: locale.locale == loc
+                          ? AppColors.gold500
+                          : Colors.white70,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -253,17 +298,24 @@ class _Sidebar extends StatelessWidget {
                         gradient: AppGradients.gold,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.park_rounded,
-                          color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.park_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.appName,
-                            style: display(14, color: Colors.white)),
-                        Text(t.appTagline,
-                            style: body(11, color: AppColors.forest300)),
+                        Text(
+                          t.appName,
+                          style: display(14, color: Colors.white),
+                        ),
+                        Text(
+                          t.appTagline,
+                          style: body(11, color: AppColors.forest300),
+                        ),
                       ],
                     ),
                   ],
@@ -273,12 +325,16 @@ class _Sidebar extends StatelessWidget {
               // Nav
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   children: [
                     for (final d in nav)
                       _NavTile(
                         dest: d,
-                        active: current == d.route ||
+                        active:
+                            current == d.route ||
                             (d.route != '/dashboard' &&
                                 d.route != '/elder' &&
                                 current.startsWith(d.route)),
@@ -294,20 +350,30 @@ class _Sidebar extends StatelessWidget {
                   children: [
                     const _LanguagePicker(),
                     ListTile(
-                      leading: const Icon(Icons.person_outline_rounded,
-                          color: Colors.white70, size: 20),
-                      title: Text(t.myProfile,
-                          style: body(13, color: Colors.white70)),
+                      leading: const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
+                      title: Text(
+                        t.myProfile,
+                        style: body(13, color: Colors.white70),
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         context.push('/profile/me');
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.logout_rounded,
-                          color: Color(0xFFFCA5A5), size: 20),
-                      title: Text(t.logout,
-                          style: body(13, color: const Color(0xFFFCA5A5))),
+                      leading: const Icon(
+                        Icons.logout_rounded,
+                        color: Color(0xFFFCA5A5),
+                        size: 20,
+                      ),
+                      title: Text(
+                        t.logout,
+                        style: body(13, color: const Color(0xFFFCA5A5)),
+                      ),
                       onTap: () async {
                         final auth = context.read<AuthService>();
                         final router = GoRouter.of(context);
@@ -351,23 +417,32 @@ class _NavTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                Icon(dest.icon,
-                    size: 18,
-                    color: active
-                        ? AppColors.gold500
-                        : Colors.white.withValues(alpha: 0.65)),
+                Icon(
+                  dest.icon,
+                  size: 18,
+                  color: active
+                      ? AppColors.gold500
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(dest.label,
-                      style: body(13,
-                          weight: FontWeight.w600,
-                          color: active
-                              ? AppColors.gold500
-                              : Colors.white.withValues(alpha: 0.65))),
+                  child: Text(
+                    dest.label,
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: active
+                          ? AppColors.gold500
+                          : Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
                 ),
                 if (active)
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 16, color: AppColors.gold500),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: AppColors.gold500,
+                  ),
               ],
             ),
           ),
@@ -391,24 +466,34 @@ class _BottomBar extends StatelessWidget {
     final leftItems = isElder
         ? [
             NavDest(Icons.park_rounded, t.navTree, '/elder'),
-            NavDest(Icons.shield_rounded, t.navRequests, '/elder/verifications'),
+            NavDest(
+              Icons.shield_rounded,
+              t.navRequests,
+              '/elder/verifications',
+            ),
           ]
-        : [
-            NavDest(Icons.grid_view_rounded, t.navHome, '/dashboard'),
-          ];
+        : [NavDest(Icons.grid_view_rounded, t.navHome, '/dashboard')];
     final rightItems = isElder
         ? [
             NavDest(Icons.groups_rounded, t.navMembers, '/elder/members'),
             NavDest(Icons.inventory_2_rounded, t.navArchive, '/elder/archive'),
           ]
-        : [
-            NavDest(Icons.park_rounded, t.navTree, '/family-tree'),
-          ];
+        : [NavDest(Icons.park_rounded, t.navTree, '/family-tree')];
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(top: BorderSide(color: Color(0xFFE5DDD0))),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkSurface,
+        ),
+        border: Border(
+          top: BorderSide(
+            color: context.onBrightness(
+              light: const Color(0xFFE5DDD0),
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -432,20 +517,23 @@ class _BottomBar extends StatelessWidget {
 
   Widget _tab(BuildContext context, NavDest d, String path) {
     final active = path == d.route;
+    final activeColor = context.onBrightness(
+      light: AppColors.forest800,
+      dark: AppColors.forest300,
+    );
+    const inactiveColor = Color(0xFF9CA3AF);
     return Expanded(
       child: InkWell(
         onTap: () => context.go(d.route),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(d.icon,
-                size: 20,
-                color: active ? AppColors.forest800 : const Color(0xFF9CA3AF)),
+            Icon(d.icon, size: 20, color: active ? activeColor : inactiveColor),
             const SizedBox(height: 3),
-            Text(d.label,
-                style: body(11,
-                    color:
-                        active ? AppColors.forest800 : const Color(0xFF9CA3AF))),
+            Text(
+              d.label,
+              style: body(11, color: active ? activeColor : inactiveColor),
+            ),
           ],
         ),
       ),
@@ -460,11 +548,16 @@ class _BottomBar extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.menu_rounded,
-                  size: 20, color: Color(0xFF9CA3AF)),
+              const Icon(
+                Icons.menu_rounded,
+                size: 20,
+                color: Color(0xFF9CA3AF),
+              ),
               const SizedBox(height: 3),
-              Text(AppLocalizations.of(context).navMore,
-                  style: body(11, color: const Color(0xFF9CA3AF))),
+              Text(
+                AppLocalizations.of(context).navMore,
+                style: body(11, color: const Color(0xFF9CA3AF)),
+              ),
             ],
           ),
         ),
@@ -487,13 +580,24 @@ class _BottomBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: AppShadows.soft,
               ),
-              child: const Icon(Icons.add_rounded,
-                  size: 22, color: Colors.white),
+              child: const Icon(
+                Icons.add_rounded,
+                size: 22,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 2),
-            Text(AppLocalizations.of(context).navPost,
-                style: body(11,
-                    weight: FontWeight.w600, color: AppColors.forest800)),
+            Text(
+              AppLocalizations.of(context).navPost,
+              style: body(
+                11,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ],
         ),
       ),

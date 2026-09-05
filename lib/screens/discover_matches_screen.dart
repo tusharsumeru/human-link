@@ -17,11 +17,11 @@ import '../widgets/ui_kit.dart';
 /// order. The backend does the actual ordering — this only names the option
 /// the member picked. Localized at call time (not `const`).
 Map<String, String> _sortOptionsOf(AppLocalizations t) => {
-      'BEST_MATCH': t.discSortBestMatch,
-      'NEWEST': t.discSortNewest,
-      'AGE_LOW_TO_HIGH': t.discSortAgeLowHigh,
-      'AGE_HIGH_TO_LOW': t.discSortAgeHighLow,
-    };
+  'BEST_MATCH': t.discSortBestMatch,
+  'NEWEST': t.discSortNewest,
+  'AGE_LOW_TO_HIGH': t.discSortAgeLowHigh,
+  'AGE_HIGH_TO_LOW': t.discSortAgeHighLow,
+};
 const _defaultSort = 'BEST_MATCH';
 
 /// Matrimony → Discover Matches. Same eligible pool as the Matrimonial Hub,
@@ -145,17 +145,20 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is ApiException
-            ? e.message
-            : AppLocalizations.of(context).discCouldNotLoadMore),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException
+                ? e.message
+                : AppLocalizations.of(context).discCouldNotLoadMore,
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _openFilters() async {
-    final result =
-        await showDiscoverFilterSheet(context, initial: _filters);
+    final result = await showDiscoverFilterSheet(context, initial: _filters);
     if (result == null || !mounted) return;
     setState(() => _filters = result);
     _load();
@@ -189,10 +192,12 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           else if (_matches.isEmpty)
             _filters.isEmpty ? _emptyState(t) : _emptyFilteredState(t)
           else ...[
-            ..._matches.map((m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _MatchCard(match: m),
-                )),
+            ..._matches.map(
+              (m) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _MatchCard(match: m),
+              ),
+            ),
             if (_hasMore) _loadMoreButton(t),
           ],
         ],
@@ -209,17 +214,28 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       children: [
         if (_totalCount != null)
           Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                text: '${_totalCount ?? 0}',
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800),
-              ),
-              TextSpan(
-                text: _totalCount == 1 ? t.discMatch : t.discMatches,
-                style: body(13, color: AppColors.textMuted),
-              ),
-            ]),
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '${_totalCount ?? 0}',
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
+                TextSpan(
+                  text: _totalCount == 1 ? t.discMatch : t.discMatches,
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           )
         else
           const SizedBox.shrink(),
@@ -227,10 +243,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
           spacing: 8,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _filterButton(t),
-            _sortButton(t),
-          ],
+          children: [_filterButton(t), _sortButton(t)],
         ),
       ],
     );
@@ -242,17 +255,25 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       onPressed: _loading ? null : _openFilters,
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-            color: count > 0 ? AppColors.forest800 : AppColors.border),
+          color: count > 0 ? AppColors.forest800 : AppColors.border,
+        ),
         backgroundColor: count > 0 ? AppColors.forest800 : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       ),
-      icon: Icon(Icons.tune_rounded,
-          size: 16, color: count > 0 ? Colors.white : AppColors.forest800),
-      label: Text(count > 0 ? t.discFilterCount(count) : t.discFilter,
-          style: body(13,
-              weight: FontWeight.w700,
-              color: count > 0 ? Colors.white : AppColors.forest800)),
+      icon: Icon(
+        Icons.tune_rounded,
+        size: 16,
+        color: count > 0 ? Colors.white : AppColors.forest800,
+      ),
+      label: Text(
+        count > 0 ? t.discFilterCount(count) : t.discFilter,
+        style: body(
+          13,
+          weight: FontWeight.w700,
+          color: count > 0 ? Colors.white : AppColors.forest800,
+        ),
+      ),
     );
   }
 
@@ -272,11 +293,13 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
             value: entry.key,
             child: Row(
               children: [
-                Icon(Icons.check_rounded,
-                    size: 16,
-                    color: entry.key == _sort
-                        ? AppColors.forest800
-                        : Colors.transparent),
+                Icon(
+                  Icons.check_rounded,
+                  size: 16,
+                  color: entry.key == _sort
+                      ? AppColors.forest800
+                      : Colors.transparent,
+                ),
                 const SizedBox(width: 8),
                 Text(entry.value, style: body(13, color: AppColors.ink)),
               ],
@@ -293,12 +316,20 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(t.discSortLabel(_sortOptionsOf(t)[_sort] ?? ''),
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            Text(
+              t.discSortLabel(_sortOptionsOf(t)[_sort] ?? ''),
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: AppColors.forest800,
+              ),
+            ),
             const SizedBox(width: 2),
-            const Icon(Icons.arrow_drop_down_rounded,
-                size: 18, color: AppColors.forest800),
+            const Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 18,
+              color: AppColors.forest800,
+            ),
           ],
         ),
       ),
@@ -316,16 +347,32 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
               )
             : OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.forest800),
+                  side: BorderSide(
+                    color: context.onBrightness(
+                      light: AppColors.forest800,
+                      dark: AppColors.forest300,
+                    ),
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 12),
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
                 onPressed: _loadMore,
-                child: Text(t.discLoadMore,
-                    style: body(13,
-                        weight: FontWeight.w700, color: AppColors.forest800)),
+                child: Text(
+                  t.discLoadMore,
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest800,
+                      dark: AppColors.forest300,
+                    ),
+                  ),
+                ),
               ),
       ),
     );
@@ -336,17 +383,37 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.favorite_border_rounded,
-              size: 30, color: AppColors.hint),
+          Icon(
+            Icons.favorite_border_rounded,
+            size: 30,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.discNoMatchesYet,
-              style:
-                  body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.discNoMatchesYet,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             t.discCompletePreferences,
             textAlign: TextAlign.center,
-            style: body(13, color: AppColors.textMuted),
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
         ],
       ),
@@ -358,18 +425,41 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.search_off_rounded, size: 30, color: AppColors.hint),
+          Icon(
+            Icons.search_off_rounded,
+            size: 30,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.discNoMatchesForFilters,
-              textAlign: TextAlign.center,
-              style:
-                  body(15, weight: FontWeight.w600, color: AppColors.hint)),
+          Text(
+            t.discNoMatchesForFilters,
+            textAlign: TextAlign.center,
+            style: body(
+              15,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           TextButton(
             onPressed: _clearFilters,
-            child: Text(t.discClearFilters,
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            child: Text(
+              t.discClearFilters,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -381,17 +471,40 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 30, color: AppColors.hint),
+          Icon(
+            Icons.wifi_off_rounded,
+            size: 30,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(message,
-              textAlign: TextAlign.center,
-              style: body(14, color: AppColors.textMuted)),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           TextButton(
             onPressed: _load,
-            child: Text(t.commonRetry,
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            child: Text(
+              t.commonRetry,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -421,8 +534,11 @@ class _Intro extends StatelessWidget {
               gradient: AppGradients.gold,
               borderRadius: BorderRadius.circular(12),
             ),
-            child:
-                const Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.white),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -486,10 +602,12 @@ class _MatchCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(age == null ? name : '$name, $age',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: display(17, color: AppColors.forest900)),
+                  Text(
+                    age == null ? name : '$name, $age',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: display(17, color: AppColors.forest900),
+                  ),
                   const SizedBox(height: 6),
                   if (location != null && location.isNotEmpty)
                     _detailRow(Icons.place_outlined, location),
@@ -502,20 +620,31 @@ class _MatchCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text('$percentage%',
-                            style: display(22, color: levelColor)),
+                        Text(
+                          '$percentage%',
+                          style: display(22, color: levelColor),
+                        ),
                         const SizedBox(width: 8),
-                        Text(t.discMatchLabel,
-                            style: body(13,
-                                weight: FontWeight.w600,
-                                color: AppColors.textMuted)),
+                        Text(
+                          t.discMatchLabel,
+                          style: body(
+                            13,
+                            weight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ],
                     ),
                   if (levelLabel.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(levelLabel,
-                        style: body(13,
-                            weight: FontWeight.w700, color: levelColor)),
+                    Text(
+                      levelLabel,
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: levelColor,
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 12),
                   Align(
@@ -523,8 +652,9 @@ class _MatchCard extends StatelessWidget {
                     child: ForestButton(
                       label: t.discViewProfile,
                       icon: Icons.favorite_rounded,
-                      onPressed:
-                          id.isEmpty ? null : () => context.push('/matrimonial/$id'),
+                      onPressed: id.isEmpty
+                          ? null
+                          : () => context.push('/matrimonial/$id'),
                     ),
                   ),
                 ],
@@ -542,10 +672,12 @@ class _MatchCard extends StatelessWidget {
         Icon(icon, size: 14, color: AppColors.hint),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: body(12, color: AppColors.textMuted)),
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: body(12, color: AppColors.textMuted),
+          ),
         ),
       ],
     );

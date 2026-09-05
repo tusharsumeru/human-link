@@ -122,7 +122,10 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
@@ -132,13 +135,34 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
             Text(t.heritageStepLabel,
                 style: body(12,
                     weight: FontWeight.w700,
-                    color: AppColors.gold700,
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
+                    ),
                     letterSpacing: 1.4)),
             const SizedBox(height: 6),
-            Text(t.heritageTitle, style: display(28, color: AppColors.forest900)),
+            Text(
+              t.heritageTitle,
+              style: display(
+                28,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(t.heritageSubtitle,
-                style: body(13, color: AppColors.textMuted, height: 1.5)),
+            Text(
+              t.heritageSubtitle,
+              style: body(
+                13,
+                height: 1.5,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
             const SizedBox(height: 18),
             AppCard(
               child: Column(

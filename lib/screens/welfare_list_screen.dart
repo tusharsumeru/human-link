@@ -21,10 +21,14 @@ class _WelfareListScreenState extends State<WelfareListScreen> {
   @override
   Widget build(BuildContext context) {
     final campaigns = Repository.instance.welfare();
-    final totalRaised =
-        campaigns.fold<int>(0, (s, c) => s + (c['raised'] as int));
-    final totalBackers =
-        campaigns.fold<int>(0, (s, c) => s + (c['backers'] as int));
+    final totalRaised = campaigns.fold<int>(
+      0,
+      (s, c) => s + (c['raised'] as int),
+    );
+    final totalBackers = campaigns.fold<int>(
+      0,
+      (s, c) => s + (c['backers'] as int),
+    );
 
     final t = AppLocalizations.of(context);
     return AppShell(
@@ -35,16 +39,26 @@ class _WelfareListScreenState extends State<WelfareListScreen> {
         backgroundColor: AppColors.gold500,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded, size: 20),
-        label: Text(t.welfareStartCampaign,
-            style: body(13, weight: FontWeight.w700, color: Colors.white)),
+        label: Text(
+          t.welfareStartCampaign,
+          style: body(13, weight: FontWeight.w700, color: Colors.white),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeaderBand(totalRaised: totalRaised, totalBackers: totalBackers),
           const SizedBox(height: 20),
-          Text(t.welfareActiveCampaigns,
-              style: display(20, color: AppColors.forest900)),
+          Text(
+            t.welfareActiveCampaigns,
+            style: display(
+              20,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           for (final c in campaigns) ...[
             _CampaignCard(campaign: c),
@@ -77,14 +91,20 @@ class _HeaderBand extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.welfareKicker,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest300,
-                  letterSpacing: 1.4)),
+          Text(
+            t.welfareKicker,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+              letterSpacing: 1.4,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(t.welfareHeroLine,
-              style: display(20, color: Colors.white, height: 1.25)),
+          Text(
+            t.welfareHeroLine,
+            style: display(20, color: Colors.white, height: 1.25),
+          ),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -124,11 +144,9 @@ class _StatTile extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value,
-              style: display(22, color: Colors.white)),
+          Text(value, style: display(22, color: Colors.white)),
           const SizedBox(height: 4),
-          Text(label,
-              style: body(12, color: AppColors.forest300)),
+          Text(label, style: body(12, color: AppColors.forest300)),
         ],
       ),
     );
@@ -160,18 +178,19 @@ class _CampaignCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(c['colorA'] as int),
-                  Color(c['colorB'] as int),
-                ],
+                colors: [Color(c['colorA'] as int), Color(c['colorB'] as int)],
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
             ),
             child: Stack(
               children: [
                 Center(
-                  child: Text(c['image'] as String,
-                      style: const TextStyle(fontSize: 46)),
+                  child: Text(
+                    c['image'] as String,
+                    style: const TextStyle(fontSize: 46),
+                  ),
                 ),
                 Positioned(
                   top: 10,
@@ -190,41 +209,61 @@ class _CampaignCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c['title'] as String,
-                    style: display(17, color: AppColors.forest900)),
+                Text(
+                  c['title'] as String,
+                  style: display(17, color: AppColors.forest900),
+                ),
                 const SizedBox(height: 6),
-                Text(c['description'] as String,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(13, color: AppColors.textMuted, height: 1.5)),
+                Text(
+                  c['description'] as String,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(13, color: AppColors.textMuted, height: 1.5),
+                ),
                 const SizedBox(height: 14),
                 ProgressBar(value: goal == 0 ? 0 : raised / goal, height: 8),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text(t.welfareRaised(formatLakh(raised)),
-                        style: body(13,
-                            weight: FontWeight.w700,
-                            color: AppColors.forest800)),
+                    Text(
+                      t.welfareRaised(formatLakh(raised)),
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: AppColors.forest800,
+                      ),
+                    ),
                     const Spacer(),
-                    Text(t.welfareOfGoalPct(formatLakh(goal), pct),
-                        style: body(12, color: AppColors.textMuted)),
+                    Text(
+                      t.welfareOfGoalPct(formatLakh(goal), pct),
+                      style: body(12, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.schedule_rounded,
-                        size: 14, color: AppColors.hint),
+                    const Icon(
+                      Icons.schedule_rounded,
+                      size: 14,
+                      color: AppColors.hint,
+                    ),
                     const SizedBox(width: 4),
-                    Text(t.welfareDaysLeft(c['daysLeft'] as int),
-                        style: body(12, color: AppColors.hint)),
+                    Text(
+                      t.welfareDaysLeft(c['daysLeft'] as int),
+                      style: body(12, color: AppColors.hint),
+                    ),
                     const SizedBox(width: 14),
-                    const Icon(Icons.favorite_rounded,
-                        size: 14, color: AppColors.gold700),
+                    const Icon(
+                      Icons.favorite_rounded,
+                      size: 14,
+                      color: AppColors.gold700,
+                    ),
                     const SizedBox(width: 4),
-                    Text(t.welfareBackers(c['backers'] as int),
-                        style: body(12, color: AppColors.hint)),
+                    Text(
+                      t.welfareBackers(c['backers'] as int),
+                      style: body(12, color: AppColors.hint),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -234,8 +273,7 @@ class _CampaignCard extends StatelessWidget {
                     label: t.welfareDonate,
                     icon: Icons.volunteer_activism_rounded,
                     expand: true,
-                    onPressed: () =>
-                        context.push('/welfare/donate/${c['id']}'),
+                    onPressed: () => context.push('/welfare/donate/${c['id']}'),
                   ),
                 ),
               ],
@@ -261,14 +299,18 @@ class _ImpactCta extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.bar_chart_rounded,
-              color: AppColors.forest300, size: 26),
+          const Icon(
+            Icons.bar_chart_rounded,
+            color: AppColors.forest300,
+            size: 26,
+          ),
           const SizedBox(height: 10),
-          Text(t.welfareImpactTitle,
-              style: display(17, color: Colors.white)),
+          Text(t.welfareImpactTitle, style: display(17, color: Colors.white)),
           const SizedBox(height: 6),
-          Text(t.welfareImpactBody,
-              style: body(13, color: AppColors.forest300, height: 1.5)),
+          Text(
+            t.welfareImpactBody,
+            style: body(13, color: AppColors.forest300, height: 1.5),
+          ),
           const SizedBox(height: 14),
           GoldButton(
             label: t.welfareViewImpactReport,

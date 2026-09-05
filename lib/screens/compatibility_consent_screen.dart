@@ -81,7 +81,10 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -98,9 +101,17 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_loadError!,
-                            textAlign: TextAlign.center,
-                            style: body(14, color: AppColors.textMuted)),
+                        Text(
+                          _loadError!,
+                          textAlign: TextAlign.center,
+                          style: body(
+                            14,
+                            color: context.onBrightness(
+                              light: AppColors.textMuted,
+                              dark: AppColors.darkTextMuted,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         OutlinedButton(onPressed: _load, child: Text(t.commonRetry)),
                       ],

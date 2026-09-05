@@ -430,6 +430,30 @@ abstract class AppLocalizations {
   /// **'Female'**
   String get registerFemale;
 
+  /// No description provided for @registerMaritalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Marital Status'**
+  String get registerMaritalStatus;
+
+  /// No description provided for @registerMarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Married'**
+  String get registerMarried;
+
+  /// No description provided for @registerUnmarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmarried'**
+  String get registerUnmarried;
+
+  /// No description provided for @registerDivorced.
+  ///
+  /// In en, this message translates to:
+  /// **'Divorced'**
+  String get registerDivorced;
+
   /// No description provided for @registerGotra.
   ///
   /// In en, this message translates to:
@@ -1024,6 +1048,18 @@ abstract class AppLocalizations {
   /// **'You\'re all caught up ✦'**
   String get dashAllCaughtUp;
 
+  /// No description provided for @dashFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get dashFollow;
+
+  /// No description provided for @dashFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get dashFollowing;
+
   /// No description provided for @dashErrorCouldNotReachSuffix.
   ///
   /// In en, this message translates to:
@@ -1191,6 +1227,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not update like'**
   String get couldNotUpdateLike;
+
+  /// No description provided for @couldNotUpdateFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update follow status'**
+  String get couldNotUpdateFollow;
 
   /// No description provided for @savedToProfile.
   ///
@@ -1527,6 +1569,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hidden from other members'**
   String get profileHiddenFromMembers;
+
+  /// No description provided for @profileAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get profileAppearance;
+
+  /// No description provided for @profileAppearanceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how the app looks.'**
+  String get profileAppearanceDesc;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDark;
 
   /// No description provided for @profileCouldNotSave.
   ///
@@ -1869,6 +1941,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select blood group'**
   String get editSelectBloodGroup;
+
+  /// No description provided for @editMaritalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Marital status'**
+  String get editMaritalStatus;
+
+  /// No description provided for @editSelectMaritalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Select marital status'**
+  String get editSelectMaritalStatus;
+
+  /// No description provided for @editMarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Married'**
+  String get editMarried;
+
+  /// No description provided for @editUnmarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmarried'**
+  String get editUnmarried;
+
+  /// No description provided for @editDivorced.
+  ///
+  /// In en, this message translates to:
+  /// **'Divorced'**
+  String get editDivorced;
 
   /// No description provided for @editKuladevata.
   ///
@@ -3315,6 +3417,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to my profile'**
   String get matGoToMyProfile;
+
+  /// No description provided for @matNotForMarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Not applicable'**
+  String get matNotForMarried;
+
+  /// No description provided for @matNotForMarriedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The matrimonial hub is only for unmarried or divorced members. You told us you\'re married — you can change this in your profile if that\'s changed.'**
+  String get matNotForMarriedBody;
 
   /// No description provided for @matReadyToPublish.
   ///

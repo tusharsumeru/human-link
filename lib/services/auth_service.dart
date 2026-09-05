@@ -214,6 +214,10 @@ class AppUser {
   final String gender;
   final String bio;
   final String occupation;
+  // 'married' | 'unmarried' | 'divorced'. Decides matrimonial-hub access: a
+  // married member never sees it, matching what they told the app at
+  // registration (or later, in Edit Profile).
+  final String maritalStatus;
   // The old single-line address. Superseded by [currentAddress], kept because
   // Aadhaar KYC still hands back one line and older accounts only have this.
   final String address;
@@ -246,6 +250,7 @@ class AppUser {
     this.gender = '',
     this.bio = '',
     this.occupation = '',
+    this.maritalStatus = '',
     this.address = '',
     this.currentAddress = CurrentAddress.empty,
     this.matrimonialOptIn = false,
@@ -274,6 +279,7 @@ class AppUser {
     gender: (m['gender'] ?? '') as String,
     bio: (m['bio'] ?? '') as String,
     occupation: (m['occupation'] ?? '') as String,
+    maritalStatus: (m['maritalStatus'] ?? '') as String,
     address: (m['address'] ?? '') as String,
     currentAddress: CurrentAddress.fromMap(m['currentAddress']),
     matrimonialOptIn: (m['matrimonialOptIn'] ?? false) as bool,
@@ -304,6 +310,7 @@ class AppUser {
     'gender': gender,
     'bio': bio,
     'occupation': occupation,
+    'maritalStatus': maritalStatus,
     'address': address,
     'currentAddress': currentAddress.toMap(),
     'matrimonialOptIn': matrimonialOptIn,
@@ -330,6 +337,7 @@ class AppUser {
     String? gender,
     String? bio,
     String? occupation,
+    String? maritalStatus,
     String? address,
     CurrentAddress? currentAddress,
     bool? matrimonialOptIn,
@@ -354,6 +362,7 @@ class AppUser {
     gender: gender ?? this.gender,
     bio: bio ?? this.bio,
     occupation: occupation ?? this.occupation,
+    maritalStatus: maritalStatus ?? this.maritalStatus,
     address: address ?? this.address,
     currentAddress: currentAddress ?? this.currentAddress,
     matrimonialOptIn: matrimonialOptIn ?? this.matrimonialOptIn,

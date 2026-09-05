@@ -7,6 +7,7 @@ import 'router.dart';
 import 'screens/permissions_intro_screen.dart';
 import 'services/auth_service.dart';
 import 'services/locale_service.dart';
+import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
 
 /// Set once the member has been through [PermissionsIntroScreen] — that
@@ -23,6 +24,7 @@ class DaivajnaApp extends StatefulWidget {
 class _DaivajnaAppState extends State<DaivajnaApp> {
   late final AuthService _auth;
   late final LocaleService _locale;
+  late final ThemeService _theme;
   late final dynamic _router;
 
   // null while the SharedPreferences flag hasn't loaded yet (a blank frame,
@@ -35,9 +37,11 @@ class _DaivajnaAppState extends State<DaivajnaApp> {
     super.initState();
     _auth = AuthService();
     _locale = LocaleService();
+    _theme = ThemeService();
     _router = buildRouter(_auth);
     _auth.load();
     _locale.load();
+    _theme.load();
     _loadPermissionsIntroFlag();
   }
 
@@ -59,12 +63,15 @@ class _DaivajnaAppState extends State<DaivajnaApp> {
       providers: [
         ChangeNotifierProvider.value(value: _auth),
         ChangeNotifierProvider.value(value: _locale),
+        ChangeNotifierProvider.value(value: _theme),
       ],
-      child: Consumer<LocaleService>(
-        builder: (context, locale, _) => MaterialApp.router(
+      child: Consumer2<LocaleService, ThemeService>(
+        builder: (context, locale, theme, _) => MaterialApp.router(
           title: 'Daivajna Samaja',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: theme.mode,
           locale: locale.locale,
           supportedLocales: LocaleService.supportedLocales,
           localizationsDelegates: const [
