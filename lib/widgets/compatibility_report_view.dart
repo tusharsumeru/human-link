@@ -31,12 +31,13 @@ class CompatibilityReportView extends StatelessWidget {
       children: [
         if (jataka == null)
           _notice(
+            context,
             icon: Icons.info_outline_rounded,
             title: 'No Jataka result',
             message: 'The report was generated but did not include a Jataka section.',
           )
         else
-          ..._karnatakaSections(jataka),
+          ..._karnatakaSections(context, jataka),
         const SizedBox(height: 14),
         AshtakootaSection(ashtakoota: report.ashtakoota, summary: report.astrologyCompatibility?.ashtakoota),
         const SizedBox(height: 14),
@@ -53,33 +54,33 @@ class CompatibilityReportView extends StatelessWidget {
         KundliChartSection(kundliChart: report.kundliChart),
         if (report.disclaimer.isNotEmpty) ...[
           const SizedBox(height: 14),
-          _disclaimerCard(report.disclaimer),
+          _disclaimerCard(context, report.disclaimer),
         ],
         if (report.notImplementedInclude.isNotEmpty) ...[
           const SizedBox(height: 14),
-          _notImplementedCard(report.notImplementedInclude),
+          _notImplementedCard(context, report.notImplementedInclude),
         ],
       ],
     );
   }
 
-  List<Widget> _karnatakaSections(CompatibilityJataka jataka) {
-    final boundaryRiskCard = _boundaryRiskCard(jataka);
+  List<Widget> _karnatakaSections(BuildContext context, CompatibilityJataka jataka) {
+    final boundaryRiskCard = _boundaryRiskCard(context, jataka);
     return [
       if (boundaryRiskCard != null) ...[boundaryRiskCard, const SizedBox(height: 14)],
-      _verdictCard(jataka),
+      _verdictCard(context, jataka),
       const SizedBox(height: 14),
-      _countsRow(jataka),
+      _countsRow(context, jataka),
       const SizedBox(height: 14),
       if (jataka.criticalAlerts.isNotEmpty) ...[
-        _criticalAlertsCard(jataka.criticalAlerts),
+        _criticalAlertsCard(context, jataka.criticalAlerts),
         const SizedBox(height: 14),
       ],
-      _poruthamListCard(jataka),
+      _poruthamListCard(context, jataka),
     ];
   }
 
-  Widget _disclaimerCard(String disclaimer) {
+  Widget _disclaimerCard(BuildContext context, String disclaimer) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -89,12 +90,12 @@ class CompatibilityReportView extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.hint),
+          Icon(Icons.info_outline_rounded, size: 16, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
           const SizedBox(width: 8),
           Expanded(
   child: TranslatedText(
     text: disclaimer,
-    style: body(11, color: AppColors.hint, height: 1.4),
+    style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted), height: 1.4),
   ),
 ),
         ],
@@ -102,7 +103,8 @@ class CompatibilityReportView extends StatelessWidget {
     );
   }
 
-  Widget _notice({
+  Widget _notice(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String message,
@@ -134,8 +136,9 @@ class CompatibilityReportView extends StatelessWidget {
   /// engine for yet (e.g. PROFILE/FAMILY/PERSONALITY today) always lands
   /// here, never as a request failure: the report above is still valid for
   /// whatever WAS calculated.
-  Widget _notImplementedCard(List<String> modules) {
+  Widget _notImplementedCard(BuildContext context, List<String> modules) {
     return _notice(
+      context,
       icon: Icons.hourglass_top_rounded,
       title: 'Not yet available',
       message:
@@ -149,7 +152,7 @@ class CompatibilityReportView extends StatelessWidget {
   /// Never computed here: [CompatibilityJataka.nakshatraBoundaryRiskOverride]
   /// and each side's [BoundaryRisk] flags come straight from the API: this
   /// widget only chooses how to *display* them, never whether they're true.
-  Widget? _boundaryRiskCard(CompatibilityJataka jataka) {
+  Widget? _boundaryRiskCard(BuildContext context, CompatibilityJataka jataka) {
     final bride = jataka.brideBoundaryRisk;
     final groom = jataka.groomBoundaryRisk;
     if (bride == null || groom == null) return null;
@@ -214,6 +217,8 @@ class CompatibilityReportView extends StatelessWidget {
       if (risk.lagnaMayChange) 'Lagna',
       if (risk.navamshaMayChange) 'Navamsha',
     ];
+    // Always rendered inside _boundaryRiskCard's own pastel tint (never the
+    // page/dark-surface background), so AppColors.ink/textMuted stay as-is.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -233,7 +238,10 @@ class CompatibilityReportView extends StatelessWidget {
     );
   }
 
-  Widget _verdictCard(CompatibilityJataka jataka) {
+  // context unused — this card's background is always one of the pastel
+  // tints below, never the theme-following default, so its text/icon colors
+  // (already contrast-safe against a light pastel) stay fixed.
+  Widget _verdictCard(BuildContext context, CompatibilityJataka jataka) {
     final (Color bg, Color fg, IconData icon) = switch (jataka.verdict) {
       TraditionalVerdictCode.strong =>
         (const Color(0xFFF0FBF4), AppColors.forest700, Icons.favorite_rounded),
@@ -281,36 +289,38 @@ class CompatibilityReportView extends StatelessWidget {
     );
   }
 
-  Widget _countsRow(CompatibilityJataka jataka) {
+  Widget _countsRow(BuildContext context, CompatibilityJataka jataka) {
     final items = [
-      ('Matched', jataka.matched, AppColors.forest700),
-      ('Partial', jataka.partial, AppColors.gold700),
-      ('Not matched', jataka.notMatched, Colors.red.shade700),
+      ('Matched', jataka.matched, AppColors.forest700, AppColors.forest300),
+      ('Partial', jataka.partial, AppColors.gold700, AppColors.goldSoft),
+      ('Not matched', jataka.notMatched, Colors.red.shade700, Colors.red.shade300),
       if (jataka.reviewRequired > 0)
-        ('Review', jataka.reviewRequired, AppColors.gold700),
+        ('Review', jataka.reviewRequired, AppColors.gold700, AppColors.goldSoft),
       if (jataka.notCalculable > 0)
-        ('Unavailable', jataka.notCalculable, AppColors.hint),
+        ('Unavailable', jataka.notCalculable, AppColors.hint, AppColors.darkTextMuted),
     ];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (final (label, count, color) in items)
+        for (final (label, count, colorLight, colorDark) in items)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
             ),
             child: Text('$label: $count',
-                style: body(12, weight: FontWeight.w700, color: color)),
+                style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: colorLight, dark: colorDark))),
           ),
       ],
     );
   }
 
-  Widget _criticalAlertsCard(List<PoruthamResult> alerts) {
+  // context unused — same reasoning as _verdictCard: always a fixed pastel
+  // red tint, never the theme-following default.
+  Widget _criticalAlertsCard(BuildContext context, List<PoruthamResult> alerts) {
     return AppCard(
       color: const Color(0xFFFEF2F2),
       border: false,
@@ -337,23 +347,23 @@ class CompatibilityReportView extends StatelessWidget {
     );
   }
 
-  Widget _poruthamListCard(CompatibilityJataka jataka) {
+  Widget _poruthamListCard(BuildContext context, CompatibilityJataka jataka) {
     final pending = jataka.poruthams.any((p) => p.status == PoruthamStatus.notCalculable);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('The 10 Poruthams', style: display(15, color: AppColors.forest900)),
+          Text('The 10 Poruthams', style: display(15, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
           const SizedBox(height: 4),
           Text('Rule version: ${jataka.ruleVersion}',
-              style: body(11, color: AppColors.textMuted)),
+              style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
           if (jataka.normalizedPercentage != null) ...[
             const SizedBox(height: 2),
             Text('Normalized score: ${jataka.normalizedPercentage}%',
-                style: body(11, color: AppColors.textMuted)),
+                style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
           ],
           const SizedBox(height: 10),
-          for (final p in jataka.poruthams) _poruthamRow(p),
+          for (final p in jataka.poruthams) _poruthamRow(context, p),
           if (pending) ...[
             const SizedBox(height: 8),
             Container(
@@ -374,26 +384,37 @@ class CompatibilityReportView extends StatelessWidget {
 
   /// Status → indicator icon/color/label. This only maps what the API
   /// returned in `status` — it never infers or recomputes a status itself.
-  Widget _poruthamRow(PoruthamResult p) {
-    final (IconData icon, Color color, String label) = switch (p.status) {
-      PoruthamStatus.matched => (Icons.check_circle_rounded, AppColors.forest700, 'Matched'),
+  Widget _poruthamRow(BuildContext context, PoruthamResult p) {
+    final (IconData icon, Color color, Color colorDark, String label) = switch (p.status) {
+      PoruthamStatus.matched => (Icons.check_circle_rounded, AppColors.forest700, AppColors.forest300, 'Matched'),
       PoruthamStatus.partial =>
-        (Icons.adjust_rounded, AppColors.gold700, 'Partial'),
+        (Icons.adjust_rounded, AppColors.gold700, AppColors.goldSoft, 'Partial'),
       PoruthamStatus.notMatched =>
-        (Icons.cancel_rounded, Colors.red.shade700, 'Not matched'),
+        (Icons.cancel_rounded, Colors.red.shade700, Colors.red.shade300, 'Not matched'),
       PoruthamStatus.reviewRequired =>
-        (Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
+        (Icons.rate_review_outlined, AppColors.gold700, AppColors.goldSoft, 'Review required'),
       PoruthamStatus.notCalculable =>
-        (Icons.remove_circle_outline_rounded, AppColors.hint, 'Unavailable'),
-      PoruthamStatus.unknown => (Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
+        (Icons.remove_circle_outline_rounded, AppColors.hint, AppColors.darkTextMuted, 'Unavailable'),
+      PoruthamStatus.unknown => (Icons.help_outline_rounded, AppColors.hint, AppColors.darkTextMuted, 'Unknown'),
     };
     final explanation = _explanationFor(p);
     final critical = p.isCritical;
+    // A critical row is always wrapped by the caller in its own fixed pastel
+    // red card below (never the theme-following default) — only the
+    // non-critical path, which sits directly on that default, needs its
+    // colors to follow the theme.
+    final resolvedStatusColor = critical ? color : context.onBrightness(light: color, dark: colorDark);
+    final resolvedLabelColor = critical
+        ? Colors.red.shade800
+        : context.onBrightness(light: AppColors.ink, dark: AppColors.darkText);
+    final resolvedExplanationColor = critical
+        ? AppColors.textMuted
+        : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted);
 
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: color),
+        Icon(icon, size: 20, color: resolvedStatusColor),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -405,13 +426,13 @@ class CompatibilityReportView extends StatelessWidget {
                     child: Text(poruthamLabel(p.code),
                         style: body(13,
                             weight: FontWeight.w700,
-                            color: critical ? Colors.red.shade800 : AppColors.ink)),
+                            color: resolvedLabelColor)),
                   ),
                   if (critical) ...[
                     Icon(Icons.priority_high_rounded, size: 14, color: Colors.red.shade700),
                     const SizedBox(width: 2),
                   ],
-                  Text(label, style: body(12, weight: FontWeight.w700, color: color)),
+                  Text(label, style: body(12, weight: FontWeight.w700, color: resolvedStatusColor)),
                 ],
               ),
               // The backend's own explanation for this result — the computed
@@ -422,7 +443,7 @@ class CompatibilityReportView extends StatelessWidget {
                 const SizedBox(height: 3),
                 TranslatedText(
   text: explanation,
-  style: body(11, color: AppColors.textMuted, height: 1.3),
+  style: body(11, color: resolvedExplanationColor, height: 1.3),
 ),
               ],
             ],

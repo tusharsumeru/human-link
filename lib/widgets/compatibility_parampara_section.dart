@@ -32,40 +32,40 @@ class DaivagnaParamparaSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _partnerCard('Bride', p.bride),
+        _partnerCard(context, 'Bride', p.bride),
         const SizedBox(height: 10),
-        _partnerCard('Groom', p.groom),
+        _partnerCard(context, 'Groom', p.groom),
       ],
     );
   }
 
-  Widget _partnerCard(String who, PartnerParamparaResult p) {
+  Widget _partnerCard(BuildContext context, String who, PartnerParamparaResult p) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(who, style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
+          Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
           const SizedBox(height: 8),
-          _declaredValueRow('Gotra', p.gotra),
-          _declaredValueRow('Kuladevata', p.kuladevata),
+          _declaredValueRow(context, 'Gotra', p.gotra),
+          _declaredValueRow(context, 'Kuladevata', p.kuladevata),
         ],
       ),
     );
   }
 
-  Widget _declaredValueRow(String label, ParamparaDeclaredValue v) {
-    final (String valueText, Color color) = switch (v.status) {
+  Widget _declaredValueRow(BuildContext context, String label, ParamparaDeclaredValue v) {
+    final (String valueText, Color colorLight, Color colorDark) = switch (v.status) {
       ParamparaValueStatus.provided =>
-        ((v.customValue?.trim().isNotEmpty ?? false) ? v.customValue!.trim() : 'Not provided', AppColors.ink),
-      ParamparaValueStatus.unknown => ('Unknown', AppColors.hint),
-      ParamparaValueStatus.notProvided => ('Not provided', AppColors.hint),
+        ((v.customValue?.trim().isNotEmpty ?? false) ? v.customValue!.trim() : 'Not provided', AppColors.ink, AppColors.darkText),
+      ParamparaValueStatus.unknown => ('Unknown', AppColors.hint, AppColors.darkTextMuted),
+      ParamparaValueStatus.notProvided => ('Not provided', AppColors.hint, AppColors.darkTextMuted),
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          SizedBox(width: 96, child: Text(label, style: body(13, weight: FontWeight.w600, color: AppColors.textMuted))),
-          Expanded(child: Text(valueText, style: body(13, weight: FontWeight.w600, color: color))),
+          SizedBox(width: 96, child: Text(label, style: body(13, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)))),
+          Expanded(child: Text(valueText, style: body(13, weight: FontWeight.w600, color: context.onBrightness(light: colorLight, dark: colorDark)))),
         ],
       ),
     );

@@ -152,6 +152,7 @@ class _CandidateDetail extends StatelessWidget {
             if (c['discoveryMatch'] != null &&
                 (c['discoveryMatch'] as Map)['matchPercentage'] != null) ...[
               _section(
+                context,
                 title: t.matMatchSummary,
                 icon: Icons.favorite_rounded,
                 child: DiscoveryMatchDetail(
@@ -161,6 +162,7 @@ class _CandidateDetail extends StatelessWidget {
               const SizedBox(height: 14),
             ],
             _section(
+                context,
               title: t.matProfessional,
               icon: Icons.business_center_outlined,
               child: _KeyValueGrid(
@@ -174,6 +176,7 @@ class _CandidateDetail extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _section(
+                context,
               title: t.matPersonal,
               icon: Icons.person_outline_rounded,
               child: _KeyValueGrid(
@@ -186,6 +189,7 @@ class _CandidateDetail extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _section(
+                context,
               title: t.matFamily,
               icon: Icons.groups_outlined,
               child: _KeyValueColumn(
@@ -198,6 +202,7 @@ class _CandidateDetail extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _section(
+                context,
               title: t.matHoroscope,
               icon: Icons.star_outline_rounded,
               iconColor: AppColors.gold700,
@@ -217,16 +222,18 @@ class _CandidateDetail extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _section(
+                context,
               title: t.matAbout,
               icon: Icons.notes_rounded,
               child: Text(
                 c['about'] as String,
-                style: body(13, color: AppColors.textMuted, height: 1.6),
+                style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.6),
               ),
             ),
             if ((c['interests'] as List?)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 14),
               _section(
+                context,
                 title: t.matInterests,
                 icon: Icons.interests_rounded,
                 iconColor: AppColors.gold700,
@@ -246,6 +253,7 @@ class _CandidateDetail extends StatelessWidget {
             ],
             const SizedBox(height: 14),
             _section(
+                context,
               title: t.matPartnerExpectations,
               icon: Icons.favorite_outline_rounded,
               child: _ExpectationsList(
@@ -272,21 +280,27 @@ class _CandidateDetail extends StatelessWidget {
     return lower[0].toUpperCase() + lower.substring(1);
   }
 
-  Widget _section({
+  Widget _section(
+    BuildContext context, {
     required String title,
     required IconData icon,
     required Widget child,
-    Color iconColor = AppColors.forest700,
+    Color? iconColor,
   }) {
+    // Only ever called with the default (forest700) or AppColors.gold700 —
+    // map each to its dark-mode-legible counterpart.
+    final resolvedIconColor = iconColor == AppColors.gold700
+        ? context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)
+        : context.onBrightness(light: iconColor ?? AppColors.forest700, dark: AppColors.forest300);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 17, color: iconColor),
+              Icon(icon, size: 17, color: resolvedIconColor),
               const SizedBox(width: 8),
-              Text(title, style: display(17, color: AppColors.forest900)),
+              Text(title, style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
             ],
           ),
           const SizedBox(height: 14),
@@ -459,12 +473,12 @@ class _KeyValue extends StatelessWidget {
       children: [
         Text(
           label,
-          style: body(11, weight: FontWeight.w600, color: AppColors.textMuted),
+          style: body(11, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
         ),
         const SizedBox(height: 3),
         Text(
           value,
-          style: body(13, weight: FontWeight.w600, color: AppColors.forest900),
+          style: body(13, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
         ),
       ],
     );
@@ -503,7 +517,7 @@ class _ExpectationsList extends StatelessWidget {
               Expanded(
                 child: Text(
                   items[i],
-                  style: body(13, color: AppColors.textMuted, height: 1.5),
+                  style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5),
                 ),
               ),
             ],
@@ -524,15 +538,15 @@ class _Footer extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           t.matPremiumProfileTitle,
-          style: display(18, color: AppColors.forest900),
+          style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
         ),
         content: Text(
           t.matPremiumProfileBody,
-          style: body(13, color: AppColors.textMuted, height: 1.5),
+          style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5),
         ),
         actions: [
           GoldButton(

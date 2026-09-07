@@ -284,7 +284,7 @@ class _PurohitCard extends StatelessWidget {
                         style: body(
                           14,
                           weight: FontWeight.w700,
-                          color: AppColors.forest900,
+                          color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                         ),
                       ),
                     ),
@@ -304,7 +304,7 @@ class _PurohitCard extends StatelessWidget {
                     sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: body(12, color: AppColors.textMuted),
+                    style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                   ),
                 ],
                 if (km.isNotEmpty) ...[
@@ -315,7 +315,7 @@ class _PurohitCard extends StatelessWidget {
                     ),
                     style: body(
                       11,
-                      color: AppColors.forest700,
+                      color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
                       weight: FontWeight.w600,
                     ),
                   ),

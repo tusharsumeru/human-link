@@ -256,7 +256,7 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           children: [
             Text(
               t.elderResolution,
-              style: display(18, color: AppColors.forest900),
+              style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -277,15 +277,15 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.shield_outlined,
                   size: 13,
-                  color: AppColors.hint,
+                  color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
                 ),
                 const SizedBox(width: 5),
                 Text(
                   t.elderOnlyEldersResolve,
-                  style: body(11, color: AppColors.hint),
+                  style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                 ),
               ],
             ),
@@ -300,15 +300,15 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.forum_rounded,
                   size: 16,
-                  color: AppColors.gold700,
+                  color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   t.elderDiscussionThread,
-                  style: display(17, color: AppColors.forest900),
+                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                 ),
               ],
             ),

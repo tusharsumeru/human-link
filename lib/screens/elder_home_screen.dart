@@ -7,6 +7,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/compatibility_status_ui.dart' show statusColorTone;
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -149,16 +150,16 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 18, color: color),
+                  child: Icon(icon, size: 18, color: statusColorTone(context, color)),
                 ),
                 const SizedBox(height: 10),
-                Text(value, style: display(22, color: AppColors.forest900)),
+                Text(value, style: display(22, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 const SizedBox(height: 2),
                 Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: body(11,
-                        weight: FontWeight.w600, color: AppColors.textMuted)),
+                        weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
               ],
             ),
           ),
@@ -190,14 +191,14 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(t.elderPendingMemberRequests,
-                      style: display(16, color: AppColors.forest900)),
+                      style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFF1ECE2)),
+          Divider(height: 1, color: context.onBrightness(light: const Color(0xFFF1ECE2), dark: AppColors.darkBorder)),
           for (var i = 0; i < preview.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: Color(0xFFF6F1E8)),
+            if (i > 0) Divider(height: 1, color: context.onBrightness(light: const Color(0xFFF6F1E8), dark: AppColors.darkBorder)),
             _previewRow(preview[i], t),
           ],
           Padding(
@@ -208,7 +209,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 onPressed: () => context.go('/elder/verifications'),
                 child: Text(t.elderReview,
                     style: body(13,
-                        weight: FontWeight.w700, color: AppColors.forest700)),
+                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
               ),
             ),
           ),
@@ -243,17 +244,17 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: body(14,
                           weight: FontWeight.w700,
-                          color: AppColors.forest900)),
+                          color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                   const SizedBox(height: 2),
                   Text(r['claimingFrom'] as String,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: body(11, color: AppColors.textMuted)),
+                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                   const SizedBox(height: 3),
                   Text(t.elderVouches(r['vouches'] as int, required),
                       style: body(11,
                           weight: FontWeight.w600,
-                          color: AppColors.forest700)),
+                          color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
                 ],
               ),
             ),
@@ -288,16 +289,16 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(t.elderTreeAlertsConflicts,
-                    style: display(15, color: AppColors.forest900)),
+                    style: display(15, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 const SizedBox(height: 4),
                 Text(
                   t.elderAlertSample,
-                  style: body(12, color: AppColors.textMuted, height: 1.45),
+                  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45),
                 ),
                 const SizedBox(height: 6),
                 Text(t.elderResolveNow,
                     style: body(12,
-                        weight: FontWeight.w700, color: AppColors.forest700)),
+                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
               ],
             ),
           ),
@@ -333,7 +334,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 onTap: () => context.go(route),
                 child: Row(
                   children: [
-                    Icon(icon, size: 18, color: AppColors.forest700),
+                    Icon(icon, size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(label,
@@ -341,10 +342,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: body(12,
                               weight: FontWeight.w600,
-                              color: AppColors.forest900)),
+                              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                     ),
-                    const Icon(Icons.chevron_right_rounded,
-                        size: 16, color: AppColors.hint),
+                    Icon(Icons.chevron_right_rounded,
+                        size: 16, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                   ],
                 ),
               ),

@@ -241,7 +241,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                         Expanded(
                           child: Text(
                             r['name'] as String,
-                            style: display(16, color: AppColors.forest900),
+                            style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                           ),
                         ),
                         Pill(
@@ -258,7 +258,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                         genderLabel,
                         r['gotra'] as String,
                       ),
-                      style: body(12, color: AppColors.textMuted),
+                      style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                     ),
                   ],
                 ),
@@ -277,7 +277,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                 style: body(
                   11,
                   weight: FontWeight.w600,
-                  color: AppColors.textMuted,
+                  color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                 ),
               ),
               const Spacer(),
@@ -286,7 +286,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
                 style: body(
                   11,
                   weight: FontWeight.w700,
-                  color: AppColors.forest700,
+                  color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
                 ),
               ),
             ],
@@ -304,7 +304,7 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
               const Spacer(),
               Text(
                 t.elderSubmittedOn('${r['submittedOn']}'),
-                style: body(11, color: AppColors.hint),
+                style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
               ),
             ],
           ),
@@ -319,12 +319,12 @@ class _ElderVerificationsScreenState extends State<ElderVerificationsScreen> {
       children: [
         Text(
           label.toUpperCase(),
-          style: body(10, weight: FontWeight.w600, color: AppColors.hint),
+          style: body(10, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
         ),
         const SizedBox(height: 2),
         Text(
           value,
-          style: body(12, weight: FontWeight.w600, color: AppColors.label),
+          style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText)),
         ),
       ],
     );

@@ -359,7 +359,7 @@ class _CandidateCard extends StatelessWidget {
                           '${c['name']}, ${c['age']}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: display(17, color: AppColors.forest900),
+                          style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                         ),
                       ),
                       const Spacer(),
@@ -376,16 +376,19 @@ class _CandidateCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   _detailRow(
+                    context,
                     Icons.height_rounded,
                     '${c['height']} · ${c['location']}',
                   ),
                   const SizedBox(height: 4),
                   _detailRow(
+                    context,
                     Icons.school_outlined,
                     (c['education'] as String).split(',').first,
                   ),
                   const SizedBox(height: 4),
                   _detailRow(
+                    context,
                     Icons.business_center_outlined,
                     (c['company'] as String).split('—').first.trim(),
                   ),
@@ -424,17 +427,17 @@ class _CandidateCard extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String text) {
+  Widget _detailRow(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: AppColors.hint),
+        Icon(icon, size: 14, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: body(12, color: AppColors.textMuted),
+            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
           ),
         ),
       ],

@@ -208,14 +208,14 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                         const SizedBox(height: 10),
                         Text(
                           c['title'] as String,
-                          style: display(18, color: AppColors.forest900),
+                          style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           c['description'] as String,
                           style: body(
                             13,
-                            color: AppColors.textMuted,
+                            color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                             height: 1.5,
                           ),
                         ),
@@ -232,13 +232,13 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                               style: body(
                                 13,
                                 weight: FontWeight.w700,
-                                color: AppColors.forest800,
+                                color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
                               ),
                             ),
                             const Spacer(),
                             Text(
                               t.welfarePctLabel(pct),
-                              style: body(12, color: AppColors.textMuted),
+                              style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                             ),
                           ],
                         ),
@@ -248,7 +248,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                             c['daysLeft'] as int,
                             c['backers'] as int,
                           ),
-                          style: body(12, color: AppColors.hint),
+                          style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                         ),
                       ],
                     ),
@@ -469,10 +469,10 @@ class _AmountChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           decoration: BoxDecoration(
             gradient: selected ? AppGradients.forest : null,
-            color: selected ? null : Colors.white,
+            color: selected ? null : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.forest800 : AppColors.border,
+              color: selected ? AppColors.forest800 : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
             ),
           ),
           child: Text(
@@ -480,7 +480,7 @@ class _AmountChip extends StatelessWidget {
             style: body(
               14,
               weight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.label,
+              color: selected ? Colors.white : context.onBrightness(light: AppColors.label, dark: AppColors.darkText),
             ),
           ),
         ),
@@ -515,10 +515,10 @@ class _PayOption extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? AppColors.forest500.withValues(alpha: 0.10)
-                : Colors.white,
+                : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.forest800 : AppColors.border,
+              color: selected ? AppColors.forest800 : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
             ),
           ),
           child: Row(
@@ -548,7 +548,7 @@ class _PayOption extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: selected ? AppColors.forest800 : AppColors.textMuted,
+                color: selected ? AppColors.forest800 : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
               ),
               const SizedBox(width: 10),
               Text(
@@ -556,7 +556,7 @@ class _PayOption extends StatelessWidget {
                 style: body(
                   14,
                   weight: FontWeight.w500,
-                  color: AppColors.label,
+                  color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText),
                 ),
               ),
             ],

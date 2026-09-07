@@ -418,27 +418,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.work_outline,
                 size: 18,
-                color: AppColors.gold700,
+                color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               ),
               const SizedBox(width: 8),
               Text(
                 t.profileAboutOccupation,
-                style: display(18, color: AppColors.forest900),
+                style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
               ),
             ],
           ),
           const SizedBox(height: 14),
           if (samajId.isNotEmpty) ...[
             _samajRow(samajId),
-            const Divider(height: 22, color: AppColors.creamDark),
+            Divider(height: 22, color: context.onBrightness(light: AppColors.creamDark, dark: AppColors.darkBorder)),
           ],
           _detailRow(Icons.badge_outlined, t.profileOccupation, occupation),
-          const Divider(height: 22, color: AppColors.creamDark),
+          Divider(height: 22, color: context.onBrightness(light: AppColors.creamDark, dark: AppColors.darkBorder)),
           _detailRow(Icons.cake_outlined, t.profileBirthYear, birthYear),
-          const Divider(height: 22, color: AppColors.creamDark),
+          Divider(height: 22, color: context.onBrightness(light: AppColors.creamDark, dark: AppColors.darkBorder)),
           _detailRow(
             status == 'Late'
                 ? Icons.local_florist_outlined
@@ -501,15 +501,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.account_tree_outlined,
                     size: 18,
-                    color: AppColors.forest700,
+                    color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     t.profileFamilyRelations,
-                    style: display(18, color: AppColors.forest900),
+                    style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                   ),
                 ],
               ),
@@ -520,7 +520,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: body(
                     12,
                     weight: FontWeight.w600,
-                    color: AppColors.forest800,
+                    color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
                   ),
                 ),
               ),
@@ -532,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 t.profileNoConnectedRelations,
-                style: body(13, color: AppColors.textMuted),
+                style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
               ),
             ),
           for (final r in immediate) _relationTile(r),
@@ -572,7 +572,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: body(
                       14,
                       weight: FontWeight.w600,
-                      color: AppColors.ink,
+                      color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
                     ),
                   ),
                   Text(
@@ -580,12 +580,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label.isEmpty ? t.profileRelative : label,
                       if (m['isPlaceholder'] == true) t.profileNotJoinedYet,
                     ].join(' · '),
-                    style: body(11, color: AppColors.textMuted),
+                    style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.hint),
+            Icon(Icons.chevron_right, size: 18, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
           ],
         ),
       ),
@@ -600,11 +600,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.star, size: 18, color: AppColors.gold700),
+              Icon(Icons.star, size: 18, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
               const SizedBox(width: 8),
               Text(
                 t.profileLifeArchive,
-                style: display(18, color: AppColors.forest900),
+                style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
               ),
             ],
           ),
@@ -621,7 +621,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: display(
                 14,
                 weight: FontWeight.w400,
-                color: AppColors.textMuted,
+                color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                 height: 1.6,
               ).copyWith(fontStyle: FontStyle.italic),
             ),
@@ -634,13 +634,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _statsCard(String gotra, String native, String status) {
     final t = AppLocalizations.of(context);
     return AppCard(
-      color: AppColors.cream,
+      color: context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             t.profileQuickStats,
-            style: display(16, color: AppColors.forest900),
+            style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
           ),
           const SizedBox(height: 14),
           Row(
@@ -664,13 +664,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.onBrightness(light: Colors.white, dark: AppColors.darkBg),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
         ),
         child: Column(
           children: [
-            Text(label, style: body(10, color: AppColors.textMuted)),
+            Text(label, style: body(10, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
             const SizedBox(height: 4),
             Text(
               value,
@@ -680,7 +680,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: body(
                 13,
                 weight: FontWeight.w700,
-                color: AppColors.forest800,
+                color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
               ),
             ),
           ],
@@ -696,7 +696,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(Icons.badge_outlined, size: 16, color: AppColors.gold700),
+        Icon(Icons.badge_outlined, size: 16, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -704,7 +704,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 t.profileSamajId,
-                style: body(11, color: AppColors.textMuted),
+                style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
               ),
               const SizedBox(height: 2),
               Text(
@@ -712,7 +712,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: body(
                   14,
                   weight: FontWeight.w700,
-                  color: AppColors.forest800,
+                  color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
                 ).copyWith(letterSpacing: 0.5),
               ),
             ],
@@ -729,12 +729,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
           borderRadius: BorderRadius.circular(8),
-          child: const Padding(
-            padding: EdgeInsets.all(6),
+          child: Padding(
+            padding: const EdgeInsets.all(6),
             child: Icon(
               Icons.copy_rounded,
               size: 18,
-              color: AppColors.forest700,
+              color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
             ),
           ),
         ),
@@ -746,17 +746,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: AppColors.gold700),
+        Icon(icon, size: 16, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: body(11, color: AppColors.textMuted)),
+              Text(label, style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: body(14, weight: FontWeight.w600, color: AppColors.ink),
+                style: body(14, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText)),
               ),
             ],
           ),
@@ -1018,15 +1018,15 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.phone_outlined,
                 size: 18,
-                color: AppColors.gold700,
+                color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               ),
               const SizedBox(width: 8),
               Text(
                 t.profilePhoneNumber,
-                style: display(18, color: AppColors.forest900),
+                style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
               ),
             ],
           ),
@@ -1043,13 +1043,13 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
                       style: body(
                         14,
                         weight: FontWeight.w600,
-                        color: AppColors.ink,
+                        color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       on ? t.profilePhoneVisibleDesc : t.profilePhoneHiddenDesc,
-                      style: body(12, color: AppColors.textMuted, height: 1.45),
+                      style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45),
                     ),
                   ],
                 ),
@@ -1083,16 +1083,18 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: on ? const Color(0xFFF0FBF4) : AppColors.cream,
+              color: on
+                  ? const Color(0xFFF0FBF4)
+                  : context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
             ),
             child: Row(
               children: [
                 Icon(
                   on ? Icons.visibility_outlined : Icons.lock_outline,
                   size: 16,
-                  color: on ? AppColors.forest700 : AppColors.textMuted,
+                  color: on ? AppColors.forest700 : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1105,7 +1107,7 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
                     style: body(
                       13,
                       weight: FontWeight.w600,
-                      color: on ? AppColors.forest800 : AppColors.textMuted,
+                      color: on ? AppColors.forest800 : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                     ),
                   ),
                 ),
@@ -1136,22 +1138,22 @@ class _AppearanceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.dark_mode_outlined,
                 size: 18,
-                color: AppColors.gold700,
+                color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               ),
               const SizedBox(width: 8),
               Text(
                 t.profileAppearance,
-                style: display(18, color: AppColors.forest900),
+                style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             t.profileAppearanceDesc,
-            style: body(12, color: AppColors.textMuted, height: 1.45),
+            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45),
           ),
           const SizedBox(height: 14),
           SegmentedButton<ThemeMode>(
@@ -1206,15 +1208,15 @@ class _SavedCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.bookmark_rounded,
                     size: 18,
-                    color: AppColors.gold700,
+                    color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     t.profileSaved,
-                    style: display(18, color: AppColors.forest900),
+                    style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                   ),
                   const Spacer(),
                   if (items.isNotEmpty)
@@ -1223,7 +1225,7 @@ class _SavedCard extends StatelessWidget {
                       style: body(
                         13,
                         weight: FontWeight.w700,
-                        color: AppColors.textMuted,
+                        color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                       ),
                     ),
                 ],
@@ -1234,7 +1236,7 @@ class _SavedCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     t.profileNoSavedPostsYet,
-                    style: body(13, color: AppColors.textMuted, height: 1.4),
+                    style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
                   ),
                 )
               else

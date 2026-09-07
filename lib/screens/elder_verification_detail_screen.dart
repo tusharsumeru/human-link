@@ -454,21 +454,21 @@ class _ElderVerificationDetailScreenState
               color: AppColors.forest500.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, size: 15, color: AppColors.forest700),
+            child: Icon(icon, size: 15, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: body(11, color: AppColors.hint)),
+                Text(label, style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
                 const SizedBox(height: 1),
                 Text(
                   value,
                   style: body(
                     13,
                     weight: FontWeight.w600,
-                    color: AppColors.forest900,
+                    color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                   ),
                 ),
               ],
@@ -513,12 +513,12 @@ class _ElderVerificationDetailScreenState
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.forest700),
+              Icon(icon, size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: display(16, color: AppColors.forest900),
+                  style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                 ),
               ),
             ],
@@ -536,14 +536,14 @@ class _ElderVerificationDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: body(11, color: AppColors.hint)),
+          Text(label, style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
           const SizedBox(height: 2),
           Text(
             value,
             style: body(
               13,
               weight: FontWeight.w600,
-              color: AppColors.forest900,
+              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
               height: 1.4,
             ),
           ),
@@ -560,12 +560,12 @@ class _ElderVerificationDetailScreenState
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: approved ? _low.withValues(alpha: 0.06) : Colors.white,
+          color: approved ? _low.withValues(alpha: 0.06) : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: approved
                 ? _low.withValues(alpha: 0.35)
-                : const Color(0xFFE5E7EB),
+                : context.onBrightness(light: const Color(0xFFE5E7EB), dark: AppColors.darkBorder),
           ),
         ),
         child: Row(
@@ -575,7 +575,7 @@ class _ElderVerificationDetailScreenState
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_unchecked_rounded,
               size: 20,
-              color: color,
+              color: approved ? color : context.onBrightness(light: color, dark: AppColors.darkTextMuted),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -587,13 +587,13 @@ class _ElderVerificationDetailScreenState
                     style: body(
                       13,
                       weight: FontWeight.w600,
-                      color: AppColors.forest900,
+                      color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                     ),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     v['role'] as String,
-                    style: body(11, color: AppColors.hint),
+                    style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                   ),
                 ],
               ),

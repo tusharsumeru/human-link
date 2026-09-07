@@ -67,22 +67,23 @@ class AdvancedJatakaSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _partnerSection('Bride', aj.bride),
+        _partnerSection(context, 'Bride', aj.bride),
         const SizedBox(height: 10),
-        _partnerSection('Groom', aj.groom),
+        _partnerSection(context, 'Groom', aj.groom),
       ],
     );
   }
 
-  Widget _partnerSection(String who, PartnerAdvancedJataka p) {
+  Widget _partnerSection(BuildContext context, String who, PartnerAdvancedJataka p) {
+    final labelColor = context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft);
     return CompatibilityExpandableSection(
       title: who,
       subtitle: 'Natal chart + Navamsha (D9) findings',
       children: [
-        Text('Natal Chart', style: body(12, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 0.6)),
+        Text('Natal Chart', style: body(12, weight: FontWeight.w700, color: labelColor, letterSpacing: 0.6)),
         for (var i = 0; i < p.natalFindings.length; i++) _findingRow(_natalLabels[i], p.natalFindings[i]),
         const SizedBox(height: 8),
-        Text('Navamsha (D9)', style: body(12, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 0.6)),
+        Text('Navamsha (D9)', style: body(12, weight: FontWeight.w700, color: labelColor, letterSpacing: 0.6)),
         for (var i = 0; i < p.navamshaFindings.length; i++) _findingRow(_navamshaLabels[i], p.navamshaFindings[i]),
       ],
     );

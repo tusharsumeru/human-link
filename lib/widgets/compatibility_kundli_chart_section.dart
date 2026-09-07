@@ -64,11 +64,11 @@ class _PartnerKundliCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(who, style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
+          Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
           const SizedBox(height: 2),
           TranslatedText(
   text: 'Lagna: ${chart.lagnaRashiName}',
-  style: body(12, color: AppColors.textMuted),
+  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
 ),
           const SizedBox(height: 14),
           Center(
@@ -85,7 +85,7 @@ class _PartnerKundliCard extends StatelessWidget {
             title: 'View Planet Details',
             subtitle: '${chart.planets.length} Grahas',
             children: [
-              for (final planet in orderedKundliPlanets(chart.planets)) _planetDetailRow(planet),
+              for (final planet in orderedKundliPlanets(chart.planets)) _planetDetailRow(context, planet),
             ],
           ),
           const SizedBox(height: 10),
@@ -110,7 +110,7 @@ class _PartnerKundliCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
                 'Navamsha chart is not available for this report.',
-                style: body(12, color: AppColors.hint, height: 1.4),
+                style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted), height: 1.4),
               ),
             ),
         ],
@@ -118,7 +118,7 @@ class _PartnerKundliCard extends StatelessWidget {
     );
   }
 
-  Widget _planetDetailRow(KundliPlanetPosition p) {
+  Widget _planetDetailRow(BuildContext context, KundliPlanetPosition p) {
     final parts = <String>[grahaFullName(p.graha)];
     final valueParts = <String>[p.rashiName];
     if (p.nakshatraName.isNotEmpty) {
@@ -132,10 +132,10 @@ class _PartnerKundliCard extends StatelessWidget {
         children: [
           SizedBox(
             width: 88,
-            child: Text(parts.join(), style: body(13, weight: FontWeight.w700, color: AppColors.ink)),
+            child: Text(parts.join(), style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
           ),
           Expanded(
-            child: Text(valueParts.join(' · '), style: body(12, color: AppColors.textMuted)),
+            child: Text(valueParts.join(' · '), style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
           ),
         ],
       ),

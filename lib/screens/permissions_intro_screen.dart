@@ -162,9 +162,9 @@ class _PermissionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
+                Text(title, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 const SizedBox(height: 3),
-                Text(bodyText, style: body(13, color: AppColors.textMuted, height: 1.4)),
+                Text(bodyText, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
               ],
             ),
           ),

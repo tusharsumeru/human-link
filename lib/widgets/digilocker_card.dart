@@ -127,11 +127,11 @@ class _DigilockerCardState extends State<DigilockerCard> {
       children: [
         Row(
           children: [
-            const Icon(Icons.verified_user_outlined,
-                size: 18, color: AppColors.forest700),
+            Icon(Icons.verified_user_outlined,
+                size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
             const SizedBox(width: 8),
             Text('Aadhaar via DigiLocker',
-                style: display(16, color: AppColors.forest900)),
+                style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
             const Spacer(),
             if (_verified)
               Pill('Verified',
@@ -173,7 +173,7 @@ class _DigilockerCardState extends State<DigilockerCard> {
             widget.description ??
                 'You\'ll sign in to the official DigiLocker portal and consent '
                     'to share your Aadhaar. We confirm verification automatically.',
-            style: body(12, color: AppColors.textMuted, height: 1.4),
+            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
           ),
           const SizedBox(height: 10),
           ForestButton(

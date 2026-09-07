@@ -149,7 +149,7 @@ class ElderEventsScreen extends StatelessWidget {
               children: [
                 Text(e['title'] as String,
                     style: body(14.5,
-                        weight: FontWeight.w700, color: AppColors.forest900)),
+                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -169,23 +169,23 @@ class ElderEventsScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 13, color: AppColors.hint),
+                    Icon(Icons.location_on_outlined,
+                        size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(e['venue'] as String,
-                          style: body(11.5, color: AppColors.textMuted)),
+                          style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.groups_rounded,
-                        size: 13, color: AppColors.hint),
+                    Icon(Icons.groups_rounded,
+                        size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                     const SizedBox(width: 4),
                     Text(t.elderAttendeesExpected(e['attendees'] as int),
-                        style: body(11.5, color: AppColors.textMuted)),
+                        style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -218,10 +218,10 @@ class ElderEventsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t.elderCommitteePreferences,
-              style: display(18, color: AppColors.forest900)),
+              style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
           const SizedBox(height: 4),
           Text(t.elderCommitteePreferencesSubtitle,
-              style: body(12.5, color: AppColors.textMuted)),
+              style: body(12.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.notifications_active_outlined,
@@ -289,7 +289,7 @@ class _SettingsTileState extends State<_SettingsTile> {
               color: AppColors.forest800.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(widget.icon, size: 18, color: AppColors.forest700),
+            child: Icon(widget.icon, size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -298,9 +298,9 @@ class _SettingsTileState extends State<_SettingsTile> {
               children: [
                 Text(widget.title,
                     style: body(13.5,
-                        weight: FontWeight.w600, color: AppColors.forest900)),
+                        weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 Text(widget.subtitle,
-                    style: body(11.5, color: AppColors.textMuted, height: 1.4)),
+                    style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
               ],
             ),
           ),

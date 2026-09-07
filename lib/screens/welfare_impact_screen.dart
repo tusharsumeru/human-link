@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../widgets/compatibility_status_ui.dart' show statusColorTone;
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 
@@ -161,12 +162,12 @@ class WelfareImpactScreen extends StatelessWidget {
               children: [
                 Text(
                   t.welfareCategoryBreakdown,
-                  style: display(17, color: AppColors.forest900),
+                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   t.welfareCategoryBreakdownSubtitle,
-                  style: body(12, color: AppColors.textMuted),
+                  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                 ),
                 const SizedBox(height: 16),
                 _CategoryPie(campaigns: campaigns, total: totalRaised),
@@ -182,20 +183,20 @@ class WelfareImpactScreen extends StatelessWidget {
               children: [
                 Text(
                   t.welfareFundAllocation,
-                  style: display(17, color: AppColors.forest900),
+                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                 ),
                 const SizedBox(height: 14),
                 for (final a in _allocationOf(t)) ...[
                   _AllocRow(alloc: a),
                   const SizedBox(height: 12),
                 ],
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), height: 1),
                 const SizedBox(height: 12),
                 Text(
                   t.welfareAuditQuote,
                   style: body(
                     12,
-                    color: AppColors.hint,
+                    color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
                     height: 1.5,
                     weight: FontWeight.w500,
                   ),
@@ -212,15 +213,15 @@ class WelfareImpactScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.favorite_rounded,
                       size: 16,
-                      color: AppColors.gold700,
+                      color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       t.welfareGuardianDonors,
-                      style: display(17, color: AppColors.forest900),
+                      style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                     ),
                   ],
                 ),
@@ -233,7 +234,7 @@ class WelfareImpactScreen extends StatelessWidget {
                   _DonorRow(donor: donors[i]),
                   if (i != donors.length - 1) ...[
                     const SizedBox(height: 12),
-                    const Divider(color: AppColors.border, height: 1),
+                    Divider(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), height: 1),
                     const SizedBox(height: 12),
                   ],
                 ],
@@ -303,6 +304,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final toneColor = statusColorTone(context, color);
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -315,14 +317,14 @@ class _StatCard extends StatelessWidget {
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, size: 19, color: color),
+            child: Icon(icon, size: 19, color: toneColor),
           ),
           const SizedBox(height: 12),
-          Text(value, style: display(24, color: color)),
+          Text(value, style: display(24, color: toneColor)),
           const SizedBox(height: 2),
           Text(
             label,
-            style: body(12, weight: FontWeight.w600, color: AppColors.label),
+            style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText)),
           ),
         ],
       ),
@@ -434,7 +436,7 @@ class _AllocRow extends StatelessWidget {
                 style: body(
                   13,
                   weight: FontWeight.w600,
-                  color: AppColors.label,
+                  color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText),
                 ),
               ),
             ),
@@ -443,7 +445,7 @@ class _AllocRow extends StatelessWidget {
               style: body(
                 13,
                 weight: FontWeight.w700,
-                color: AppColors.forest900,
+                color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
               ),
             ),
           ],
@@ -486,16 +488,16 @@ class _DonorRow extends StatelessWidget {
                 style: body(
                   13,
                   weight: FontWeight.w700,
-                  color: AppColors.forest900,
+                  color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                 ),
               ),
-              Text(donor.role, style: body(12, color: AppColors.hint)),
+              Text(donor.role, style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
             ],
           ),
         ),
         Text(
           donor.amount,
-          style: body(13, weight: FontWeight.w700, color: AppColors.forest800),
+          style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300)),
         ),
       ],
     );

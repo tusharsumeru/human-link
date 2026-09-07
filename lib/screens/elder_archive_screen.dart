@@ -170,7 +170,7 @@ class ElderArchiveScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(m['title'] as String,
-                            style: display(17, color: AppColors.forest900)),
+                            style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                       ),
                       Pill(m['year'] as String,
                           bg: AppColors.creamDark, fg: AppColors.gold700),
@@ -180,15 +180,15 @@ class ElderArchiveScreen extends StatelessWidget {
                   Text(m['caption'] as String,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: body(12.5, color: AppColors.textMuted, height: 1.5)),
+                      style: body(12.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.person_outline_rounded,
-                          size: 13, color: AppColors.hint),
+                      Icon(Icons.person_outline_rounded,
+                          size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                       const SizedBox(width: 5),
                       Text(t.elderContributedBy(m['contributor'] as String),
-                          style: body(11, color: AppColors.hint)),
+                          style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
                     ],
                   ),
                 ],

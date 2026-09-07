@@ -188,7 +188,7 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                   _matrimonialTile(t),
                   const SizedBox(height: 14),
                   Text(t.heritageUploadNote,
-                      style: body(11, color: AppColors.textMuted, height: 1.4)),
+                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
                   const SizedBox(height: 6),
                   _document == null ? _uploadPrompt(t) : _documentPreview(t),
                 ],
@@ -235,9 +235,13 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
-                color: _matrimonial ? AppColors.forest700 : Colors.white,
+                color: _matrimonial
+                    ? AppColors.forest700
+                    : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
                 border: Border.all(
-                  color: _matrimonial ? AppColors.forest700 : AppColors.border,
+                  color: _matrimonial
+                      ? AppColors.forest700
+                      : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
                   width: 1.5,
                 ),
               ),
@@ -252,10 +256,10 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                 children: [
                   Text(t.heritageMatrimonialOptIn,
                       style: body(13,
-                          weight: FontWeight.w600, color: AppColors.ink)),
+                          weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
                   const SizedBox(height: 2),
                   Text(t.heritageMatrimonialDesc,
-                      style: body(11, color: AppColors.textMuted, height: 1.4)),
+                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
                 ],
               ),
             ),
@@ -273,14 +277,14 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
         padding: const EdgeInsets.symmetric(vertical: 22),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: Colors.white,
-          border: Border.all(color: AppColors.border, width: 1.5),
+          color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
+          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), width: 1.5),
         ),
         child: Column(
           children: [
-            const Icon(Icons.upload_file, size: 28, color: AppColors.gold700),
+            Icon(Icons.upload_file, size: 28, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
             const SizedBox(height: 8),
-            Text(t.heritageUploadPrompt, style: body(12, color: AppColors.label)),
+            Text(t.heritageUploadPrompt, style: body(12, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText))),
           ],
         ),
       ),
@@ -299,20 +303,20 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.check_circle, size: 16, color: AppColors.forest700),
+            Icon(Icons.check_circle, size: 16, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
             const SizedBox(width: 6),
             Expanded(
               child: Text(_document!.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: body(12,
-                      weight: FontWeight.w600, color: AppColors.forest700)),
+                      weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
             ),
             TextButton(
               onPressed: _pickDocument,
               child: Text(t.heritageChange,
                   style: body(13,
-                      weight: FontWeight.w700, color: AppColors.gold700)),
+                      weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
             ),
           ],
         ),

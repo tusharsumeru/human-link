@@ -537,9 +537,9 @@ class _NearbyCard extends StatelessWidget {
         width: 182,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,7 +559,7 @@ class _NearbyCard extends StatelessWidget {
               style: body(
                 14,
                 weight: FontWeight.w700,
-                color: AppColors.forest900,
+                color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
               ),
             ),
             const SizedBox(height: 2),
@@ -568,15 +568,15 @@ class _NearbyCard extends StatelessWidget {
                 t.dirGotraSuffix(gotra),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: body(11, color: AppColors.textMuted),
+                style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
               ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.location_on_outlined,
                   size: 11,
-                  color: AppColors.hint,
+                  color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
                 ),
                 const SizedBox(width: 3),
                 Expanded(
@@ -584,7 +584,7 @@ class _NearbyCard extends StatelessWidget {
                     _placeOf(member, t),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: body(11, color: AppColors.hint),
+                    style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                   ),
                 ),
               ],
@@ -639,9 +639,9 @@ class _SuggestedCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,13 +668,13 @@ class _SuggestedCard extends StatelessWidget {
             style: body(
               15,
               weight: FontWeight.w700,
-              color: AppColors.forest900,
+              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             reason,
-            style: body(12, color: AppColors.textMuted, height: 1.4),
+            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
           ),
           const SizedBox(height: 12),
           Row(
@@ -722,9 +722,9 @@ class _CommunityMapCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,13 +736,13 @@ class _CommunityMapCard extends StatelessWidget {
                   style: body(
                     14,
                     weight: FontWeight.w700,
-                    color: AppColors.forest900,
+                    color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   t.dirMembersCount(count),
-                  style: body(11, color: AppColors.textMuted),
+                  style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                 ),
               ],
             ),
@@ -835,7 +835,9 @@ class _MiniButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: filled ? AppColors.forest700 : const Color(0xFFF1EFEA),
+          color: filled
+              ? AppColors.forest700
+              : context.onBrightness(light: const Color(0xFFF1EFEA), dark: AppColors.darkBg),
           borderRadius: BorderRadius.circular(9),
         ),
         // Scale the label down if the card is narrow, so it never truncates.
@@ -847,7 +849,7 @@ class _MiniButton extends StatelessWidget {
             style: body(
               12,
               weight: FontWeight.w700,
-              color: filled ? Colors.white : AppColors.forest800,
+              color: filled ? Colors.white : context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
             ),
           ),
         ),
@@ -966,7 +968,7 @@ class _RowCard extends StatelessWidget {
                   style: body(
                     14,
                     weight: FontWeight.w700,
-                    color: AppColors.forest900,
+                    color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -974,7 +976,7 @@ class _RowCard extends StatelessWidget {
                   sub,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: body(12, color: AppColors.textMuted),
+                  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                 ),
               ],
             ),
@@ -1091,7 +1093,7 @@ class _MemberSheetState extends State<MemberSheet> {
                               name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: display(20, color: AppColors.forest900),
+                              style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                             ),
                           ),
                           if (verified) ...[
@@ -1107,7 +1109,7 @@ class _MemberSheetState extends State<MemberSheet> {
                       if (userName.isNotEmpty)
                         Text(
                           '@$userName',
-                          style: body(12, color: AppColors.textMuted),
+                          style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                         ),
                     ],
                   ),
@@ -1138,7 +1140,7 @@ class _MemberSheetState extends State<MemberSheet> {
             if (_s('phone').isNotEmpty) _phoneRow(_s('phone')),
             if (bio.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(bio, style: body(13, color: AppColors.label, height: 1.5)),
+              Text(bio, style: body(13, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText), height: 1.5)),
             ],
             const SizedBox(height: 20),
             Row(
@@ -1183,20 +1185,20 @@ class _MemberSheetState extends State<MemberSheet> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Icon(Icons.phone_outlined, size: 16, color: AppColors.gold700),
+          Icon(Icons.phone_outlined, size: 16, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.dirPhone, style: body(11, color: AppColors.textMuted)),
+                Text(t.dirPhone, style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                 const SizedBox(height: 1),
                 Text(
                   phone,
                   style: body(
                     14,
                     weight: FontWeight.w600,
-                    color: AppColors.ink,
+                    color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
                   ),
                 ),
               ],
@@ -1213,12 +1215,12 @@ class _MemberSheetState extends State<MemberSheet> {
               );
             },
             borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.all(6),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
               child: Icon(
                 Icons.copy_rounded,
                 size: 18,
-                color: AppColors.forest700,
+                color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
               ),
             ),
           ),
@@ -1238,27 +1240,27 @@ class _MemberSheetState extends State<MemberSheet> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.gold700),
+          Icon(icon, size: 16, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: body(11, color: AppColors.textMuted)),
+                Text(label, style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                 const SizedBox(height: 1),
                 Text(
                   value,
                   style: body(
                     14,
                     weight: FontWeight.w600,
-                    color: AppColors.ink,
+                    color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
                   ),
                 ),
               ],
             ),
           ),
           if (onTap != null)
-            const Icon(Icons.copy_rounded, size: 15, color: AppColors.hint),
+            Icon(Icons.copy_rounded, size: 15, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
         ],
       ),
     );
@@ -1479,7 +1481,7 @@ void showMemberProfile(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.cream,
+    backgroundColor: context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),

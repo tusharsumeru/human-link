@@ -26,6 +26,27 @@ class StatusVisual {
   final String label;
 }
 
+/// [StatusVisual.color] is always one of a handful of fixed light-mode tones
+/// (forest700, gold700, textMuted, hint, or a red shade) — this maps each to
+/// its dark-mode-legible counterpart for use on the theme-following default
+/// [AppCard] background. Never used inside a fixed pastel tint, which stays
+/// readable with the original color regardless of theme.
+Color statusColorTone(BuildContext context, Color light) {
+  if (light == AppColors.forest700) {
+    return context.onBrightness(light: light, dark: AppColors.forest300);
+  }
+  if (light == AppColors.gold700) {
+    return context.onBrightness(light: light, dark: AppColors.goldSoft);
+  }
+  if (light == AppColors.hint || light == AppColors.textMuted) {
+    return context.onBrightness(light: light, dark: AppColors.darkTextMuted);
+  }
+  if (light == Colors.red.shade700) {
+    return context.onBrightness(light: light, dark: Colors.red.shade300);
+  }
+  return context.onBrightness(light: light, dark: AppColors.darkText);
+}
+
 StatusVisual poruthamStatusVisual(PoruthamStatus status) => switch (status) {
       PoruthamStatus.matched => const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Matched'),
       PoruthamStatus.partial => const StatusVisual(Icons.adjust_rounded, AppColors.gold700, 'Partial'),
@@ -144,9 +165,9 @@ class CompatibilitySectionHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(eyebrow.toUpperCase(),
-                  style: body(11, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 1)),
+                  style: body(11, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft), letterSpacing: 1)),
               const SizedBox(height: 6),
-              Text(title, style: display(17, color: AppColors.forest900)),
+              Text(title, style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
             ],
           ),
         ),
@@ -180,10 +201,11 @@ class FindingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = statusColorTone(context, visual.color);
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(visual.icon, size: 20, color: visual.color),
+        Icon(visual.icon, size: 20, color: statusColor),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -196,7 +218,7 @@ class FindingRow extends StatelessWidget {
                     child: Text(title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: body(13, weight: FontWeight.w700, color: AppColors.ink)),
+                        style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
                   ),
                   if (valueLabel != null && valueLabel!.isNotEmpty) ...[
                     const SizedBox(width: 8),
@@ -205,16 +227,16 @@ class FindingRow extends StatelessWidget {
                           textAlign: TextAlign.right,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: body(12, weight: FontWeight.w600, color: AppColors.textMuted)),
+                          style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
                     ),
                   ],
                   const SizedBox(width: 8),
-                  Text(visual.label, style: body(12, weight: FontWeight.w700, color: visual.color)),
+                  Text(visual.label, style: body(12, weight: FontWeight.w700, color: statusColor)),
                 ],
               ),
               if (explanation != null && explanation!.isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(explanation!, style: body(11, color: AppColors.textMuted, height: 1.3)),
+                Text(explanation!, style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.3)),
               ],
             ],
           ),
@@ -229,9 +251,9 @@ class FindingRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 5),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: visual.color.withValues(alpha: 0.08),
+        color: statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: visual.color.withValues(alpha: 0.35)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
       ),
       child: content,
     );
@@ -259,25 +281,30 @@ class CompatibilityExpandableSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
       ),
       clipBehavior: Clip.antiAlias,
-      // The Container above paints its own white background, so the
+      // The Container above paints its own background, so the
       // ExpansionTile's ListTile needs its own transparent Material ancestor
       // — otherwise Flutter can't paint its tap ink/splash.
       child: Material(
         color: Colors.transparent,
         child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          data: Theme.of(context).copyWith(
+            dividerColor: Colors.transparent,
+            iconTheme: IconThemeData(
+              color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
+            ),
+          ),
           child: ExpansionTile(
             initiallyExpanded: initiallyExpanded,
             tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-            title: Text(title, style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
+            title: Text(title, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
             subtitle: subtitle != null
-                ? Text(subtitle!, style: body(12, color: AppColors.textMuted))
+                ? Text(subtitle!, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)))
                 : null,
             children: children,
           ),

@@ -9,6 +9,7 @@ import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/compatibility_status_ui.dart' show statusColorTone;
 import '../widgets/ui_kit.dart';
 import 'compatibility_dashboard_screen.dart';
 import 'south_indian_jataka_screen.dart';
@@ -418,9 +419,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(top: BorderSide(color: Color(0xFFE5DDD0))),
+      decoration: BoxDecoration(
+        color: context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
+        border: Border(top: BorderSide(color: context.onBrightness(light: const Color(0xFFE5DDD0), dark: AppColors.darkBorder))),
       ),
       child: SafeArea(
         top: false,
@@ -430,7 +431,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             if (_calculating) ...[
               Text(t.compChecking,
                   textAlign: TextAlign.center,
-                  style: body(12, weight: FontWeight.w600, color: AppColors.forest700)),
+                  style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
               const SizedBox(height: 8),
             ] else if (_calcError != null) ...[
               _calcErrorBanner(_calcError!, t),
@@ -441,7 +442,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
                     ? t.compCompleteHighlighted
                     : t.compCantCheckYet,
                 textAlign: TextAlign.center,
-                style: body(12, color: AppColors.textMuted),
+                style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
               ),
               const SizedBox(height: 8),
             ],
@@ -531,10 +532,12 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     Widget? readyExtra,
   }) {
     final visual = _statusVisual(readiness.status, readyLabel: readyLabel ?? t.compReady, t: t);
+    final visualColor = statusColorTone(context, visual.color);
     final action = (readiness.status == ReadinessStatus.actionRequired &&
             readiness.reason.isActionableByViewer)
         ? _actionFor(context, readiness.reason, t)
         : null;
+    final mutedColor = context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted);
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -545,36 +548,36 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             children: [
               Expanded(
                 child: Text(title,
-                    style: body(14, weight: FontWeight.w700, color: AppColors.forest900)),
+                    style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
               ),
               // The "action required" case already explains itself below (a
               // description + an action button), so the badge is skipped
               // there rather than showing a redundant "More information
               // needed" label alongside it.
               if (readiness.status != ReadinessStatus.actionRequired) ...[
-                Icon(visual.icon, size: 16, color: visual.color),
+                Icon(visual.icon, size: 16, color: visualColor),
                 const SizedBox(width: 4),
                 Text(visual.label,
-                    style: body(12, weight: FontWeight.w700, color: visual.color)),
+                    style: body(12, weight: FontWeight.w700, color: visualColor)),
               ],
             ],
           ),
           if (action != null) ...[
             const SizedBox(height: 8),
-            Text(action.description, style: body(12, color: AppColors.textMuted)),
+            Text(action.description, style: body(12, color: mutedColor)),
             const SizedBox(height: 8),
             OutlineButtonX(label: action.actionLabel, onPressed: action.onTap),
           ] else if (readiness.status == ReadinessStatus.actionRequired &&
               readiness.reason == PrerequisiteReason.yourVerificationIncomplete) ...[
             const SizedBox(height: 6),
-            Text(t.compVerificationRequired, style: body(12, color: AppColors.textMuted)),
+            Text(t.compVerificationRequired, style: body(12, color: mutedColor)),
           ] else if (readiness.status == ReadinessStatus.unavailable) ...[
             const SizedBox(height: 6),
             // Deliberately generic — never names what specifically the
             // candidate is missing, whether it's their data or their
             // consent (§5/§6 of the spec).
             Text(t.compDataNotAvailableYet,
-                style: body(12, color: AppColors.textMuted)),
+                style: body(12, color: mutedColor)),
           ],
           if (readiness.status == ReadinessStatus.ready && readyExtra != null) ...[
             const SizedBox(height: 10),
@@ -598,7 +601,7 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           ),
           const SizedBox(width: 8),
           Text(t.compCheckingEllipsis,
-              style: body(12, weight: FontWeight.w600, color: AppColors.forest700)),
+              style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
         ],
       );
     }

@@ -250,13 +250,17 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
     final outdated = consent != null && consent.granted && !consent.isCurrentPolicy;
 
     return AppCard(
-      color: ok ? const Color(0xFFF0FBF4) : AppColors.cream,
+      color: ok
+          ? const Color(0xFFF0FBF4)
+          : context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
       child: Row(
         children: [
           Icon(
             ok ? Icons.check_circle_outline_rounded : Icons.privacy_tip_outlined,
             size: 18,
-            color: ok ? AppColors.forest700 : AppColors.gold700,
+            color: ok
+                ? AppColors.forest700
+                : context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -264,7 +268,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(t.compYourConsentBirthData,
-                    style: body(12, weight: FontWeight.w700, color: AppColors.forest900)),
+                    style: body(12, weight: FontWeight.w700, color: ok ? AppColors.forest900 : context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
                 const SizedBox(height: 2),
                 Text(
                   ok
@@ -272,7 +276,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
                       : outdated
                           ? t.compPolicyChangedReconfirm
                           : t.compNotAllowedYet,
-                  style: body(11, color: AppColors.textMuted),
+                  style: body(11, color: ok ? AppColors.textMuted : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
                 ),
               ],
             ),
@@ -280,7 +284,7 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
           TextButton(
             onPressed: _openConsentScreen,
             child: Text(ok ? t.compManage : t.compReview,
-                style: body(12, weight: FontWeight.w700, color: AppColors.forest700)),
+                style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
           ),
         ],
       ),
@@ -303,11 +307,11 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
           ),
           const SizedBox(height: 14),
           Text(t.compReportTitle,
-              style: display(20, color: AppColors.forest900),
+              style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
               textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text('$myName × $otherName',
-              style: body(14, weight: FontWeight.w600, color: AppColors.textMuted),
+              style: body(14, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
               textAlign: TextAlign.center),
         ],
       ),

@@ -251,27 +251,32 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
 
   Widget _filterButton(AppLocalizations t) {
     final count = _filters.activeGroupCount;
+    final unfilledColor = context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300);
     return OutlinedButton.icon(
       onPressed: _loading ? null : _openFilters,
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          color: count > 0 ? AppColors.forest800 : AppColors.border,
+          color: count > 0
+              ? AppColors.forest800
+              : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
         ),
-        backgroundColor: count > 0 ? AppColors.forest800 : Colors.white,
+        backgroundColor: count > 0
+            ? AppColors.forest800
+            : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       ),
       icon: Icon(
         Icons.tune_rounded,
         size: 16,
-        color: count > 0 ? Colors.white : AppColors.forest800,
+        color: count > 0 ? Colors.white : unfilledColor,
       ),
       label: Text(
         count > 0 ? t.discFilterCount(count) : t.discFilter,
         style: body(
           13,
           weight: FontWeight.w700,
-          color: count > 0 ? Colors.white : AppColors.forest800,
+          color: count > 0 ? Colors.white : unfilledColor,
         ),
       ),
     );
@@ -281,6 +286,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     return PopupMenuButton<String>(
       enabled: !_loading,
       initialValue: _sort,
+      // Pinned to white so the always-ink menu-item text below stays
+      // readable rather than following the app's dark theme surface.
+      color: Colors.white,
       onSelected: (wire) {
         if (wire == _sort) return;
         setState(() => _sort = wire);
@@ -309,9 +317,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -321,14 +329,14 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
               style: body(
                 13,
                 weight: FontWeight.w700,
-                color: AppColors.forest800,
+                color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
               ),
             ),
             const SizedBox(width: 2),
-            const Icon(
+            Icon(
               Icons.arrow_drop_down_rounded,
               size: 18,
-              color: AppColors.forest800,
+              color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
             ),
           ],
         ),
@@ -578,7 +586,7 @@ class _MatchCard extends StatelessWidget {
         : null;
     final level = (m['matchLevel'] ?? '').toString();
     final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
-    final levelColor = matchLevelColors[level] ?? AppColors.hint;
+    final levelColor = matchLevelColorTone(context, matchLevelColors[level] ?? AppColors.hint);
 
     return AppCard(
       padding: EdgeInsets.zero,
@@ -606,14 +614,14 @@ class _MatchCard extends StatelessWidget {
                     age == null ? name : '$name, $age',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: display(17, color: AppColors.forest900),
+                    style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
                   ),
                   const SizedBox(height: 6),
                   if (location != null && location.isNotEmpty)
-                    _detailRow(Icons.place_outlined, location),
+                    _detailRow(context, Icons.place_outlined, location),
                   if (occupation != null && occupation.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    _detailRow(Icons.business_center_outlined, occupation),
+                    _detailRow(context, Icons.business_center_outlined, occupation),
                   ],
                   const SizedBox(height: 12),
                   if (percentage != null)
@@ -630,7 +638,7 @@ class _MatchCard extends StatelessWidget {
                           style: body(
                             13,
                             weight: FontWeight.w600,
-                            color: AppColors.textMuted,
+                            color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
                           ),
                         ),
                       ],
@@ -666,17 +674,17 @@ class _MatchCard extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String text) {
+  Widget _detailRow(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: AppColors.hint),
+        Icon(icon, size: 14, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: body(12, color: AppColors.textMuted),
+            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
           ),
         ),
       ],

@@ -16,6 +16,7 @@ import '../services/compatibility_certificate_pdf.dart';
 import '../services/compatibility_pdf_export.dart';
 import '../services/download_notification_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/compatibility_status_ui.dart' show statusColorTone;
 import '../widgets/ui_kit.dart';
 import 'compatibility_report_screen.dart';
 
@@ -125,7 +126,7 @@ class _CompatibilityDashboardScreenState
         : t.compThisMember;
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(light: AppColors.cream, dark: AppColors.darkBg),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -304,12 +305,12 @@ class _CompatibilityDashboardScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 32, color: AppColors.hint),
+            Icon(Icons.wifi_off_rounded, size: 32, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: body(14, color: AppColors.textMuted),
+              style: body(14, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
             ),
             const SizedBox(height: 14),
             OutlineButtonX(label: t.commonRetry, onPressed: _load),
@@ -451,7 +452,7 @@ class _CompatibilityDashboardScreenState
           const SizedBox(height: 14),
           Text(
             t.compMarriageCompatibility,
-            style: display(20, color: AppColors.forest900),
+            style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
@@ -460,7 +461,7 @@ class _CompatibilityDashboardScreenState
             style: body(
               14,
               weight: FontWeight.w600,
-              color: AppColors.textMuted,
+              color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
             ),
             textAlign: TextAlign.center,
           ),
@@ -489,14 +490,14 @@ class _CompatibilityDashboardScreenState
             style: body(
               10,
               weight: FontWeight.w700,
-              color: AppColors.gold700,
+              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 10),
           PercentageRing(
             percentage: percentage,
-            color: visual.color,
+            color: statusColorTone(context, visual.color),
             size: 92,
             strokeWidth: 9,
           ),
@@ -521,17 +522,17 @@ class _CompatibilityDashboardScreenState
             style: body(
               12,
               weight: FontWeight.w700,
-              color: AppColors.forest900,
+              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
               height: 1.3,
             ),
           ),
           const SizedBox(height: 10),
           if (percentage != null)
-            Text('$percentage%', style: display(26, color: AppColors.forest900))
+            Text('$percentage%', style: display(26, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))
           else
             Text(
               unavailableText,
-              style: body(12, color: AppColors.textMuted, height: 1.35),
+              style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.35),
             ),
         ],
       ),
@@ -557,7 +558,7 @@ class _CompatibilityDashboardScreenState
             style: body(
               13,
               weight: FontWeight.w700,
-              color: AppColors.gold700,
+              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               letterSpacing: 1.4,
             ),
           ),
@@ -604,9 +605,9 @@ class _CompatibilityDashboardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: body(13, color: AppColors.textMuted, height: 1.3)),
+        Text(label, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.3)),
         const SizedBox(height: 6),
-        Text(value, style: display(24, color: AppColors.forest900)),
+        Text(value, style: display(24, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
         if (sublabel != null) ...[
           const SizedBox(height: 3),
           Text(
@@ -614,7 +615,7 @@ class _CompatibilityDashboardScreenState
             style: body(
               18,
               weight: FontWeight.w700,
-              color: AppColors.forest700,
+              color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
             ),
           ),
         ],

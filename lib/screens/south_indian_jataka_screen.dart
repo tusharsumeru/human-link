@@ -7,6 +7,7 @@ import '../data/models/south_indian_jataka.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../widgets/compatibility_status_ui.dart' show statusColorTone;
 import '../widgets/ui_kit.dart';
 
 /// STEP F1 — South Indian Jataka result screen, reached from the "Check
@@ -292,14 +293,14 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
             style: body(
               11,
               weight: FontWeight.w700,
-              color: AppColors.gold700,
+              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             t.jatakaKarnataka10Porutham,
-            style: display(18, color: AppColors.forest900),
+            style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
           ),
           const SizedBox(height: 4),
           Text(
@@ -307,13 +308,13 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
               '${k.traditionalScoreMatched}',
               '${k.traditionalScoreTotal}',
             ),
-            style: display(24, color: AppColors.forest900),
+            style: display(24, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
           ),
           if (k.ruleVersion != null) ...[
             const SizedBox(height: 2),
             Text(
               t.jatakaRuleVersion('${k.ruleVersion}'),
-              style: body(11, color: AppColors.textMuted),
+              style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
             ),
           ],
           const SizedBox(height: 12),
@@ -359,13 +360,13 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
       ),
       child: Text(
         '$label: $count',
-        style: body(12, weight: FontWeight.w700, color: color),
+        style: body(12, weight: FontWeight.w700, color: statusColorTone(context, color)),
       ),
     );
   }
@@ -518,7 +519,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         children: [
           Text(
             t.jatakaThe10Poruthams,
-            style: display(15, color: AppColors.forest900),
+            style: display(15, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
           ),
           const SizedBox(height: 10),
           for (final p in ordered) _poruthamRow(p, t),
@@ -562,11 +563,22 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
         t.jatakaStatusUnknown,
       ),
     };
+    // A critical row is always wrapped by the caller below in its own fixed
+    // pastel red card (never the theme-following default) — only the
+    // non-critical path, which sits directly on that default, needs its
+    // colors to follow the theme.
+    final resolvedColor = p.critical ? color : statusColorTone(context, color);
+    final resolvedLabelColor = p.critical
+        ? Colors.red.shade800
+        : context.onBrightness(light: AppColors.ink, dark: AppColors.darkText);
+    final resolvedExplanationColor = p.critical
+        ? AppColors.textMuted
+        : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted);
 
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: color),
+        Icon(icon, size: 20, color: resolvedColor),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -580,7 +592,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                       style: body(
                         13,
                         weight: FontWeight.w700,
-                        color: p.critical ? Colors.red.shade800 : AppColors.ink,
+                        color: resolvedLabelColor,
                       ),
                     ),
                   ),
@@ -594,7 +606,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                   ],
                   Text(
                     label,
-                    style: body(12, weight: FontWeight.w700, color: color),
+                    style: body(12, weight: FontWeight.w700, color: resolvedColor),
                   ),
                 ],
               ),
@@ -603,7 +615,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                 const SizedBox(height: 3),
                 Text(
                   p.explanation,
-                  style: body(11, color: AppColors.textMuted, height: 1.3),
+                  style: body(11, color: resolvedExplanationColor, height: 1.3),
                 ),
               ],
             ],
@@ -644,7 +656,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
               style: body(
                 11,
                 weight: FontWeight.w700,
-                color: AppColors.gold700,
+                color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
                 letterSpacing: 1,
               ),
             ),
@@ -652,16 +664,16 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.hourglass_top_rounded,
                   size: 18,
-                  color: AppColors.hint,
+                  color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     t.jatakaAshtakootaUnavailable,
-                    style: body(13, color: AppColors.textMuted, height: 1.4),
+                    style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
                   ),
                 ),
               ],
@@ -680,14 +692,14 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
             style: body(
               11,
               weight: FontWeight.w700,
-              color: AppColors.gold700,
+              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
               letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             '${a.earned} / ${a.maximum}',
-            style: display(24, color: AppColors.forest900),
+            style: display(24, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
           ),
           const SizedBox(height: 12),
           for (final koota in orderedKootas(a.kootas)) _kootaRow(koota, t),
@@ -730,13 +742,14 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
       ),
     };
     final scoreLabel = k.earned != null ? '${k.earned}/${k.maximum}' : label;
+    final resolvedColor = statusColorTone(context, color);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: 20, color: resolvedColor),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -750,13 +763,13 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                         style: body(
                           13,
                           weight: FontWeight.w700,
-                          color: AppColors.ink,
+                          color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
                         ),
                       ),
                     ),
                     Text(
                       scoreLabel,
-                      style: body(12, weight: FontWeight.w700, color: color),
+                      style: body(12, weight: FontWeight.w700, color: resolvedColor),
                     ),
                   ],
                 ),
@@ -764,7 +777,7 @@ class _SouthIndianJatakaScreenState extends State<SouthIndianJatakaScreen> {
                   const SizedBox(height: 3),
                   Text(
                     k.explanation,
-                    style: body(11, color: AppColors.textMuted, height: 1.3),
+                    style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.3),
                   ),
                 ],
               ],

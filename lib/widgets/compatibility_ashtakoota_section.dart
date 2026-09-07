@@ -44,14 +44,14 @@ class AshtakootaSection extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.hint),
+                Icon(Icons.hourglass_top_rounded, size: 18, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     a.requiresReview
                         ? 'Ashtakoota is incomplete - one or more Kootas require review.'
                         : 'Ashtakoota calculation is currently unavailable.',
-                    style: body(13, color: AppColors.textMuted, height: 1.4),
+                    style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
                   ),
                 ),
               ],
@@ -73,10 +73,10 @@ class AshtakootaSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('${a.earned} / ${a.maximum}', style: display(26, color: AppColors.forest900)),
+              Text('${a.earned} / ${a.maximum}', style: display(26, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
               if (pct != null) ...[
                 const SizedBox(width: 10),
-                Text('${pct.toStringAsFixed(1)}%', style: body(14, weight: FontWeight.w700, color: AppColors.gold700)),
+                Text('${pct.toStringAsFixed(1)}%', style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
               ],
             ],
           ),

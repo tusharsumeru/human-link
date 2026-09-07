@@ -207,14 +207,14 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
         children: [
           Row(
             children: [
-              Icon(widget.icon, size: 18, color: AppColors.gold700),
+              Icon(widget.icon, size: 18, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text(widget.title, style: display(17, color: AppColors.forest900))),
+                  child: Text(widget.title, style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
             ],
           ),
           const SizedBox(height: 10),
-          Text(widget.description, style: body(13, color: AppColors.textMuted, height: 1.45)),
+          Text(widget.description, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45)),
           const SizedBox(height: 14),
           if (outdated) ...[
             Container(
@@ -242,17 +242,17 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
               Expanded(
                 child: Text(
                   on ? t.compAllowed : t.compNotAllowed,
-                  style: body(14, weight: FontWeight.w600, color: AppColors.ink),
+                  style: body(14, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText)),
                 ),
               ),
               _saving
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 14),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.forest700),
+                            strokeWidth: 2, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
                       ),
                     )
                   : Switch(
@@ -268,7 +268,7 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
           if (on && status?.grantedAt != null) ...[
             const SizedBox(height: 8),
             Text(t.compGrantedOn(_formatDate(status!.grantedAt!)),
-                style: body(11, color: AppColors.hint)),
+                style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
           ],
         ],
       ),

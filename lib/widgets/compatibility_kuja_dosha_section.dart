@@ -47,14 +47,14 @@ class KujaDoshaSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _partnerCard('Bride', k.bride),
+        _partnerCard(context, 'Bride', k.bride),
         const SizedBox(height: 10),
-        _partnerCard('Groom', k.groom),
+        _partnerCard(context, 'Groom', k.groom),
       ],
     );
   }
 
-  Widget _partnerCard(String who, PartnerKujaResult p) {
+  Widget _partnerCard(BuildContext context, String who, PartnerKujaResult p) {
     final visual = kujaDoshaStatusVisual(p.status);
     return AppCard(
       child: Column(
@@ -62,17 +62,17 @@ class KujaDoshaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(who, style: body(14, weight: FontWeight.w700, color: AppColors.forest900))),
+              Expanded(child: Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (p.marsRashiName != null) ...[
             const SizedBox(height: 6),
-            Text('Mars in ${p.marsRashiName}', style: body(12, color: AppColors.textMuted)),
+            Text('Mars in ${p.marsRashiName}', style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
           ],
           if (p.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(p.explanation, style: body(12, color: AppColors.textMuted, height: 1.4)),
+            Text(p.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
           ],
           const SizedBox(height: 8),
           if (p.fromLagna != null) _referenceRow('From Lagna', p.fromLagna!),
@@ -81,8 +81,8 @@ class KujaDoshaSection extends StatelessWidget {
           if (p.cancellationFindings.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text('Cancellation findings',
-                style: body(12, weight: FontWeight.w700, color: AppColors.gold700, letterSpacing: 0.6)),
-            for (final c in p.cancellationFindings) _cancellationRow(c),
+                style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft), letterSpacing: 0.6)),
+            for (final c in p.cancellationFindings) _cancellationRow(context, c),
           ],
         ],
       ),
@@ -102,17 +102,17 @@ class KujaDoshaSection extends StatelessWidget {
     );
   }
 
-  Widget _cancellationRow(KujaCancellationFinding c) {
+  Widget _cancellationRow(BuildContext context, KujaCancellationFinding c) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.verified_rounded, size: 16, color: AppColors.forest700),
+          Icon(Icons.verified_rounded, size: 16, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(c.explanation.isNotEmpty ? c.explanation : humanizeCode(c.ruleId),
-                style: body(12, color: AppColors.textMuted, height: 1.35)),
+                style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.35)),
           ),
         ],
       ),

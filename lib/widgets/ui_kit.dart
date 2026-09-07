@@ -145,7 +145,7 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(20),
     this.radius = 18,
-    this.color = Colors.white,
+    this.color,
     this.border = true,
     this.shadow,
     this.onTap,
@@ -154,7 +154,10 @@ class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final double radius;
-  final Color color;
+  // Null → theme-aware default (white in light mode, a dark surface in dark
+  // mode). An explicit value (e.g. a semantic tint like a warning panel's
+  // pale gold) always wins and is never touched by theme.
+  final Color? color;
   final bool border;
   final List<BoxShadow>? shadow;
   final VoidCallback? onTap;
@@ -163,9 +166,21 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = Container(
       decoration: BoxDecoration(
-        color: color,
+        color:
+            color ??
+            context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
         borderRadius: BorderRadius.circular(radius),
-        border: border ? Border.all(color: AppColors.border) : null,
+        border: border
+            ? Border.all(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              )
+            : null,
         boxShadow: shadow ?? AppShadows.soft,
       ),
       padding: padding,
