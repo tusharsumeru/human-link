@@ -9,7 +9,11 @@ library;
 import 'package:flutter/material.dart';
 
 import '../data/models/compatibility_astrology_modules.dart'
-    show KujaCancellationFinding, KujaDosha, KujaReferenceFinding, PartnerKujaResult;
+    show
+        KujaCancellationFinding,
+        KujaDosha,
+        KujaReferenceFinding,
+        PartnerKujaResult;
 import '../theme/app_theme.dart';
 import 'compatibility_status_ui.dart';
 import 'ui_kit.dart';
@@ -41,7 +45,11 @@ class KujaDoshaSection extends StatelessWidget {
               CompatibilitySectionHeader(
                 eyebrow: 'Kuja Dosha / Manglik',
                 title: 'Pair Result',
-                trailing: Pill(visual.label, fg: visual.color, icon: visual.icon),
+                trailing: Pill(
+                  visual.label,
+                  fg: visual.color,
+                  icon: visual.icon,
+                ),
               ),
             ],
           ),
@@ -62,17 +70,48 @@ class KujaDoshaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+              Expanded(
+                child: Text(
+                  who,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (p.marsRashiName != null) ...[
             const SizedBox(height: 6),
-            Text('Mars in ${p.marsRashiName}', style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+            Text(
+              'Mars in ${p.marsRashiName}',
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ],
           if (p.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(p.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+            Text(
+              p.explanation,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.4,
+              ),
+            ),
           ],
           const SizedBox(height: 8),
           if (p.fromLagna != null) _referenceRow('From Lagna', p.fromLagna!),
@@ -80,9 +119,20 @@ class KujaDoshaSection extends StatelessWidget {
           if (p.fromVenus != null) _referenceRow('From Venus', p.fromVenus!),
           if (p.cancellationFindings.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Cancellation findings',
-                style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft), letterSpacing: 0.6)),
-            for (final c in p.cancellationFindings) _cancellationRow(context, c),
+            Text(
+              'Cancellation findings',
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+                letterSpacing: 0.6,
+              ),
+            ),
+            for (final c in p.cancellationFindings)
+              _cancellationRow(context, c),
           ],
         ],
       ),
@@ -108,11 +158,27 @@ class KujaDoshaSection extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.verified_rounded, size: 16, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+          Icon(
+            Icons.verified_rounded,
+            size: 16,
+            color: context.onBrightness(
+              light: AppColors.forest700,
+              dark: AppColors.forest300,
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(c.explanation.isNotEmpty ? c.explanation : humanizeCode(c.ruleId),
-                style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.35)),
+            child: Text(
+              c.explanation.isNotEmpty ? c.explanation : humanizeCode(c.ruleId),
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),

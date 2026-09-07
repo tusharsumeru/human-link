@@ -359,7 +359,13 @@ class _CandidateCard extends StatelessWidget {
                           '${c['name']}, ${c['age']}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                          style: display(
+                            17,
+                            color: context.onBrightness(
+                              light: AppColors.forest900,
+                              dark: AppColors.darkText,
+                            ),
+                          ),
                         ),
                       ),
                       const Spacer(),
@@ -430,14 +436,27 @@ class _CandidateCard extends StatelessWidget {
   Widget _detailRow(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+        Icon(
+          icon,
+          size: 14,
+          color: context.onBrightness(
+            light: AppColors.hint,
+            dark: AppColors.darkTextMuted,
+          ),
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+            style: body(
+              12,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
         ),
       ],

@@ -182,7 +182,13 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
           const SizedBox(height: 14),
           Text(
             t.compReportTitle,
-            style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+            style: display(
+              20,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
@@ -191,7 +197,10 @@ class _CompatibilityReportScreenState extends State<CompatibilityReportScreen> {
             style: body(
               14,
               weight: FontWeight.w600,
-              color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
             ),
             textAlign: TextAlign.center,
           ),

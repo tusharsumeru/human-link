@@ -12,12 +12,12 @@ import '../theme/app_theme.dart';
 /// numbers in two different places. Localized at call time — the keys are
 /// the stable wire values sent by the backend.
 Map<String, String> matchLevelLabelsOf(AppLocalizations t) => {
-      'EXCELLENT': t.matchLevelExcellent,
-      'HIGH': t.matchLevelHigh,
-      'GOOD': t.matchLevelGood,
-      'MODERATE': t.matchLevelModerate,
-      'LOW': t.matchLevelLow,
-    };
+  'EXCELLENT': t.matchLevelExcellent,
+  'HIGH': t.matchLevelHigh,
+  'GOOD': t.matchLevelGood,
+  'MODERATE': t.matchLevelModerate,
+  'LOW': t.matchLevelLow,
+};
 
 const Map<String, Color> matchLevelColors = {
   'EXCELLENT': AppColors.forest700,
@@ -59,25 +59,43 @@ class DiscoveryMatchBadge extends StatelessWidget {
     final dm = discoveryMatch;
     if (dm == null) return const SizedBox.shrink();
 
-    final percentage =
-        (dm['matchPercentage'] is num) ? (dm['matchPercentage'] as num).round() : null;
+    final percentage = (dm['matchPercentage'] is num)
+        ? (dm['matchPercentage'] as num).round()
+        : null;
     if (percentage == null) return const SizedBox.shrink();
 
     final t = AppLocalizations.of(context);
     final level = (dm['matchLevel'] ?? '').toString();
     final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
-    final levelColor = matchLevelColorTone(context, matchLevelColors[level] ?? AppColors.hint);
+    final levelColor = matchLevelColorTone(
+      context,
+      matchLevelColors[level] ?? AppColors.hint,
+    );
 
     return Row(
       children: [
-        Text('$percentage%',
-            style: body(20, weight: FontWeight.w800, color: levelColor)),
+        Text(
+          '$percentage%',
+          style: body(20, weight: FontWeight.w800, color: levelColor),
+        ),
         const SizedBox(width: 7),
-        Text(t.matchBadgeMatch, style: body(15, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+        Text(
+          t.matchBadgeMatch,
+          style: body(
+            15,
+            weight: FontWeight.w600,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
+        ),
         if (levelLabel.isNotEmpty) ...[
           const SizedBox(width: 8),
-          Text('· $levelLabel',
-              style: body(15, weight: FontWeight.w700, color: levelColor)),
+          Text(
+            '· $levelLabel',
+            style: body(15, weight: FontWeight.w700, color: levelColor),
+          ),
         ],
       ],
     );
@@ -89,15 +107,15 @@ class DiscoveryMatchBadge extends StatelessWidget {
 /// weighted is entirely server-side (see discovery-match-rules.ts). Localized
 /// at call time — the keys are the stable wire values from the backend.
 Map<String, String> _factorLabelsOf(AppLocalizations t) => {
-      'marriageIntention': t.matchFactorMarriageIntention,
-      'childrenPreference': t.matchFactorChildren,
-      'familyPreference': t.matchFactorFamilyType,
-      'relocationPreference': t.matchFactorRelocation,
-      'foodPreference': t.matchFactorFoodPreference,
-      'interests': t.matchFactorInterests,
-      'location': t.matchFactorLocation,
-      'age': t.matchFactorAge,
-    };
+  'marriageIntention': t.matchFactorMarriageIntention,
+  'childrenPreference': t.matchFactorChildren,
+  'familyPreference': t.matchFactorFamilyType,
+  'relocationPreference': t.matchFactorRelocation,
+  'foodPreference': t.matchFactorFoodPreference,
+  'interests': t.matchFactorInterests,
+  'location': t.matchFactorLocation,
+  'age': t.matchFactorAge,
+};
 
 /// The full Discovery Match breakdown for the Candidate Profile screen: the
 /// same percentage/level shown on the Hub and Discover Matches cards (via
@@ -118,14 +136,18 @@ class DiscoveryMatchDetail extends StatelessWidget {
     final dm = discoveryMatch;
     if (dm == null) return const SizedBox.shrink();
 
-    final percentage =
-        (dm['matchPercentage'] is num) ? (dm['matchPercentage'] as num).round() : null;
+    final percentage = (dm['matchPercentage'] is num)
+        ? (dm['matchPercentage'] as num).round()
+        : null;
     if (percentage == null) return const SizedBox.shrink();
 
     final t = AppLocalizations.of(context);
     final level = (dm['matchLevel'] ?? '').toString();
     final levelLabel = matchLevelLabelsOf(t)[level] ?? level;
-    final levelColor = matchLevelColorTone(context, matchLevelColors[level] ?? AppColors.hint);
+    final levelColor = matchLevelColorTone(
+      context,
+      matchLevelColors[level] ?? AppColors.hint,
+    );
     final factors = ((dm['factors'] as List?) ?? const [])
         .whereType<Map>()
         .map((f) => Map<String, dynamic>.from(f))
@@ -138,8 +160,10 @@ class DiscoveryMatchDetail extends StatelessWidget {
           children: [
             Icon(Icons.favorite_rounded, size: 14, color: levelColor),
             const SizedBox(width: 5),
-            Text('$percentage%${levelLabel.isNotEmpty ? ' · $levelLabel' : ''}',
-                style: body(13, weight: FontWeight.w700, color: levelColor)),
+            Text(
+              '$percentage%${levelLabel.isNotEmpty ? ' · $levelLabel' : ''}',
+              style: body(13, weight: FontWeight.w700, color: levelColor),
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -160,7 +184,11 @@ class DiscoveryMatchDetail extends StatelessWidget {
     );
   }
 
-  Widget _factorRow(BuildContext context, Map<String, dynamic> f, AppLocalizations t) {
+  Widget _factorRow(
+    BuildContext context,
+    Map<String, dynamic> f,
+    AppLocalizations t,
+  ) {
     final key = (f['factor'] ?? '').toString();
     final label = _factorLabelsOf(t)[key] ?? key;
     final applicable = f['applicable'] == true;
@@ -172,12 +200,27 @@ class DiscoveryMatchDetail extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.remove_circle_outline_rounded,
-                size: 15, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+            Icon(
+              Icons.remove_circle_outline_rounded,
+              size: 15,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(t.matchFactorNotEnoughInfo(label),
-                  style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.35)),
+              child: Text(
+                t.matchFactorNotEnoughInfo(label),
+                style: body(
+                  13,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                  height: 1.35,
+                ),
+              ),
             ),
           ],
         ),
@@ -190,11 +233,27 @@ class DiscoveryMatchDetail extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.circle, size: 8, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
+          Icon(
+            Icons.circle,
+            size: 8,
+            color: context.onBrightness(
+              light: AppColors.gold700,
+              dark: AppColors.goldSoft,
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(t.matchFactorAligned(label, factorPercentage),
-                style: body(13, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText), height: 1.35)),
+            child: Text(
+              t.matchFactorAligned(label, factorPercentage),
+              style: body(
+                13,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),

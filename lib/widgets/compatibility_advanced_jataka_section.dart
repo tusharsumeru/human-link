@@ -61,7 +61,11 @@ class AdvancedJatakaSection extends StatelessWidget {
               CompatibilitySectionHeader(
                 eyebrow: 'Advanced Jataka',
                 title: 'Chart Comparison',
-                trailing: Pill(visual.label, fg: visual.color, icon: visual.icon),
+                trailing: Pill(
+                  visual.label,
+                  fg: visual.color,
+                  icon: visual.icon,
+                ),
               ),
             ],
           ),
@@ -74,17 +78,42 @@ class AdvancedJatakaSection extends StatelessWidget {
     );
   }
 
-  Widget _partnerSection(BuildContext context, String who, PartnerAdvancedJataka p) {
-    final labelColor = context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft);
+  Widget _partnerSection(
+    BuildContext context,
+    String who,
+    PartnerAdvancedJataka p,
+  ) {
+    final labelColor = context.onBrightness(
+      light: AppColors.gold700,
+      dark: AppColors.goldSoft,
+    );
     return CompatibilityExpandableSection(
       title: who,
       subtitle: 'Natal chart + Navamsha (D9) findings',
       children: [
-        Text('Natal Chart', style: body(12, weight: FontWeight.w700, color: labelColor, letterSpacing: 0.6)),
-        for (var i = 0; i < p.natalFindings.length; i++) _findingRow(_natalLabels[i], p.natalFindings[i]),
+        Text(
+          'Natal Chart',
+          style: body(
+            12,
+            weight: FontWeight.w700,
+            color: labelColor,
+            letterSpacing: 0.6,
+          ),
+        ),
+        for (var i = 0; i < p.natalFindings.length; i++)
+          _findingRow(_natalLabels[i], p.natalFindings[i]),
         const SizedBox(height: 8),
-        Text('Navamsha (D9)', style: body(12, weight: FontWeight.w700, color: labelColor, letterSpacing: 0.6)),
-        for (var i = 0; i < p.navamshaFindings.length; i++) _findingRow(_navamshaLabels[i], p.navamshaFindings[i]),
+        Text(
+          'Navamsha (D9)',
+          style: body(
+            12,
+            weight: FontWeight.w700,
+            color: labelColor,
+            letterSpacing: 0.6,
+          ),
+        ),
+        for (var i = 0; i < p.navamshaFindings.length; i++)
+          _findingRow(_navamshaLabels[i], p.navamshaFindings[i]),
       ],
     );
   }
@@ -101,6 +130,8 @@ class AdvancedJatakaSection extends StatelessWidget {
     if (f.explanation.isNotEmpty) return f.explanation;
     final data = f.data;
     if (data == null || data.isEmpty) return '';
-    return data.entries.map((e) => '${humanizeKey(e.key)}: ${e.value}').join(' · ');
+    return data.entries
+        .map((e) => '${humanizeKey(e.key)}: ${e.value}')
+        .join(' · ');
   }
 }

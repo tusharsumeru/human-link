@@ -211,14 +211,27 @@ class _CampaignCard extends StatelessWidget {
               children: [
                 Text(
                   c['title'] as String,
-                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                  style: display(
+                    17,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   c['description'] as String,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5),
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 ProgressBar(value: goal == 0 ? 0 : raised / goal, height: 8),
@@ -230,13 +243,22 @@ class _CampaignCard extends StatelessWidget {
                       style: body(
                         13,
                         weight: FontWeight.w700,
-                        color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
+                        color: context.onBrightness(
+                          light: AppColors.forest800,
+                          dark: AppColors.forest300,
+                        ),
                       ),
                     ),
                     const Spacer(),
                     Text(
                       t.welfareOfGoalPct(formatLakh(goal), pct),
-                      style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                      style: body(
+                        12,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -246,23 +268,41 @@ class _CampaignCard extends StatelessWidget {
                     Icon(
                       Icons.schedule_rounded,
                       size: 14,
-                      color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       t.welfareDaysLeft(c['daysLeft'] as int),
-                      style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                      style: body(
+                        12,
+                        color: context.onBrightness(
+                          light: AppColors.hint,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Icon(
                       Icons.favorite_rounded,
                       size: 14,
-                      color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+                      color: context.onBrightness(
+                        light: AppColors.gold700,
+                        dark: AppColors.goldSoft,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       t.welfareBackers(c['backers'] as int),
-                      style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                      style: body(
+                        12,
+                        color: context.onBrightness(
+                          light: AppColors.hint,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                   ],
                 ),

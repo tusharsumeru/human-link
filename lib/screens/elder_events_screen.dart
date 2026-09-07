@@ -54,12 +54,12 @@ class ElderEventsScreen extends StatelessWidget {
   };
 
   static String _typeLabel(String type, AppLocalizations t) => switch (type) {
-        'Cultural' => t.elderTypeCultural,
-        'Admin' => t.elderTypeAdmin,
-        'Education' => t.elderTypeEducation,
-        'Community' => t.elderTypeCommunity,
-        _ => type,
-      };
+    'Cultural' => t.elderTypeCultural,
+    'Admin' => t.elderTypeAdmin,
+    'Education' => t.elderTypeEducation,
+    'Community' => t.elderTypeCommunity,
+    _ => type,
+  };
 
   static String _statusLabel(String status, AppLocalizations t) =>
       status == 'Planning' ? t.elderStatusPlanning : t.elderStatusUpcoming;
@@ -67,11 +67,13 @@ class ElderEventsScreen extends StatelessWidget {
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
@@ -103,10 +105,12 @@ class ElderEventsScreen extends StatelessWidget {
             onPressed: () => _toast(context, t.elderAddEventToast),
           ),
           const SizedBox(height: 18),
-          ..._eventsOf(t).map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _eventCard(context, e, t),
-              )),
+          ..._eventsOf(t).map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _eventCard(context, e, t),
+            ),
+          ),
           const SizedBox(height: 8),
           _settingsSection(context, t),
           const SizedBox(height: 8),
@@ -115,7 +119,11 @@ class ElderEventsScreen extends StatelessWidget {
     );
   }
 
-  Widget _eventCard(BuildContext context, Map<String, dynamic> e, AppLocalizations t) {
+  Widget _eventCard(
+    BuildContext context,
+    Map<String, dynamic> e,
+    AppLocalizations t,
+  ) {
     final col = _typeColors[e['type']] ?? const [0xFFF3F4F6, 0xFF374151];
     final status = e['status'] as String;
     final isPlanning = status == 'Planning';
@@ -134,11 +142,18 @@ class ElderEventsScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Text((e['date'] as String).split(' ').first,
-                    style: display(18, color: Color(col[1]))),
-                Text((e['date'] as String).split(' ').last.toUpperCase(),
-                    style: body(10,
-                        weight: FontWeight.w700, color: Color(col[1]))),
+                Text(
+                  (e['date'] as String).split(' ').first,
+                  style: display(18, color: Color(col[1])),
+                ),
+                Text(
+                  (e['date'] as String).split(' ').last.toUpperCase(),
+                  style: body(
+                    10,
+                    weight: FontWeight.w700,
+                    color: Color(col[1]),
+                  ),
+                ),
               ],
             ),
           ),
@@ -147,45 +162,86 @@ class ElderEventsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e['title'] as String,
-                    style: body(14.5,
-                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                Text(
+                  e['title'] as String,
+                  style: body(
+                    14.5,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    Pill(_typeLabel(e['type'] as String, t),
-                        bg: Color(col[0]), fg: Color(col[1])),
-                    Pill(_statusLabel(status, t),
-                        bg: isPlanning
-                            ? const Color(0xFFFEF3C7)
-                            : const Color(0xFFD1FAE5),
-                        fg: isPlanning
-                            ? const Color(0xFFD97706)
-                            : const Color(0xFF065F46)),
+                    Pill(
+                      _typeLabel(e['type'] as String, t),
+                      bg: Color(col[0]),
+                      fg: Color(col[1]),
+                    ),
+                    Pill(
+                      _statusLabel(status, t),
+                      bg: isPlanning
+                          ? const Color(0xFFFEF3C7)
+                          : const Color(0xFFD1FAE5),
+                      fg: isPlanning
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF065F46),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined,
-                        size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 13,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(e['venue'] as String,
-                          style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                      child: Text(
+                        e['venue'] as String,
+                        style: body(
+                          11.5,
+                          color: context.onBrightness(
+                            light: AppColors.textMuted,
+                            dark: AppColors.darkTextMuted,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.groups_rounded,
-                        size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                    Icon(
+                      Icons.groups_rounded,
+                      size: 13,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                     const SizedBox(width: 4),
-                    Text(t.elderAttendeesExpected(e['attendees'] as int),
-                        style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                    Text(
+                      t.elderAttendeesExpected(e['attendees'] as int),
+                      style: body(
+                        11.5,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -194,13 +250,17 @@ class ElderEventsScreen extends StatelessWidget {
                     ForestButton(
                       label: t.elderRsvp,
                       onPressed: () => _toast(
-                          context, t.elderRsvpConfirmed(e['title'] as String)),
+                        context,
+                        t.elderRsvpConfirmed(e['title'] as String),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     OutlineButtonX(
                       label: t.elderManage,
                       onPressed: () => _toast(
-                          context, t.elderManaging(e['title'] as String)),
+                        context,
+                        t.elderManaging(e['title'] as String),
+                      ),
                     ),
                   ],
                 ),
@@ -217,19 +277,37 @@ class ElderEventsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.elderCommitteePreferences,
-              style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+          Text(
+            t.elderCommitteePreferences,
+            style: display(
+              18,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(t.elderCommitteePreferencesSubtitle,
-              style: body(12.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+          Text(
+            t.elderCommitteePreferencesSubtitle,
+            style: body(
+              12.5,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.notifications_active_outlined,
             title: t.elderEventReminders,
             subtitle: t.elderEventRemindersSubtitle,
             initial: true,
-            onChanged: (v) => _toast(context,
-                v ? t.elderEventRemindersOn : t.elderEventRemindersOff),
+            onChanged: (v) => _toast(
+              context,
+              v ? t.elderEventRemindersOn : t.elderEventRemindersOff,
+            ),
           ),
           _SettingsTile(
             icon: Icons.how_to_reg_outlined,
@@ -237,7 +315,9 @@ class ElderEventsScreen extends StatelessWidget {
             subtitle: t.elderAutoApproveRsvpsSubtitle,
             initial: false,
             onChanged: (v) => _toast(
-                context, v ? t.elderAutoApproveOn : t.elderAutoApproveOff),
+              context,
+              v ? t.elderAutoApproveOn : t.elderAutoApproveOff,
+            ),
           ),
           _SettingsTile(
             icon: Icons.public_outlined,
@@ -245,7 +325,9 @@ class ElderEventsScreen extends StatelessWidget {
             subtitle: t.elderPublishToPublicCalendarSubtitle,
             initial: true,
             onChanged: (v) => _toast(
-                context, v ? t.elderPublicCalendarOn : t.elderPublicCalendarOff),
+              context,
+              v ? t.elderPublicCalendarOn : t.elderPublicCalendarOff,
+            ),
           ),
         ],
       ),
@@ -289,18 +371,42 @@ class _SettingsTileState extends State<_SettingsTile> {
               color: AppColors.forest800.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(widget.icon, size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+            child: Icon(
+              widget.icon,
+              size: 18,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.title,
-                    style: body(13.5,
-                        weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
-                Text(widget.subtitle,
-                    style: body(11.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+                Text(
+                  widget.title,
+                  style: body(
+                    13.5,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+                Text(
+                  widget.subtitle,
+                  style: body(
+                    11.5,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),

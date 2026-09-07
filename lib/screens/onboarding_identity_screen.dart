@@ -139,7 +139,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                     style: body(
                       12,
                       weight: FontWeight.w600,
-                      color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300),
+                      color: context.onBrightness(
+                        light: AppColors.forest800,
+                        dark: AppColors.forest300,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -173,11 +176,17 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
           borderRadius: BorderRadius.circular(16),
           color: done
               ? AppColors.forest600.withValues(alpha: 0.08)
-              : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
+              : context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
           border: Border.all(
             color: done
                 ? AppColors.forest600
-                : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
+                : context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
             width: 1.5,
           ),
         ),
@@ -209,7 +218,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                     style: body(
                       13,
                       weight: FontWeight.w600,
-                      color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
                     ),
                   ),
                   if (!done) ...[
@@ -219,7 +231,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
                       style: body(
                         11,
                         weight: FontWeight.w600,
-                        color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
+                        color: context.onBrightness(
+                          light: AppColors.forest700,
+                          dark: AppColors.forest300,
+                        ),
                       ),
                     ),
                   ],
@@ -230,7 +245,10 @@ class _OnboardingIdentityScreenState extends State<OnboardingIdentityScreen> {
               Icon(
                 Icons.check_circle,
                 size: 20,
-                color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
               ),
           ],
         ),

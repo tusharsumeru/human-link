@@ -94,13 +94,15 @@ class _DigilockerCardState extends State<DigilockerCard> {
           maskedAadhaar: masked.isEmpty ? null : masked,
           verified: true,
         );
-        await auth.updateUser(user.copyWith(
-          dob: dob.isEmpty ? null : dob,
-          gender: gender.isEmpty ? null : gender,
-          address: address.isEmpty ? null : address,
-          maskedAadhaar: masked.isEmpty ? null : masked,
-          verified: true,
-        ));
+        await auth.updateUser(
+          user.copyWith(
+            dob: dob.isEmpty ? null : dob,
+            gender: gender.isEmpty ? null : gender,
+            address: address.isEmpty ? null : address,
+            maskedAadhaar: masked.isEmpty ? null : masked,
+            verified: true,
+          ),
+        );
       }
       if (!mounted) return;
       setState(() {
@@ -114,8 +116,9 @@ class _DigilockerCardState extends State<DigilockerCard> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error =
-            e is ApiException ? e.message : 'DigiLocker verification failed.';
+        _error = e is ApiException
+            ? e.message
+            : 'DigiLocker verification failed.';
       });
     }
   }
@@ -127,17 +130,33 @@ class _DigilockerCardState extends State<DigilockerCard> {
       children: [
         Row(
           children: [
-            Icon(Icons.verified_user_outlined,
-                size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+            Icon(
+              Icons.verified_user_outlined,
+              size: 18,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
+            ),
             const SizedBox(width: 8),
-            Text('Aadhaar via DigiLocker',
-                style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+            Text(
+              'Aadhaar via DigiLocker',
+              style: display(
+                16,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const Spacer(),
             if (_verified)
-              Pill('Verified',
-                  icon: Icons.check_circle,
-                  bg: AppColors.forest600.withValues(alpha: 0.14),
-                  fg: AppColors.forest700),
+              Pill(
+                'Verified',
+                icon: Icons.check_circle,
+                bg: AppColors.forest600.withValues(alpha: 0.14),
+                fg: AppColors.forest700,
+              ),
           ],
         ),
         const SizedBox(height: 12),
@@ -151,18 +170,24 @@ class _DigilockerCardState extends State<DigilockerCard> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle,
-                    size: 18, color: AppColors.forest700),
+                const Icon(
+                  Icons.check_circle,
+                  size: 18,
+                  color: AppColors.forest700,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _verifiedName.isNotEmpty
                         ? 'Verified: $_verifiedName'
                         : _maskedAadhaar.isNotEmpty
-                            ? 'Aadhaar verified · $_maskedAadhaar'
-                            : 'Aadhaar verified successfully.',
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.forest700),
+                        ? 'Aadhaar verified · $_maskedAadhaar'
+                        : 'Aadhaar verified successfully.',
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: AppColors.forest700,
+                    ),
                   ),
                 ),
               ],
@@ -173,7 +198,14 @@ class _DigilockerCardState extends State<DigilockerCard> {
             widget.description ??
                 'You\'ll sign in to the official DigiLocker portal and consent '
                     'to share your Aadhaar. We confirm verification automatically.',
-            style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
+            style: body(
+              12,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 10),
           ForestButton(

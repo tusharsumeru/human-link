@@ -126,7 +126,10 @@ class _CompatibilityDashboardScreenState
         : t.compThisMember;
 
     return Scaffold(
-      backgroundColor: context.onBrightness(light: AppColors.cream, dark: AppColors.darkBg),
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.forest800,
         surfaceTintColor: Colors.transparent,
@@ -305,12 +308,25 @@ class _CompatibilityDashboardScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 32, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 32,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: body(14, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
             const SizedBox(height: 14),
             OutlineButtonX(label: t.commonRetry, onPressed: _load),
@@ -452,7 +468,13 @@ class _CompatibilityDashboardScreenState
           const SizedBox(height: 14),
           Text(
             t.compMarriageCompatibility,
-            style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+            style: display(
+              20,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
@@ -461,7 +483,10 @@ class _CompatibilityDashboardScreenState
             style: body(
               14,
               weight: FontWeight.w600,
-              color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted),
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
             ),
             textAlign: TextAlign.center,
           ),
@@ -490,7 +515,10 @@ class _CompatibilityDashboardScreenState
             style: body(
               10,
               weight: FontWeight.w700,
-              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+              color: context.onBrightness(
+                light: AppColors.gold700,
+                dark: AppColors.goldSoft,
+              ),
               letterSpacing: 1.2,
             ),
           ),
@@ -522,17 +550,36 @@ class _CompatibilityDashboardScreenState
             style: body(
               12,
               weight: FontWeight.w700,
-              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
               height: 1.3,
             ),
           ),
           const SizedBox(height: 10),
           if (percentage != null)
-            Text('$percentage%', style: display(26, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))
+            Text(
+              '$percentage%',
+              style: display(
+                26,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            )
           else
             Text(
               unavailableText,
-              style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.35),
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.35,
+              ),
             ),
         ],
       ),
@@ -558,7 +605,10 @@ class _CompatibilityDashboardScreenState
             style: body(
               13,
               weight: FontWeight.w700,
-              color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+              color: context.onBrightness(
+                light: AppColors.gold700,
+                dark: AppColors.goldSoft,
+              ),
               letterSpacing: 1.4,
             ),
           ),
@@ -605,9 +655,28 @@ class _CompatibilityDashboardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.3)),
+        Text(
+          label,
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+            height: 1.3,
+          ),
+        ),
         const SizedBox(height: 6),
-        Text(value, style: display(24, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+        Text(
+          value,
+          style: display(
+            24,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
         if (sublabel != null) ...[
           const SizedBox(height: 3),
           Text(
@@ -615,7 +684,10 @@ class _CompatibilityDashboardScreenState
             style: body(
               18,
               weight: FontWeight.w700,
-              color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
             ),
           ),
         ],

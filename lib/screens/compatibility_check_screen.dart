@@ -54,7 +54,8 @@ class CompatibilityCheckScreen extends StatefulWidget {
   final Map<String, dynamic>? discoveryMatch;
 
   @override
-  State<CompatibilityCheckScreen> createState() => _CompatibilityCheckScreenState();
+  State<CompatibilityCheckScreen> createState() =>
+      _CompatibilityCheckScreenState();
 }
 
 class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
@@ -87,8 +88,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       _error = null;
     });
     try {
-      final p = await Repository.instance
-          .compatibilityPrerequisites(widget.candidateProfileId);
+      final p = await Repository.instance.compatibilityPrerequisites(
+        widget.candidateProfileId,
+      );
       if (!mounted) return;
       setState(() {
         _prereqs = p;
@@ -117,8 +119,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     if (prereqs == null) return;
     final t = AppLocalizations.of(context);
 
-    final myRole =
-        TraditionalRole.forGender(context.read<AuthService>().user?.gender ?? '');
+    final myRole = TraditionalRole.forGender(
+      context.read<AuthService>().user?.gender ?? '',
+    );
     final otherRole = TraditionalRole.forGender(widget.candidateGender);
 
     if (myRole == null || otherRole == null) {
@@ -128,8 +131,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           message: myRole == null
               ? t.compErrorGenericMissingRoleMine
               : t.compErrorGenericMissingRoleTheirs,
-          profile:
-              myRole == null ? CompatibilityErrorProfile.a : CompatibilityErrorProfile.b,
+          profile: myRole == null
+              ? CompatibilityErrorProfile.a
+              : CompatibilityErrorProfile.b,
         );
       });
       return;
@@ -179,13 +183,15 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
       // dashboard (Overall/Profile/Astrology summary) rather than the
       // detailed report directly; "View Detailed Report" on that screen is
       // what reaches [CompatibilityReportScreen] now.
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CompatibilityDashboardScreen(
-          reportId: response.reportId,
-          otherName: widget.candidateName,
-          discoveryMatch: widget.discoveryMatch,
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CompatibilityDashboardScreen(
+            reportId: response.reportId,
+            otherName: widget.candidateName,
+            discoveryMatch: widget.discoveryMatch,
+          ),
         ),
-      ));
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -218,8 +224,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     if (prereqs == null || !prereqs.jataka.isReady) return;
     final t = AppLocalizations.of(context);
 
-    final myRole =
-        TraditionalRole.forGender(context.read<AuthService>().user?.gender ?? '');
+    final myRole = TraditionalRole.forGender(
+      context.read<AuthService>().user?.gender ?? '',
+    );
     final otherRole = TraditionalRole.forGender(widget.candidateGender);
 
     if (myRole == null || otherRole == null) {
@@ -229,8 +236,9 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           message: myRole == null
               ? t.compErrorGenericMissingRoleMine
               : t.compErrorGenericMissingRoleTheirs,
-          profile:
-              myRole == null ? CompatibilityErrorProfile.a : CompatibilityErrorProfile.b,
+          profile: myRole == null
+              ? CompatibilityErrorProfile.a
+              : CompatibilityErrorProfile.b,
         );
       });
       return;
@@ -265,12 +273,14 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         return;
       }
       setState(() => _jatakaCalculating = false);
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => SouthIndianJatakaScreen(
-          reportId: response.reportId,
-          otherName: widget.candidateName,
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SouthIndianJatakaScreen(
+            reportId: response.reportId,
+            otherName: widget.candidateName,
+          ),
         ),
-      ));
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -302,13 +312,16 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(t.compCheckCompatibilityTitle, style: display(18, color: Colors.white)),
+        title: Text(
+          t.compCheckCompatibilityTitle,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _errorState(_error!, t)
-              : _content(_prereqs!, t),
+          ? _errorState(_error!, t)
+          : _content(_prereqs!, t),
     );
   }
 
@@ -378,7 +391,12 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _moduleCard(context, t.compProfileCompatibility, p.profileCompatibility, t),
+            _moduleCard(
+              context,
+              t.compProfileCompatibility,
+              p.profileCompatibility,
+              t,
+            ),
             const SizedBox(height: 10),
             _moduleCard(
               context,
@@ -399,7 +417,11 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     );
   }
 
-  Widget _continueBar(bool canTap, OverallReadinessStatus overallStatus, AppLocalizations t) {
+  Widget _continueBar(
+    bool canTap,
+    OverallReadinessStatus overallStatus,
+    AppLocalizations t,
+  ) {
     // "Nothing is ready at all" (dim the button) is a different state from
     // "a request is in flight" (spinner, but still a normal-looking button)
     // — [canTap] already folds in `!_calculating`, so recover the former on
@@ -420,8 +442,18 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
-        border: Border(top: BorderSide(color: context.onBrightness(light: const Color(0xFFE5DDD0), dark: AppColors.darkBorder))),
+        color: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkSurface,
+        ),
+        border: Border(
+          top: BorderSide(
+            color: context.onBrightness(
+              light: const Color(0xFFE5DDD0),
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -429,9 +461,18 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_calculating) ...[
-              Text(t.compChecking,
-                  textAlign: TextAlign.center,
-                  style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+              Text(
+                t.compChecking,
+                textAlign: TextAlign.center,
+                style: body(
+                  12,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.forest300,
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
             ] else if (_calcError != null) ...[
               _calcErrorBanner(_calcError!, t),
@@ -442,7 +483,13 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
                     ? t.compCompleteHighlighted
                     : t.compCantCheckYet,
                 textAlign: TextAlign.center,
-                style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
             ],
@@ -466,20 +513,20 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
         ? (null, null)
         : switch (error.reason) {
             CompatibilityErrorReason.missingRole => (
-                t.compGoToProfile,
-                () => context.push('/profile/edit'),
-              ),
+              t.compGoToProfile,
+              () => context.push('/profile/edit'),
+            ),
             CompatibilityErrorReason.missingBirthData => (
-                t.compAddBirthDetailsBtn,
-                () => context.push('/matrimonial/birth-details'),
-              ),
+              t.compAddBirthDetailsBtn,
+              () => context.push('/matrimonial/birth-details'),
+            ),
             CompatibilityErrorReason.missingConsent => (
-                t.compManageConsent,
-                () async {
-                  await context.push('/matrimonial/compatibility-consent');
-                  if (mounted) _load();
-                },
-              ),
+              t.compManageConsent,
+              () async {
+                await context.push('/matrimonial/compatibility-consent');
+                if (mounted) _load();
+              },
+            ),
             CompatibilityErrorReason.apiError => (null, null),
           };
 
@@ -495,11 +542,17 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.error_outline_rounded, size: 16, color: Colors.red.shade700),
+              Icon(
+                Icons.error_outline_rounded,
+                size: 16,
+                color: Colors.red.shade700,
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(error.message,
-                    style: body(12, color: Colors.red.shade800, height: 1.35)),
+                child: Text(
+                  error.message,
+                  style: body(12, color: Colors.red.shade800, height: 1.35),
+                ),
               ),
             ],
           ),
@@ -510,9 +563,17 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
               child: TextButton(
                 onPressed: onAction,
                 style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
-                child: Text(actionLabel,
-                    style: body(12, weight: FontWeight.w700, color: AppColors.forest700)),
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                ),
+                child: Text(
+                  actionLabel,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest700,
+                  ),
+                ),
               ),
             ),
           ],
@@ -531,13 +592,21 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
     String? readyLabel,
     Widget? readyExtra,
   }) {
-    final visual = _statusVisual(readiness.status, readyLabel: readyLabel ?? t.compReady, t: t);
+    final visual = _statusVisual(
+      readiness.status,
+      readyLabel: readyLabel ?? t.compReady,
+      t: t,
+    );
     final visualColor = statusColorTone(context, visual.color);
-    final action = (readiness.status == ReadinessStatus.actionRequired &&
+    final action =
+        (readiness.status == ReadinessStatus.actionRequired &&
             readiness.reason.isActionableByViewer)
         ? _actionFor(context, readiness.reason, t)
         : null;
-    final mutedColor = context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted);
+    final mutedColor = context.onBrightness(
+      light: AppColors.textMuted,
+      dark: AppColors.darkTextMuted,
+    );
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -547,8 +616,17 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(title,
-                    style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                child: Text(
+                  title,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
               ),
               // The "action required" case already explains itself below (a
               // description + an action button), so the badge is skipped
@@ -557,8 +635,10 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
               if (readiness.status != ReadinessStatus.actionRequired) ...[
                 Icon(visual.icon, size: 16, color: visualColor),
                 const SizedBox(width: 4),
-                Text(visual.label,
-                    style: body(12, weight: FontWeight.w700, color: visualColor)),
+                Text(
+                  visual.label,
+                  style: body(12, weight: FontWeight.w700, color: visualColor),
+                ),
               ],
             ],
           ),
@@ -568,18 +648,22 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             const SizedBox(height: 8),
             OutlineButtonX(label: action.actionLabel, onPressed: action.onTap),
           ] else if (readiness.status == ReadinessStatus.actionRequired &&
-              readiness.reason == PrerequisiteReason.yourVerificationIncomplete) ...[
+              readiness.reason ==
+                  PrerequisiteReason.yourVerificationIncomplete) ...[
             const SizedBox(height: 6),
-            Text(t.compVerificationRequired, style: body(12, color: mutedColor)),
+            Text(
+              t.compVerificationRequired,
+              style: body(12, color: mutedColor),
+            ),
           ] else if (readiness.status == ReadinessStatus.unavailable) ...[
             const SizedBox(height: 6),
             // Deliberately generic — never names what specifically the
             // candidate is missing, whether it's their data or their
             // consent (§5/§6 of the spec).
-            Text(t.compDataNotAvailableYet,
-                style: body(12, color: mutedColor)),
+            Text(t.compDataNotAvailableYet, style: body(12, color: mutedColor)),
           ],
-          if (readiness.status == ReadinessStatus.ready && readyExtra != null) ...[
+          if (readiness.status == ReadinessStatus.ready &&
+              readyExtra != null) ...[
             const SizedBox(height: 10),
             readyExtra,
           ],
@@ -600,8 +684,17 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 8),
-          Text(t.compCheckingEllipsis,
-              style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+          Text(
+            t.compCheckingEllipsis,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
+            ),
+          ),
         ],
       );
     }
@@ -612,7 +705,10 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
           _calcErrorBanner(_jatakaCalcError!, t),
           const SizedBox(height: 8),
         ],
-        OutlineButtonX(label: t.compCheckCompatibilityTitle, onPressed: _checkJataka),
+        OutlineButtonX(
+          label: t.compCheckCompatibilityTitle,
+          onPressed: _checkJataka,
+        ),
       ],
     );
   }
@@ -624,7 +720,11 @@ class _CompatibilityCheckScreenState extends State<CompatibilityCheckScreen> {
   }) {
     switch (status) {
       case ReadinessStatus.ready:
-        return (icon: Icons.check_circle_rounded, color: AppColors.forest700, label: readyLabel);
+        return (
+          icon: Icons.check_circle_rounded,
+          color: AppColors.forest700,
+          label: readyLabel,
+        );
       case ReadinessStatus.actionRequired:
         return (
           icon: Icons.error_outline_rounded,

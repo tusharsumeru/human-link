@@ -9,7 +9,12 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../data/models/parampara.dart' show DaivagnaParampara, ParamparaDeclaredValue, ParamparaValueStatus, PartnerParamparaResult;
+import '../data/models/parampara.dart'
+    show
+        DaivagnaParampara,
+        ParamparaDeclaredValue,
+        ParamparaValueStatus,
+        PartnerParamparaResult;
 import '../theme/app_theme.dart';
 import 'compatibility_status_ui.dart' show CompatibilityUnavailableNotice;
 import 'ui_kit.dart';
@@ -39,12 +44,26 @@ class DaivagnaParamparaSection extends StatelessWidget {
     );
   }
 
-  Widget _partnerCard(BuildContext context, String who, PartnerParamparaResult p) {
+  Widget _partnerCard(
+    BuildContext context,
+    String who,
+    PartnerParamparaResult p,
+  ) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+          Text(
+            who,
+            style: body(
+              14,
+              weight: FontWeight.w700,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           _declaredValueRow(context, 'Gotra', p.gotra),
           _declaredValueRow(context, 'Kuladevata', p.kuladevata),
@@ -53,19 +72,62 @@ class DaivagnaParamparaSection extends StatelessWidget {
     );
   }
 
-  Widget _declaredValueRow(BuildContext context, String label, ParamparaDeclaredValue v) {
-    final (String valueText, Color colorLight, Color colorDark) = switch (v.status) {
-      ParamparaValueStatus.provided =>
-        ((v.customValue?.trim().isNotEmpty ?? false) ? v.customValue!.trim() : 'Not provided', AppColors.ink, AppColors.darkText),
-      ParamparaValueStatus.unknown => ('Unknown', AppColors.hint, AppColors.darkTextMuted),
-      ParamparaValueStatus.notProvided => ('Not provided', AppColors.hint, AppColors.darkTextMuted),
+  Widget _declaredValueRow(
+    BuildContext context,
+    String label,
+    ParamparaDeclaredValue v,
+  ) {
+    final (
+      String valueText,
+      Color colorLight,
+      Color colorDark,
+    ) = switch (v.status) {
+      ParamparaValueStatus.provided => (
+        (v.customValue?.trim().isNotEmpty ?? false)
+            ? v.customValue!.trim()
+            : 'Not provided',
+        AppColors.ink,
+        AppColors.darkText,
+      ),
+      ParamparaValueStatus.unknown => (
+        'Unknown',
+        AppColors.hint,
+        AppColors.darkTextMuted,
+      ),
+      ParamparaValueStatus.notProvided => (
+        'Not provided',
+        AppColors.hint,
+        AppColors.darkTextMuted,
+      ),
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          SizedBox(width: 96, child: Text(label, style: body(13, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)))),
-          Expanded(child: Text(valueText, style: body(13, weight: FontWeight.w600, color: context.onBrightness(light: colorLight, dark: colorDark)))),
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valueText,
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: context.onBrightness(light: colorLight, dark: colorDark),
+              ),
+            ),
+          ),
         ],
       ),
     );

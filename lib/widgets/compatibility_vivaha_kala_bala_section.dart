@@ -35,7 +35,8 @@ class VivahaKalaBalaSection extends StatelessWidget {
     if (v == null) {
       return const CompatibilityUnavailableNotice(
         title: 'Vivaha Kala Bala not available',
-        message: 'This report does not include a marriage-timing (Vivaha Kala Bala) result.',
+        message:
+            'This report does not include a marriage-timing (Vivaha Kala Bala) result.',
       );
     }
 
@@ -51,7 +52,11 @@ class VivahaKalaBalaSection extends StatelessWidget {
               CompatibilitySectionHeader(
                 eyebrow: 'Vivaha Kala Bala',
                 title: 'Marriage Timing',
-                trailing: Pill(visual.label, fg: visual.color, icon: visual.icon),
+                trailing: Pill(
+                  visual.label,
+                  fg: visual.color,
+                  icon: visual.icon,
+                ),
               ),
               const Divider(height: 24),
               _timingResultRow('Bride', v.bride),
@@ -76,7 +81,11 @@ class VivahaKalaBalaSection extends StatelessWidget {
   }
 
   Widget _timingResultRow(String who, PartnerVivahaTimingResult r) {
-    return FindingRow(title: who, visual: moduleStatusVisual(r.status), explanation: r.explanation);
+    return FindingRow(
+      title: who,
+      visual: moduleStatusVisual(r.status),
+      explanation: r.explanation,
+    );
   }
 
   Widget _balaCard(BuildContext context, String title, BalaFinding b) {
@@ -87,17 +96,48 @@ class VivahaKalaBalaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(title, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+              Expanded(
+                child: Text(
+                  title,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (b.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(b.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+            Text(
+              b.explanation,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.4,
+              ),
+            ),
           ],
           if (b.transitPosition != null) ...[
             const SizedBox(height: 6),
-            Text(_positionLabel(b.transitPosition!), style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
+            Text(
+              _positionLabel(b.transitPosition!),
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ],
           const SizedBox(height: 6),
           _balaPartnerRow('Bride', b.bride),
@@ -111,7 +151,9 @@ class VivahaKalaBalaSection extends StatelessWidget {
     return FindingRow(
       title: who,
       visual: moduleStatusVisual(p.status),
-      valueLabel: p.classification != null ? humanizeCode(p.classification!) : null,
+      valueLabel: p.classification != null
+          ? humanizeCode(p.classification!)
+          : null,
       explanation: p.explanation,
     );
   }
@@ -124,17 +166,48 @@ class VivahaKalaBalaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Tara Bala', style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+              Expanded(
+                child: Text(
+                  'Tara Bala',
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (t.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(t.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+            Text(
+              t.explanation,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.4,
+              ),
+            ),
           ],
           if (t.transitMoonPosition != null) ...[
             const SizedBox(height: 6),
-            Text('Transiting Moon - ${_positionLabel(t.transitMoonPosition!)}', style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
+            Text(
+              'Transiting Moon - ${_positionLabel(t.transitMoonPosition!)}',
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ],
           const SizedBox(height: 6),
           _taraPartnerRow('Bride', t.bride),
@@ -166,13 +239,35 @@ class VivahaKalaBalaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Gochar (Transits)', style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+              Expanded(
+                child: Text(
+                  'Gochar (Transits)',
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (g.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(g.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+            Text(
+              g.explanation,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.4,
+              ),
+            ),
           ],
           if (positions != null && positions.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -181,8 +276,29 @@ class VivahaKalaBalaSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    Expanded(child: Text(humanizeCode(entry.key), style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText)))),
-                    Text(_positionLabel(entry.value), style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                    Expanded(
+                      child: Text(
+                        humanizeCode(entry.key),
+                        style: body(
+                          12,
+                          weight: FontWeight.w600,
+                          color: context.onBrightness(
+                            light: AppColors.ink,
+                            dark: AppColors.darkText,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _positionLabel(entry.value),
+                      style: body(
+                        11,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -200,13 +316,35 @@ class VivahaKalaBalaSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Dasha Timing', style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+              Expanded(
+                child: Text(
+                  'Dasha Timing',
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
               Pill(visual.label, fg: visual.color, icon: visual.icon),
             ],
           ),
           if (d.explanation.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(d.explanation, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+            Text(
+              d.explanation,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                height: 1.4,
+              ),
+            ),
           ],
           const SizedBox(height: 6),
           _dashaTimingPartnerRow('Bride', d.bride),
@@ -218,14 +356,20 @@ class VivahaKalaBalaSection extends StatelessWidget {
 
   Widget _dashaTimingPartnerRow(String who, PartnerDashaTimingFinding p) {
     final valueParts = <String>[
-      if (p.currentMahadashaLord != null) 'MD: ${humanizeCode(p.currentMahadashaLord!)}',
-      if (p.currentAntardashaLord != null) 'AD: ${humanizeCode(p.currentAntardashaLord!)}',
+      if (p.currentMahadashaLord != null)
+        'MD: ${humanizeCode(p.currentMahadashaLord!)}',
+      if (p.currentAntardashaLord != null)
+        'AD: ${humanizeCode(p.currentAntardashaLord!)}',
     ];
     return FindingRow(
       title: who,
       visual: moduleStatusVisual(p.status),
-      valueLabel: p.timingClassification != null ? humanizeCode(p.timingClassification!) : null,
-      explanation: valueParts.isEmpty ? p.explanation : '${valueParts.join(' · ')}${p.explanation.isEmpty ? '' : ' - ${p.explanation}'}',
+      valueLabel: p.timingClassification != null
+          ? humanizeCode(p.timingClassification!)
+          : null,
+      explanation: valueParts.isEmpty
+          ? p.explanation
+          : '${valueParts.join(' · ')}${p.explanation.isEmpty ? '' : ' - ${p.explanation}'}',
     );
   }
 

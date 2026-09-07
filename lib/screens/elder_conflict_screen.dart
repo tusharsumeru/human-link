@@ -256,7 +256,13 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
           children: [
             Text(
               t.elderResolution,
-              style: display(18, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+              style: display(
+                18,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -280,12 +286,21 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 Icon(
                   Icons.shield_outlined,
                   size: 13,
-                  color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
                 ),
                 const SizedBox(width: 5),
                 Text(
                   t.elderOnlyEldersResolve,
-                  style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                  style: body(
+                    11,
+                    color: context.onBrightness(
+                      light: AppColors.hint,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -303,12 +318,21 @@ class _ElderConflictScreenState extends State<ElderConflictScreen> {
                 Icon(
                   Icons.forum_rounded,
                   size: 16,
-                  color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   t.elderDiscussionThread,
-                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                  style: display(
+                    17,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                 ),
               ],
             ),

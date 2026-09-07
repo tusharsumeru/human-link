@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 import '../data/models/compatibility_astrology_modules.dart'
     show AstrologyFavorabilityStatus, DashaComparisonStatus, KujaDoshaStatus;
 import '../data/models/compatibility_models.dart' show PoruthamStatus;
-import '../data/models/parampara.dart' show ParamparaComparisonStatus, ParamparaFieldComparisonStatus;
+import '../data/models/parampara.dart'
+    show ParamparaComparisonStatus, ParamparaFieldComparisonStatus;
 import '../data/models/south_indian_jataka.dart' show AstrologyModuleStatus;
 import '../theme/app_theme.dart';
 import 'ui_kit.dart';
@@ -48,109 +49,246 @@ Color statusColorTone(BuildContext context, Color light) {
 }
 
 StatusVisual poruthamStatusVisual(PoruthamStatus status) => switch (status) {
-      PoruthamStatus.matched => const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Matched'),
-      PoruthamStatus.partial => const StatusVisual(Icons.adjust_rounded, AppColors.gold700, 'Partial'),
-      PoruthamStatus.notMatched =>
-        StatusVisual(Icons.cancel_rounded, Colors.red.shade700, 'Not matched'),
-      PoruthamStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      PoruthamStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Unavailable'),
-      PoruthamStatus.unknown => const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
+  PoruthamStatus.matched => const StatusVisual(
+    Icons.check_circle_rounded,
+    AppColors.forest700,
+    'Matched',
+  ),
+  PoruthamStatus.partial => const StatusVisual(
+    Icons.adjust_rounded,
+    AppColors.gold700,
+    'Partial',
+  ),
+  PoruthamStatus.notMatched => StatusVisual(
+    Icons.cancel_rounded,
+    Colors.red.shade700,
+    'Not matched',
+  ),
+  PoruthamStatus.reviewRequired => const StatusVisual(
+    Icons.rate_review_outlined,
+    AppColors.gold700,
+    'Review required',
+  ),
+  PoruthamStatus.notCalculable => const StatusVisual(
+    Icons.remove_circle_outline_rounded,
+    AppColors.hint,
+    'Unavailable',
+  ),
+  PoruthamStatus.unknown => const StatusVisual(
+    Icons.help_outline_rounded,
+    AppColors.hint,
+    'Unknown',
+  ),
+};
+
+StatusVisual moduleStatusVisual(AstrologyModuleStatus status) =>
+    switch (status) {
+      AstrologyModuleStatus.calculated => const StatusVisual(
+        Icons.check_circle_rounded,
+        AppColors.forest700,
+        'Calculated',
+      ),
+      AstrologyModuleStatus.reviewRequired => const StatusVisual(
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        'Review required',
+      ),
+      AstrologyModuleStatus.notCalculable => const StatusVisual(
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        'Not calculable',
+      ),
+      AstrologyModuleStatus.unknown => const StatusVisual(
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        'Unknown',
+      ),
     };
 
-StatusVisual moduleStatusVisual(AstrologyModuleStatus status) => switch (status) {
-      AstrologyModuleStatus.calculated =>
-        const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Calculated'),
-      AstrologyModuleStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      AstrologyModuleStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      AstrologyModuleStatus.unknown =>
-        const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
-    };
-
-StatusVisual favorabilityStatusVisual(AstrologyFavorabilityStatus status) => switch (status) {
-      AstrologyFavorabilityStatus.supportive =>
-        const StatusVisual(Icons.thumb_up_alt_rounded, AppColors.forest700, 'Supportive'),
-      AstrologyFavorabilityStatus.neutral =>
-        const StatusVisual(Icons.trending_flat_rounded, AppColors.textMuted, 'Neutral'),
-      AstrologyFavorabilityStatus.caution =>
-        const StatusVisual(Icons.warning_amber_rounded, AppColors.gold700, 'Caution'),
-      AstrologyFavorabilityStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      AstrologyFavorabilityStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      AstrologyFavorabilityStatus.unknown =>
-        const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
+StatusVisual favorabilityStatusVisual(AstrologyFavorabilityStatus status) =>
+    switch (status) {
+      AstrologyFavorabilityStatus.supportive => const StatusVisual(
+        Icons.thumb_up_alt_rounded,
+        AppColors.forest700,
+        'Supportive',
+      ),
+      AstrologyFavorabilityStatus.neutral => const StatusVisual(
+        Icons.trending_flat_rounded,
+        AppColors.textMuted,
+        'Neutral',
+      ),
+      AstrologyFavorabilityStatus.caution => const StatusVisual(
+        Icons.warning_amber_rounded,
+        AppColors.gold700,
+        'Caution',
+      ),
+      AstrologyFavorabilityStatus.reviewRequired => const StatusVisual(
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        'Review required',
+      ),
+      AstrologyFavorabilityStatus.notCalculable => const StatusVisual(
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        'Not calculable',
+      ),
+      AstrologyFavorabilityStatus.unknown => const StatusVisual(
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        'Unknown',
+      ),
     };
 
 StatusVisual kujaDoshaStatusVisual(KujaDoshaStatus status) => switch (status) {
-      KujaDoshaStatus.notPresent =>
-        const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Not present'),
-      KujaDoshaStatus.mild => const StatusVisual(Icons.info_outline_rounded, AppColors.gold700, 'Mild'),
-      KujaDoshaStatus.moderate =>
-        const StatusVisual(Icons.warning_amber_rounded, AppColors.gold700, 'Moderate'),
-      KujaDoshaStatus.strong =>
-        StatusVisual(Icons.priority_high_rounded, Colors.red.shade700, 'Strong'),
-      KujaDoshaStatus.cancelled =>
-        const StatusVisual(Icons.verified_rounded, AppColors.forest700, 'Cancelled'),
-      KujaDoshaStatus.balancedWithPartner =>
-        const StatusVisual(Icons.balance_rounded, AppColors.forest700, 'Balanced with partner'),
-      KujaDoshaStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      KujaDoshaStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      KujaDoshaStatus.unknown => const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
+  KujaDoshaStatus.notPresent => const StatusVisual(
+    Icons.check_circle_rounded,
+    AppColors.forest700,
+    'Not present',
+  ),
+  KujaDoshaStatus.mild => const StatusVisual(
+    Icons.info_outline_rounded,
+    AppColors.gold700,
+    'Mild',
+  ),
+  KujaDoshaStatus.moderate => const StatusVisual(
+    Icons.warning_amber_rounded,
+    AppColors.gold700,
+    'Moderate',
+  ),
+  KujaDoshaStatus.strong => StatusVisual(
+    Icons.priority_high_rounded,
+    Colors.red.shade700,
+    'Strong',
+  ),
+  KujaDoshaStatus.cancelled => const StatusVisual(
+    Icons.verified_rounded,
+    AppColors.forest700,
+    'Cancelled',
+  ),
+  KujaDoshaStatus.balancedWithPartner => const StatusVisual(
+    Icons.balance_rounded,
+    AppColors.forest700,
+    'Balanced with partner',
+  ),
+  KujaDoshaStatus.reviewRequired => const StatusVisual(
+    Icons.rate_review_outlined,
+    AppColors.gold700,
+    'Review required',
+  ),
+  KujaDoshaStatus.notCalculable => const StatusVisual(
+    Icons.remove_circle_outline_rounded,
+    AppColors.hint,
+    'Not calculable',
+  ),
+  KujaDoshaStatus.unknown => const StatusVisual(
+    Icons.help_outline_rounded,
+    AppColors.hint,
+    'Unknown',
+  ),
+};
+
+StatusVisual dashaComparisonStatusVisual(DashaComparisonStatus status) =>
+    switch (status) {
+      DashaComparisonStatus.supportive => const StatusVisual(
+        Icons.thumb_up_alt_rounded,
+        AppColors.forest700,
+        'Supportive',
+      ),
+      DashaComparisonStatus.neutral => const StatusVisual(
+        Icons.trending_flat_rounded,
+        AppColors.textMuted,
+        'Neutral',
+      ),
+      DashaComparisonStatus.sensitiveTransition => const StatusVisual(
+        Icons.swap_horiz_rounded,
+        AppColors.gold700,
+        'Sensitive transition',
+      ),
+      DashaComparisonStatus.reviewRequired => const StatusVisual(
+        Icons.rate_review_outlined,
+        AppColors.gold700,
+        'Review required',
+      ),
+      DashaComparisonStatus.notCalculable => const StatusVisual(
+        Icons.remove_circle_outline_rounded,
+        AppColors.hint,
+        'Not calculable',
+      ),
+      DashaComparisonStatus.unknown => const StatusVisual(
+        Icons.help_outline_rounded,
+        AppColors.hint,
+        'Unknown',
+      ),
     };
 
-StatusVisual dashaComparisonStatusVisual(DashaComparisonStatus status) => switch (status) {
-      DashaComparisonStatus.supportive =>
-        const StatusVisual(Icons.thumb_up_alt_rounded, AppColors.forest700, 'Supportive'),
-      DashaComparisonStatus.neutral =>
-        const StatusVisual(Icons.trending_flat_rounded, AppColors.textMuted, 'Neutral'),
-      DashaComparisonStatus.sensitiveTransition =>
-        const StatusVisual(Icons.swap_horiz_rounded, AppColors.gold700, 'Sensitive transition'),
-      DashaComparisonStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      DashaComparisonStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      DashaComparisonStatus.unknown =>
-        const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
-    };
-
-StatusVisual paramparaComparisonStatusVisual(ParamparaComparisonStatus status) => switch (status) {
-      ParamparaComparisonStatus.match =>
-        const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Match'),
-      ParamparaComparisonStatus.informational =>
-        const StatusVisual(Icons.info_outline_rounded, AppColors.textMuted, 'Informational'),
-      ParamparaComparisonStatus.reviewRequired =>
-        const StatusVisual(Icons.rate_review_outlined, AppColors.gold700, 'Review required'),
-      ParamparaComparisonStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      ParamparaComparisonStatus.unknown =>
-        const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
-    };
+StatusVisual paramparaComparisonStatusVisual(
+  ParamparaComparisonStatus status,
+) => switch (status) {
+  ParamparaComparisonStatus.match => const StatusVisual(
+    Icons.check_circle_rounded,
+    AppColors.forest700,
+    'Match',
+  ),
+  ParamparaComparisonStatus.informational => const StatusVisual(
+    Icons.info_outline_rounded,
+    AppColors.textMuted,
+    'Informational',
+  ),
+  ParamparaComparisonStatus.reviewRequired => const StatusVisual(
+    Icons.rate_review_outlined,
+    AppColors.gold700,
+    'Review required',
+  ),
+  ParamparaComparisonStatus.notCalculable => const StatusVisual(
+    Icons.remove_circle_outline_rounded,
+    AppColors.hint,
+    'Not calculable',
+  ),
+  ParamparaComparisonStatus.unknown => const StatusVisual(
+    Icons.help_outline_rounded,
+    AppColors.hint,
+    'Unknown',
+  ),
+};
 
 /// Purely descriptive — DIFFERENT is never shown as a failure/incompatible
 /// color, matching the backend's own "MATCH does not mean compatible;
 /// DIFFERENT does not mean incompatible" rule.
-StatusVisual paramparaFieldStatusVisual(ParamparaFieldComparisonStatus status) => switch (status) {
-      ParamparaFieldComparisonStatus.match =>
-        const StatusVisual(Icons.check_circle_rounded, AppColors.forest700, 'Match'),
-      ParamparaFieldComparisonStatus.different =>
-        const StatusVisual(Icons.compare_arrows_rounded, AppColors.textMuted, 'Different'),
-      ParamparaFieldComparisonStatus.notCalculable =>
-        const StatusVisual(Icons.remove_circle_outline_rounded, AppColors.hint, 'Not calculable'),
-      ParamparaFieldComparisonStatus.unknown =>
-        const StatusVisual(Icons.help_outline_rounded, AppColors.hint, 'Unknown'),
-    };
+StatusVisual paramparaFieldStatusVisual(
+  ParamparaFieldComparisonStatus status,
+) => switch (status) {
+  ParamparaFieldComparisonStatus.match => const StatusVisual(
+    Icons.check_circle_rounded,
+    AppColors.forest700,
+    'Match',
+  ),
+  ParamparaFieldComparisonStatus.different => const StatusVisual(
+    Icons.compare_arrows_rounded,
+    AppColors.textMuted,
+    'Different',
+  ),
+  ParamparaFieldComparisonStatus.notCalculable => const StatusVisual(
+    Icons.remove_circle_outline_rounded,
+    AppColors.hint,
+    'Not calculable',
+  ),
+  ParamparaFieldComparisonStatus.unknown => const StatusVisual(
+    Icons.help_outline_rounded,
+    AppColors.hint,
+    'Unknown',
+  ),
+};
 
 /// A module's eyebrow + title, matching the existing
 /// "ASHTAKOOTA / 36 GUNA" / "Karnataka 10 Porutham" header pattern already
 /// used by [CompatibilityReportView]/`SouthIndianJatakaScreen`.
 class CompatibilitySectionHeader extends StatelessWidget {
-  const CompatibilitySectionHeader({super.key, required this.eyebrow, required this.title, this.trailing});
+  const CompatibilitySectionHeader({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.trailing,
+  });
   final String eyebrow;
   final String title;
   final Widget? trailing;
@@ -164,10 +302,29 @@ class CompatibilitySectionHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(eyebrow.toUpperCase(),
-                  style: body(11, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft), letterSpacing: 1)),
+              Text(
+                eyebrow.toUpperCase(),
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
+                  letterSpacing: 1,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text(title, style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+              Text(
+                title,
+                style: display(
+                  17,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -215,28 +372,63 @@ class FindingRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
+                    ),
                   ),
                   if (valueLabel != null && valueLabel!.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Flexible(
-                      child: Text(valueLabel!,
-                          textAlign: TextAlign.right,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                      child: Text(
+                        valueLabel!,
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: body(
+                          12,
+                          weight: FontWeight.w600,
+                          color: context.onBrightness(
+                            light: AppColors.textMuted,
+                            dark: AppColors.darkTextMuted,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                   const SizedBox(width: 8),
-                  Text(visual.label, style: body(12, weight: FontWeight.w700, color: statusColor)),
+                  Text(
+                    visual.label,
+                    style: body(
+                      12,
+                      weight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
                 ],
               ),
               if (explanation != null && explanation!.isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(explanation!, style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.3)),
+                Text(
+                  explanation!,
+                  style: body(
+                    11,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                    height: 1.3,
+                  ),
+                ),
               ],
             ],
           ),
@@ -245,7 +437,10 @@ class FindingRow extends StatelessWidget {
     );
 
     if (!emphasized) {
-      return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: content);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: content,
+      );
     }
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 5),
@@ -281,9 +476,17 @@ class CompatibilityExpandableSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
+        color: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       // The Container above paints its own background, so the
@@ -295,16 +498,41 @@ class CompatibilityExpandableSection extends StatelessWidget {
           data: Theme.of(context).copyWith(
             dividerColor: Colors.transparent,
             iconTheme: IconThemeData(
-              color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300),
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
             ),
           ),
           child: ExpansionTile(
             initiallyExpanded: initiallyExpanded,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
             childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-            title: Text(title, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+            title: Text(
+              title,
+              style: body(
+                14,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             subtitle: subtitle != null
-                ? Text(subtitle!, style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)))
+                ? Text(
+                    subtitle!,
+                    style: body(
+                      12,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  )
                 : null,
             children: children,
           ),
@@ -318,7 +546,11 @@ class CompatibilityExpandableSection extends StatelessWidget {
 /// null on the report (not requested, missing consent, missing birth data),
 /// distinct from an individual finding's own NOT_CALCULABLE.
 class CompatibilityUnavailableNotice extends StatelessWidget {
-  const CompatibilityUnavailableNotice({super.key, required this.title, required this.message});
+  const CompatibilityUnavailableNotice({
+    super.key,
+    required this.title,
+    required this.message,
+  });
   final String title;
   final String message;
 
@@ -330,15 +562,29 @@ class CompatibilityUnavailableNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.gold700),
+          const Icon(
+            Icons.hourglass_top_rounded,
+            size: 18,
+            color: AppColors.gold700,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: body(14, weight: FontWeight.w700, color: AppColors.gold700)),
+                Text(
+                  title,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: AppColors.gold700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(message, style: body(13, color: AppColors.textMuted, height: 1.4)),
+                Text(
+                  message,
+                  style: body(13, color: AppColors.textMuted, height: 1.4),
+                ),
               ],
             ),
           ),
@@ -353,7 +599,18 @@ class CompatibilityUnavailableNotice extends StatelessWidget {
 String formatCompatDate(DateTime? d) {
   if (d == null) return 'Unknown';
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', //
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec', //
   ];
   return '${d.day} ${months[d.month - 1]} ${d.year}';
 }
@@ -372,7 +629,10 @@ String humanizeCode(String code) {
 /// several findings carry — a display transform only, same convention as
 /// [CompatibilityReportView]'s own key humanizer.
 String humanizeKey(String key) {
-  final spaced = key.replaceAllMapped(RegExp(r'([a-z0-9])([A-Z])'), (m) => '${m[1]} ${m[2]}');
+  final spaced = key.replaceAllMapped(
+    RegExp(r'([a-z0-9])([A-Z])'),
+    (m) => '${m[1]} ${m[2]}',
+  );
   if (spaced.isEmpty) return spaced;
   return spaced[0].toUpperCase() + spaced.substring(1).toLowerCase();
 }

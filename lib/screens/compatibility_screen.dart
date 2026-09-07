@@ -70,7 +70,8 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
       if (!mounted) return;
       ConsentStatus? birthData;
       for (final c in consents) {
-        if (c.consentType == CompatibilityConsentType.birthDataMatching) birthData = c;
+        if (c.consentType == CompatibilityConsentType.birthDataMatching)
+          birthData = c;
       }
       setState(() {
         _myConsent = birthData;
@@ -85,8 +86,9 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
   }
 
   Future<void> _openConsentScreen() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CompatibilityConsentScreen()));
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CompatibilityConsentScreen()),
+    );
     if (!mounted) return;
     await _loadConsentStatus();
     // If the last attempt failed on consent specifically, retry now that the
@@ -99,7 +101,8 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
   Future<void> _calculate() async {
     final t = AppLocalizations.of(context);
     final myRole = TraditionalRole.forGender(
-        context.read<AuthService>().user?.gender ?? '');
+      context.read<AuthService>().user?.gender ?? '',
+    );
     final otherRole = TraditionalRole.forGender(widget.otherGender);
 
     if (myRole == null || otherRole == null) {
@@ -146,7 +149,9 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
         });
         return;
       }
-      final report = await Repository.instance.compatibilityReport(response.reportId);
+      final report = await Repository.instance.compatibilityReport(
+        response.reportId,
+      );
       if (!mounted) return;
       setState(() {
         _report = report;
@@ -213,7 +218,9 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               child: ForestButton(
                 label: _report != null
                     ? t.compRecalculate
-                    : (_error != null ? t.compRetry : t.compCalculateCompatibility),
+                    : (_error != null
+                          ? t.compRetry
+                          : t.compCalculateCompatibility),
                 icon: Icons.auto_awesome_rounded,
                 expand: true,
                 loading: _loading,
@@ -239,7 +246,10 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
             child: SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.forest700),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.forest700,
+              ),
             ),
           ),
         ),
@@ -247,44 +257,81 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
     }
     final consent = _myConsent;
     final ok = consent?.satisfiesCalculation ?? false;
-    final outdated = consent != null && consent.granted && !consent.isCurrentPolicy;
+    final outdated =
+        consent != null && consent.granted && !consent.isCurrentPolicy;
 
     return AppCard(
       color: ok
           ? const Color(0xFFF0FBF4)
-          : context.onBrightness(light: AppColors.cream, dark: AppColors.darkSurface),
+          : context.onBrightness(
+              light: AppColors.cream,
+              dark: AppColors.darkSurface,
+            ),
       child: Row(
         children: [
           Icon(
-            ok ? Icons.check_circle_outline_rounded : Icons.privacy_tip_outlined,
+            ok
+                ? Icons.check_circle_outline_rounded
+                : Icons.privacy_tip_outlined,
             size: 18,
             color: ok
                 ? AppColors.forest700
-                : context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+                : context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.compYourConsentBirthData,
-                    style: body(12, weight: FontWeight.w700, color: ok ? AppColors.forest900 : context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                Text(
+                  t.compYourConsentBirthData,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: ok
+                        ? AppColors.forest900
+                        : context.onBrightness(
+                            light: AppColors.forest900,
+                            dark: AppColors.darkText,
+                          ),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   ok
                       ? t.compAllowedRequiredForCalc
                       : outdated
-                          ? t.compPolicyChangedReconfirm
-                          : t.compNotAllowedYet,
-                  style: body(11, color: ok ? AppColors.textMuted : context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                      ? t.compPolicyChangedReconfirm
+                      : t.compNotAllowedYet,
+                  style: body(
+                    11,
+                    color: ok
+                        ? AppColors.textMuted
+                        : context.onBrightness(
+                            light: AppColors.textMuted,
+                            dark: AppColors.darkTextMuted,
+                          ),
+                  ),
                 ),
               ],
             ),
           ),
           TextButton(
             onPressed: _openConsentScreen,
-            child: Text(ok ? t.compManage : t.compReview,
-                style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+            child: Text(
+              ok ? t.compManage : t.compReview,
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -302,17 +349,37 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               color: Color(0xFFFCEBDD),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.favorite_rounded,
-                size: 26, color: AppColors.gold700),
+            child: const Icon(
+              Icons.favorite_rounded,
+              size: 26,
+              color: AppColors.gold700,
+            ),
           ),
           const SizedBox(height: 14),
-          Text(t.compReportTitle,
-              style: display(20, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
-              textAlign: TextAlign.center),
+          Text(
+            t.compReportTitle,
+            style: display(
+              20,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 6),
-          Text('$myName × $otherName',
-              style: body(14, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
-              textAlign: TextAlign.center),
+          Text(
+            '$myName × $otherName',
+            style: body(
+              14,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -324,38 +391,38 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
     final mine = error.profile == CompatibilityErrorProfile.a;
     return switch (error.reason) {
       CompatibilityErrorReason.missingRole => _noticeCard(
-          icon: Icons.person_outline_rounded,
-          title: t.compTraditionalRoleUnknown,
-          message: error.message,
-          actionLabel: mine ? t.compGoToProfile : null,
-          onAction: mine ? () => context.push('/profile/edit') : null,
-        ),
+        icon: Icons.person_outline_rounded,
+        title: t.compTraditionalRoleUnknown,
+        message: error.message,
+        actionLabel: mine ? t.compGoToProfile : null,
+        onAction: mine ? () => context.push('/profile/edit') : null,
+      ),
       CompatibilityErrorReason.missingBirthData => _noticeCard(
-          icon: Icons.cake_outlined,
-          title: mine
-              ? t.compYourBirthDetailsIncomplete
-              : t.compTheirBirthDetailsIncomplete,
-          message: mine
-              ? t.compAddBirthDetailsBody
-              : t.compTheirBirthDetailsBody,
-          actionLabel: mine ? t.compAddBirthDetailsAction : null,
-          onAction: mine ? () => context.push('/matrimonial/birth-details') : null,
-        ),
+        icon: Icons.cake_outlined,
+        title: mine
+            ? t.compYourBirthDetailsIncomplete
+            : t.compTheirBirthDetailsIncomplete,
+        message: mine ? t.compAddBirthDetailsBody : t.compTheirBirthDetailsBody,
+        actionLabel: mine ? t.compAddBirthDetailsAction : null,
+        onAction: mine
+            ? () => context.push('/matrimonial/birth-details')
+            : null,
+      ),
       CompatibilityErrorReason.missingConsent => _noticeCard(
-          icon: Icons.privacy_tip_outlined,
-          title: mine ? t.compYourConsentNeeded : t.compTheirConsentNeeded,
-          message: mine
-              ? t.compYourConsentNeededBody
-              : t.compTheirConsentNeededBody,
-          actionLabel: mine ? t.compReviewConsent : null,
-          onAction: mine ? _openConsentScreen : null,
-        ),
+        icon: Icons.privacy_tip_outlined,
+        title: mine ? t.compYourConsentNeeded : t.compTheirConsentNeeded,
+        message: mine
+            ? t.compYourConsentNeededBody
+            : t.compTheirConsentNeededBody,
+        actionLabel: mine ? t.compReviewConsent : null,
+        onAction: mine ? _openConsentScreen : null,
+      ),
       CompatibilityErrorReason.apiError => _noticeCard(
-          icon: Icons.error_outline_rounded,
-          title: t.compSomethingWentWrong,
-          message: error.message,
-          isError: true,
-        ),
+        icon: Icons.error_outline_rounded,
+        title: t.compSomethingWentWrong,
+        message: error.message,
+        isError: true,
+      ),
     };
   }
 
@@ -384,10 +451,15 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: body(14, weight: FontWeight.w700, color: fg)),
+                    Text(
+                      title,
+                      style: body(14, weight: FontWeight.w700, color: fg),
+                    ),
                     const SizedBox(height: 4),
-                    Text(message,
-                        style: body(13, color: AppColors.textMuted, height: 1.4)),
+                    Text(
+                      message,
+                      style: body(13, color: AppColors.textMuted, height: 1.4),
+                    ),
                   ],
                 ),
               ),
@@ -399,8 +471,14 @@ class _CompatibilityScreenState extends State<CompatibilityScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: onAction,
-                child: Text(actionLabel,
-                    style: body(13, weight: FontWeight.w700, color: AppColors.forest700)),
+                child: Text(
+                  actionLabel,
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest700,
+                  ),
+                ),
               ),
             ),
           ],

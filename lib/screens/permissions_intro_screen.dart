@@ -30,7 +30,12 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
     // Requested one at a time (not Future.wait) so each OS prompt appears in
     // its own turn rather than all firing at once, which some Android/iOS
     // versions coalesce or drop.
-    for (final p in [Permission.photos, Permission.videos, Permission.notification, Permission.locationWhenInUse]) {
+    for (final p in [
+      Permission.photos,
+      Permission.videos,
+      Permission.notification,
+      Permission.locationWhenInUse,
+    ]) {
       try {
         await p.request();
       } catch (_) {
@@ -63,7 +68,11 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
                   gradient: AppGradients.forest,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.shield_outlined, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.shield_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -140,7 +149,11 @@ class _PermissionsIntroScreenState extends State<PermissionsIntroScreen> {
 }
 
 class _PermissionRow extends StatelessWidget {
-  const _PermissionRow({required this.icon, required this.title, required this.bodyText});
+  const _PermissionRow({
+    required this.icon,
+    required this.title,
+    required this.bodyText,
+  });
   final IconData icon;
   final String title;
   final String bodyText;
@@ -154,7 +167,10 @@ class _PermissionRow extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(color: Color(0xFFF0FBF4), shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0FBF4),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, size: 20, color: AppColors.forest700),
           ),
           const SizedBox(width: 12),
@@ -162,9 +178,29 @@ class _PermissionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                Text(
+                  title,
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(bodyText, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+                Text(
+                  bodyText,
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),

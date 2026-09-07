@@ -88,18 +88,29 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.elderPortalKicker,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest300,
-                  letterSpacing: 1.4)),
+          Text(
+            t.elderPortalKicker,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+              letterSpacing: 1.4,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(t.elderWelcomeBack(firstName),
-              style: display(26, color: Colors.white)),
+          Text(
+            t.elderWelcomeBack(firstName),
+            style: display(26, color: Colors.white),
+          ),
           const SizedBox(height: 6),
-          Text(t.elderGuardianOfTree,
-              style: body(13,
-                  weight: FontWeight.w600, color: const Color(0xFFFCD34D))),
+          Text(
+            t.elderGuardianOfTree,
+            style: body(
+              13,
+              weight: FontWeight.w600,
+              color: const Color(0xFFFCD34D),
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             t.elderDashboardBlurb,
@@ -117,13 +128,13 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
         '${kVerificationRequests.length}',
         t.elderPendingVerifications,
         Icons.shield_rounded,
-        AppColors.gold700
+        AppColors.gold700,
       ),
       (
         '${kConflictCases.length}',
         t.elderActiveConflicts,
         Icons.warning_amber_rounded,
-        _high
+        _high,
       ),
       ('1,428', t.elderTotalMembers, Icons.groups_rounded, AppColors.forest700),
       ('86', t.elderActiveBranches, Icons.park_rounded, AppColors.forest600),
@@ -150,16 +161,37 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 18, color: statusColorTone(context, color)),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: statusColorTone(context, color),
+                  ),
                 ),
                 const SizedBox(height: 10),
-                Text(value, style: display(22, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                Text(
+                  value,
+                  style: display(
+                    22,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: body(11,
-                        weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(
+                    11,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -168,7 +200,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   // ── Pending member requests preview ──────────────────────────────────────
-  Widget _pendingPreview(List<Map<String, dynamic>> preview, AppLocalizations t) {
+  Widget _pendingPreview(
+    List<Map<String, dynamic>> preview,
+    AppLocalizations t,
+  ) {
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -183,22 +218,50 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                   height: 22,
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
-                      color: _medium, shape: BoxShape.circle),
-                  child: Text('!',
-                      style: body(13,
-                          weight: FontWeight.w700, color: Colors.white)),
+                    color: _medium,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '!',
+                    style: body(
+                      13,
+                      weight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(t.elderPendingMemberRequests,
-                      style: display(16, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                  child: Text(
+                    t.elderPendingMemberRequests,
+                    style: display(
+                      16,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          Divider(height: 1, color: context.onBrightness(light: const Color(0xFFF1ECE2), dark: AppColors.darkBorder)),
+          Divider(
+            height: 1,
+            color: context.onBrightness(
+              light: const Color(0xFFF1ECE2),
+              dark: AppColors.darkBorder,
+            ),
+          ),
           for (var i = 0; i < preview.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: context.onBrightness(light: const Color(0xFFF6F1E8), dark: AppColors.darkBorder)),
+            if (i > 0)
+              Divider(
+                height: 1,
+                color: context.onBrightness(
+                  light: const Color(0xFFF6F1E8),
+                  dark: AppColors.darkBorder,
+                ),
+              ),
             _previewRow(preview[i], t),
           ],
           Padding(
@@ -207,9 +270,17 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => context.go('/elder/verifications'),
-                child: Text(t.elderReview,
-                    style: body(13,
-                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+                child: Text(
+                  t.elderReview,
+                  style: body(
+                    13,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -239,28 +310,53 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(r['name'] as String,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(14,
-                          weight: FontWeight.w700,
-                          color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                  Text(
+                    r['name'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      14,
+                      weight: FontWeight.w700,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(r['claimingFrom'] as String,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+                  Text(
+                    r['claimingFrom'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      11,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(t.elderVouches(r['vouches'] as int, required),
-                      style: body(11,
-                          weight: FontWeight.w600,
-                          color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+                  Text(
+                    t.elderVouches(r['vouches'] as int, required),
+                    style: body(
+                      11,
+                      weight: FontWeight.w600,
+                      color: context.onBrightness(
+                        light: AppColors.forest700,
+                        dark: AppColors.forest300,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Pill(_riskLabel(risk, t),
-                bg: color.withValues(alpha: 0.14), fg: color),
+            Pill(
+              _riskLabel(risk, t),
+              bg: color.withValues(alpha: 0.14),
+              fg: color,
+            ),
           ],
         ),
       ),
@@ -280,25 +376,51 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               color: _medium.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.warning_amber_rounded,
-                color: _medium, size: 20),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: _medium,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.elderTreeAlertsConflicts,
-                    style: display(15, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                Text(
+                  t.elderTreeAlertsConflicts,
+                  style: display(
+                    15,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   t.elderAlertSample,
-                  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45),
+                  style: body(
+                    12,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                    height: 1.45,
+                  ),
                 ),
                 const SizedBox(height: 6),
-                Text(t.elderResolveNow,
-                    style: body(12,
-                        weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+                Text(
+                  t.elderResolveNow,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -334,18 +456,38 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 onTap: () => context.go(route),
                 child: Row(
                   children: [
-                    Icon(icon, size: 18, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: context.onBrightness(
+                        light: AppColors.forest700,
+                        dark: AppColors.forest300,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(label,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(12,
-                              weight: FontWeight.w600,
-                              color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: body(
+                          12,
+                          weight: FontWeight.w600,
+                          color: context.onBrightness(
+                            light: AppColors.forest900,
+                            dark: AppColors.darkText,
+                          ),
+                        ),
+                      ),
                     ),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 16, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -367,33 +509,38 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.elderLineageWisdom,
-              style: body(11,
-                  weight: FontWeight.w700,
-                  color: AppColors.forest300,
-                  letterSpacing: 1.4)),
+          Text(
+            t.elderLineageWisdom,
+            style: body(
+              11,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+              letterSpacing: 1.4,
+            ),
+          ),
           const SizedBox(height: 14),
           // simple lineage tree representation
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _treeNode('Ramachandra', isRoot: true),
-            ],
+            children: [_treeNode('Ramachandra', isRoot: true)],
           ),
           const SizedBox(height: 6),
-          const Icon(Icons.more_vert_rounded,
-              size: 16, color: AppColors.forest500),
+          const Icon(
+            Icons.more_vert_rounded,
+            size: 16,
+            color: AppColors.forest500,
+          ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _treeNode('Venkatesh'),
-              _treeNode('Savitribai'),
-            ],
+            children: [_treeNode('Venkatesh'), _treeNode('Savitribai')],
           ),
           const SizedBox(height: 6),
-          const Icon(Icons.more_vert_rounded,
-              size: 16, color: AppColors.forest500),
+          const Icon(
+            Icons.more_vert_rounded,
+            size: 16,
+            color: AppColors.forest500,
+          ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -406,8 +553,12 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
           const SizedBox(height: 16),
           Text(
             t.elderLineageQuote,
-            style: display(14,
-                color: Colors.white, fontStyle: FontStyle.italic, height: 1.5),
+            style: display(
+              14,
+              color: Colors.white,
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -423,14 +574,19 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
             : Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: isRoot
-                ? AppColors.gold500.withValues(alpha: 0.4)
-                : Colors.white.withValues(alpha: 0.12)),
+          color: isRoot
+              ? AppColors.gold500.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.12),
+        ),
       ),
-      child: Text(name,
-          style: body(11,
-              weight: FontWeight.w600,
-              color: isRoot ? AppColors.goldSoft : Colors.white)),
+      child: Text(
+        name,
+        style: body(
+          11,
+          weight: FontWeight.w600,
+          color: isRoot ? AppColors.goldSoft : Colors.white,
+        ),
+      ),
     );
   }
 }

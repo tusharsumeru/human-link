@@ -162,12 +162,24 @@ class WelfareImpactScreen extends StatelessWidget {
               children: [
                 Text(
                   t.welfareCategoryBreakdown,
-                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                  style: display(
+                    17,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   t.welfareCategoryBreakdownSubtitle,
-                  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                  style: body(
+                    12,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _CategoryPie(campaigns: campaigns, total: totalRaised),
@@ -183,20 +195,35 @@ class WelfareImpactScreen extends StatelessWidget {
               children: [
                 Text(
                   t.welfareFundAllocation,
-                  style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                  style: display(
+                    17,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 for (final a in _allocationOf(t)) ...[
                   _AllocRow(alloc: a),
                   const SizedBox(height: 12),
                 ],
-                Divider(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), height: 1),
+                Divider(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                  height: 1,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   t.welfareAuditQuote,
                   style: body(
                     12,
-                    color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
+                    color: context.onBrightness(
+                      light: AppColors.hint,
+                      dark: AppColors.darkTextMuted,
+                    ),
                     height: 1.5,
                     weight: FontWeight.w500,
                   ),
@@ -216,12 +243,21 @@ class WelfareImpactScreen extends StatelessWidget {
                     Icon(
                       Icons.favorite_rounded,
                       size: 16,
-                      color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft),
+                      color: context.onBrightness(
+                        light: AppColors.gold700,
+                        dark: AppColors.goldSoft,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       t.welfareGuardianDonors,
-                      style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)),
+                      style: display(
+                        17,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -234,7 +270,13 @@ class WelfareImpactScreen extends StatelessWidget {
                   _DonorRow(donor: donors[i]),
                   if (i != donors.length - 1) ...[
                     const SizedBox(height: 12),
-                    Divider(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), height: 1),
+                    Divider(
+                      color: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
+                      height: 1,
+                    ),
                     const SizedBox(height: 12),
                   ],
                 ],
@@ -324,7 +366,14 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: body(12, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText)),
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
           ),
         ],
       ),
@@ -436,7 +485,10 @@ class _AllocRow extends StatelessWidget {
                 style: body(
                   13,
                   weight: FontWeight.w600,
-                  color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText),
+                  color: context.onBrightness(
+                    light: AppColors.label,
+                    dark: AppColors.darkText,
+                  ),
                 ),
               ),
             ),
@@ -445,7 +497,10 @@ class _AllocRow extends StatelessWidget {
               style: body(
                 13,
                 weight: FontWeight.w700,
-                color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
               ),
             ),
           ],
@@ -488,16 +543,35 @@ class _DonorRow extends StatelessWidget {
                 style: body(
                   13,
                   weight: FontWeight.w700,
-                  color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
                 ),
               ),
-              Text(donor.role, style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
+              Text(
+                donor.role,
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
         Text(
           donor.amount,
-          style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest800, dark: AppColors.forest300)),
+          style: body(
+            13,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.forest800,
+              dark: AppColors.forest300,
+            ),
+          ),
         ),
       ],
     );

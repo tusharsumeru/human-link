@@ -69,11 +69,15 @@ class _Logo extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Flexible(
-          child: Text(AppLocalizations.of(context).landOrgName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: display(17,
-                  color: onDark ? Colors.white : AppColors.forest800)),
+          child: Text(
+            AppLocalizations.of(context).landOrgName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: display(
+              17,
+              color: onDark ? Colors.white : AppColors.forest800,
+            ),
+          ),
         ),
       ],
     );
@@ -98,8 +102,9 @@ class _Hero extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
               color: AppColors.forest800.withValues(alpha: 0.06),
-              border:
-                  Border.all(color: AppColors.forest800.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: AppColors.forest800.withValues(alpha: 0.2),
+              ),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -109,12 +114,19 @@ class _Hero extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration: const BoxDecoration(
-                      color: AppColors.forest800, shape: BoxShape.circle),
+                    color: AppColors.forest800,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text(t.landEyebrow,
-                    style: body(11,
-                        weight: FontWeight.w700, color: AppColors.forest800)),
+                Text(
+                  t.landEyebrow,
+                  style: body(
+                    11,
+                    weight: FontWeight.w700,
+                    color: AppColors.forest800,
+                  ),
+                ),
               ],
             ),
           ),
@@ -122,8 +134,12 @@ class _Hero extends StatelessWidget {
           // Headline
           Text(
             t.landHeadline,
-            style: display(40,
-                color: AppColors.forest900, height: 1.1, weight: FontWeight.w800),
+            style: display(
+              40,
+              color: AppColors.forest900,
+              height: 1.1,
+              weight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 18),
           Text(
@@ -174,14 +190,21 @@ class _TreePreviewCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.park_rounded,
-                  size: 14, color: AppColors.forest500),
+              const Icon(
+                Icons.park_rounded,
+                size: 14,
+                color: AppColors.forest500,
+              ),
               const SizedBox(width: 8),
-              Text(t.landFamilyLineagePreview,
-                  style: body(11,
-                      weight: FontWeight.w700,
-                      color: AppColors.forest500,
-                      letterSpacing: 1.2)),
+              Text(
+                t.landFamilyLineagePreview,
+                style: body(
+                  11,
+                  weight: FontWeight.w700,
+                  color: AppColors.forest500,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -219,8 +242,10 @@ class _TreeTag extends StatelessWidget {
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          style: body(11, weight: FontWeight.w600, color: color)),
+      child: Text(
+        label,
+        style: body(11, weight: FontWeight.w600, color: color),
+      ),
     );
   }
 }
@@ -255,8 +280,15 @@ class _TreePainter extends CustomPainter {
     line(skb, g3[2], AppColors.forest500);
     line(skb, g3[3], AppColors.forest500);
 
-    void node(Offset c, double r, Color fill, Color? stroke, String label,
-        Color textColor, double fontSize) {
+    void node(
+      Offset c,
+      double r,
+      Color fill,
+      Color? stroke,
+      String label,
+      Color textColor,
+      double fontSize,
+    ) {
       canvas.drawCircle(c, r, Paint()..color = fill);
       if (stroke != null) {
         canvas.drawCircle(
@@ -272,9 +304,10 @@ class _TreePainter extends CustomPainter {
         text: TextSpan(
           text: label,
           style: TextStyle(
-              color: textColor,
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold),
+            color: textColor,
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -282,14 +315,35 @@ class _TreePainter extends CustomPainter {
     }
 
     node(root, 22 * sx, AppColors.gold700, null, 'RCB', Colors.white, 9);
-    node(vkb, 18 * sx, AppColors.forest800, AppColors.forest500, 'VKB',
-        Colors.white, 8);
-    node(skb, 18 * sx, AppColors.forest800, AppColors.forest500, 'SKB',
-        Colors.white, 8);
+    node(
+      vkb,
+      18 * sx,
+      AppColors.forest800,
+      AppColors.forest500,
+      'VKB',
+      Colors.white,
+      8,
+    );
+    node(
+      skb,
+      18 * sx,
+      AppColors.forest800,
+      AppColors.forest500,
+      'SKB',
+      Colors.white,
+      8,
+    );
     const g3Labels = ['RKS', 'MKS', 'AJH', 'SBH'];
     for (var i = 0; i < g3.length; i++) {
-      node(g3[i], 15 * sx, AppColors.forest900, AppColors.gold500,
-          g3Labels[i], AppColors.gold500, 7);
+      node(
+        g3[i],
+        15 * sx,
+        AppColors.forest900,
+        AppColors.gold500,
+        g3Labels[i],
+        AppColors.gold500,
+        7,
+      );
     }
   }
 
@@ -297,37 +351,38 @@ class _TreePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-
 // ─── Pillars ─────────────────────────────────────────────────────────────────
 class _Pillars extends StatelessWidget {
   const _Pillars();
 
-  static List<(IconData, String, String, String)> _pillarsOf(AppLocalizations t) => [
-        (
-          Icons.park_rounded,
-          t.landPillarFamilyTreeTitle,
-          t.landPillarFamilyTreeDesc,
-          '/family-tree',
-        ),
-        (
-          Icons.favorite_rounded,
-          t.landPillarWelfareTitle,
-          t.landPillarWelfareDesc,
-          '/welfare',
-        ),
-        (
-          Icons.groups_rounded,
-          t.landPillarMatrimonialTitle,
-          t.landPillarMatrimonialDesc,
-          '/matrimonial',
-        ),
-        (
-          Icons.shield_rounded,
-          t.landPillarElderTitle,
-          t.landPillarElderDesc,
-          '/elder',
-        ),
-      ];
+  static List<(IconData, String, String, String)> _pillarsOf(
+    AppLocalizations t,
+  ) => [
+    (
+      Icons.park_rounded,
+      t.landPillarFamilyTreeTitle,
+      t.landPillarFamilyTreeDesc,
+      '/family-tree',
+    ),
+    (
+      Icons.favorite_rounded,
+      t.landPillarWelfareTitle,
+      t.landPillarWelfareDesc,
+      '/welfare',
+    ),
+    (
+      Icons.groups_rounded,
+      t.landPillarMatrimonialTitle,
+      t.landPillarMatrimonialDesc,
+      '/matrimonial',
+    ),
+    (
+      Icons.shield_rounded,
+      t.landPillarElderTitle,
+      t.landPillarElderDesc,
+      '/elder',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -336,17 +391,19 @@ class _Pillars extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 48, 20, 48),
       child: Column(
         children: [
-          ..._pillarsOf(t).map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _PillarCard(
-                  icon: p.$1,
-                  title: p.$2,
-                  desc: p.$3,
-                  // Public landing page: pillars are gated behind auth, so
-                  // send visitors to sign in first (matches the router guard).
-                  onTap: () => context.go('/login'),
-                ),
-              )),
+          ..._pillarsOf(t).map(
+            (p) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _PillarCard(
+                icon: p.$1,
+                title: p.$2,
+                desc: p.$3,
+                // Public landing page: pillars are gated behind auth, so
+                // send visitors to sign in first (matches the router guard).
+                onTap: () => context.go('/login'),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -383,20 +440,52 @@ class _PillarCard extends StatelessWidget {
             child: Icon(icon, size: 22, color: Colors.white),
           ),
           const SizedBox(height: 14),
-          Text(title, style: display(18, color: context.onBrightness(light: AppColors.forest800, dark: AppColors.darkText))),
+          Text(
+            title,
+            style: display(
+              18,
+              color: context.onBrightness(
+                light: AppColors.forest800,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(desc,
-              style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5)),
+          Text(
+            desc,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+              height: 1.5,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(t.landExplore,
-                  style: body(13,
-                      weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
+              Text(
+                t.landExplore,
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
+                ),
+              ),
               const SizedBox(width: 4),
-              Icon(Icons.arrow_forward_rounded,
-                  size: 14, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 14,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+              ),
             ],
           ),
         ],
@@ -410,22 +499,10 @@ class _TrustSection extends StatelessWidget {
   const _TrustSection();
 
   static List<(IconData, String, String)> _itemsOf(AppLocalizations t) => [
-        (
-          Icons.verified_rounded,
-          t.landTrustAadhaarTitle,
-          t.landTrustAadhaarDesc,
-        ),
-        (
-          Icons.groups_rounded,
-          t.landTrustPeerTitle,
-          t.landTrustPeerDesc,
-        ),
-        (
-          Icons.shield_rounded,
-          t.landTrustElderTitle,
-          t.landTrustElderDesc,
-        ),
-      ];
+    (Icons.verified_rounded, t.landTrustAadhaarTitle, t.landTrustAadhaarDesc),
+    (Icons.groups_rounded, t.landTrustPeerTitle, t.landTrustPeerDesc),
+    (Icons.shield_rounded, t.landTrustElderTitle, t.landTrustElderDesc),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -442,39 +519,50 @@ class _TrustSection extends StatelessWidget {
             titleSize: 26,
           ),
           const SizedBox(height: 24),
-          ..._itemsOf(t).map((it) => Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.forest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(it.$1, size: 18, color: Colors.white),
+          ..._itemsOf(t).map(
+            (it) => Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.forest,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(it.$2,
-                              style: body(14,
-                                  weight: FontWeight.w700,
-                                  color: AppColors.forest900)),
-                          const SizedBox(height: 3),
-                          Text(it.$3,
-                              style: body(13,
-                                  color: AppColors.textMuted, height: 1.5)),
-                        ],
-                      ),
+                    child: Icon(it.$1, size: 18, color: Colors.white),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          it.$2,
+                          style: body(
+                            14,
+                            weight: FontWeight.w700,
+                            color: AppColors.forest900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          it.$3,
+                          style: body(
+                            13,
+                            color: AppColors.textMuted,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           // Quote card
           Container(
@@ -491,14 +579,18 @@ class _TrustSection extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   t.landQuote,
-                  style: display(18,
-                      color: AppColors.gold500,
-                      height: 1.5,
-                      weight: FontWeight.w500),
+                  style: display(
+                    18,
+                    color: AppColors.gold500,
+                    height: 1.5,
+                    weight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(t.landQuoteAuthor,
-                    style: body(13, color: AppColors.forest500)),
+                Text(
+                  t.landQuoteAuthor,
+                  style: body(13, color: AppColors.forest500),
+                ),
               ],
             ),
           ),
@@ -529,8 +621,10 @@ class _Footer extends StatelessWidget {
         children: [
           const _Logo(onDark: true),
           const SizedBox(height: 8),
-          Text(t.landFooterTagline,
-              style: body(12, color: AppColors.forest500)),
+          Text(
+            t.landFooterTagline,
+            style: body(12, color: AppColors.forest500),
+          ),
           const SizedBox(height: 20),
           Divider(color: Colors.white.withValues(alpha: 0.1)),
           const SizedBox(height: 20),
@@ -538,16 +632,19 @@ class _Footer extends StatelessWidget {
             alignment: WrapAlignment.center,
             spacing: 16,
             runSpacing: 10,
-            children: [
-              t.landFooterPrivacy,
-              t.landFooterTerms,
-              t.landFooterHeritage,
-              t.landFooterContact,
-              t.landFooterGovernance,
-            ]
-                .map((l) => Text(l,
-                    style: body(12, color: AppColors.forest500)))
-                .toList(),
+            children:
+                [
+                      t.landFooterPrivacy,
+                      t.landFooterTerms,
+                      t.landFooterHeritage,
+                      t.landFooterContact,
+                      t.landFooterGovernance,
+                    ]
+                    .map(
+                      (l) =>
+                          Text(l, style: body(12, color: AppColors.forest500)),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 20),
           Text(

@@ -64,12 +64,28 @@ class _PartnerKundliCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(who, style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+          Text(
+            who,
+            style: body(
+              14,
+              weight: FontWeight.w700,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
           const SizedBox(height: 2),
           TranslatedText(
-  text: 'Lagna: ${chart.lagnaRashiName}',
-  style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
-),
+            text: 'Lagna: ${chart.lagnaRashiName}',
+            style: body(
+              12,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           Center(
             child: SouthIndianKundliChart(
@@ -85,14 +101,17 @@ class _PartnerKundliCard extends StatelessWidget {
             title: 'View Planet Details',
             subtitle: '${chart.planets.length} Grahas',
             children: [
-              for (final planet in orderedKundliPlanets(chart.planets)) _planetDetailRow(context, planet),
+              for (final planet in orderedKundliPlanets(chart.planets))
+                _planetDetailRow(context, planet),
             ],
           ),
           const SizedBox(height: 10),
           if (chart.hasNavamsha)
             CompatibilityExpandableSection(
               title: 'Navamsha (D9) Chart',
-              subtitle: navamshaLagna != null ? 'Lagna: ${navamshaLagna.rashiName}' : null,
+              subtitle: navamshaLagna != null
+                  ? 'Lagna: ${navamshaLagna.rashiName}'
+                  : null,
               children: [
                 Center(
                   child: SouthIndianKundliChart(
@@ -110,7 +129,14 @@ class _PartnerKundliCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
                 'Navamsha chart is not available for this report.',
-                style: body(12, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted), height: 1.4),
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                  height: 1.4,
+                ),
               ),
             ),
         ],
@@ -132,17 +158,38 @@ class _PartnerKundliCard extends StatelessWidget {
         children: [
           SizedBox(
             width: 88,
-            child: Text(parts.join(), style: body(13, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
+            child: Text(
+              parts.join(),
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
           ),
           Expanded(
-            child: Text(valueParts.join(' · '), style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted))),
+            child: Text(
+              valueParts.join(' · '),
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Map<int, List<String>> _planetLabelsByRashi(List<KundliPlanetPosition> planets) {
+  Map<int, List<String>> _planetLabelsByRashi(
+    List<KundliPlanetPosition> planets,
+  ) {
     final map = <int, List<String>>{};
     for (final p in orderedKundliPlanets(planets)) {
       final label = grahaShortLabel(p.graha) + (p.isRetrograde ? '(R)' : '');
@@ -156,14 +203,18 @@ class _PartnerKundliCard extends StatelessWidget {
     for (final p in chart.planets) {
       if (p.rashiName.isNotEmpty) map[p.rashiId] = p.rashiName;
     }
-    if (chart.lagnaRashiName.isNotEmpty) map[chart.lagnaId] = chart.lagnaRashiName;
+    if (chart.lagnaRashiName.isNotEmpty)
+      map[chart.lagnaId] = chart.lagnaRashiName;
     return map;
   }
 
-  Map<int, List<String>> _navamshaLabelsByRashi(List<KundliNavamshaPosition> navamsha) {
+  Map<int, List<String>> _navamshaLabelsByRashi(
+    List<KundliNavamshaPosition> navamsha,
+  ) {
     final map = <int, List<String>>{};
     for (final n in navamsha) {
-      if (n.isLagna) continue; // the Lagna cell is marked via lagnaRashiId, not as a "planet" label
+      if (n.isLagna)
+        continue; // the Lagna cell is marked via lagnaRashiId, not as a "planet" label
       map.putIfAbsent(n.rashiId, () => []).add(grahaShortLabel(n.point));
     }
     return map;

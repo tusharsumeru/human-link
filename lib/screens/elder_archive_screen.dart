@@ -75,21 +75,23 @@ class ElderArchiveScreen extends StatelessWidget {
   };
 
   static String _tagLabel(String tag, AppLocalizations t) => switch (tag) {
-        'Cultural' => t.elderTagCultural,
-        'Heritage' => t.elderTagHeritage,
-        'Lineage' => t.elderTagLineage,
-        'Devotional' => t.elderTagDevotional,
-        _ => tag,
-      };
+    'Cultural' => t.elderTagCultural,
+    'Heritage' => t.elderTagHeritage,
+    'Lineage' => t.elderTagLineage,
+    'Devotional' => t.elderTagDevotional,
+    _ => tag,
+  };
 
   void _toast(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
@@ -121,17 +123,23 @@ class ElderArchiveScreen extends StatelessWidget {
             onPressed: () => _toast(context, t.elderUploadMemoryToast),
           ),
           const SizedBox(height: 18),
-          ..._memoriesOf(t).map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _memoryCard(context, m, t),
-              )),
+          ..._memoriesOf(t).map(
+            (m) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _memoryCard(context, m, t),
+            ),
+          ),
           const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _memoryCard(BuildContext context, Map<String, dynamic> m, AppLocalizations t) {
+  Widget _memoryCard(
+    BuildContext context,
+    Map<String, dynamic> m,
+    AppLocalizations t,
+  ) {
     final col = _tagColors[m['tag']] ?? const [0xFFF3F4F6, 0xFF374151];
     return AppCard(
       padding: EdgeInsets.zero,
@@ -155,8 +163,11 @@ class ElderArchiveScreen extends StatelessWidget {
                   Positioned(
                     top: 10,
                     left: 10,
-                    child: Pill(_tagLabel(m['tag'] as String, t),
-                        bg: Color(col[0]), fg: Color(col[1])),
+                    child: Pill(
+                      _tagLabel(m['tag'] as String, t),
+                      bg: Color(col[0]),
+                      fg: Color(col[1]),
+                    ),
                   ),
                 ],
               ),
@@ -169,26 +180,60 @@ class ElderArchiveScreen extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(m['title'] as String,
-                            style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                        child: Text(
+                          m['title'] as String,
+                          style: display(
+                            17,
+                            color: context.onBrightness(
+                              light: AppColors.forest900,
+                              dark: AppColors.darkText,
+                            ),
+                          ),
+                        ),
                       ),
-                      Pill(m['year'] as String,
-                          bg: AppColors.creamDark, fg: AppColors.gold700),
+                      Pill(
+                        m['year'] as String,
+                        bg: AppColors.creamDark,
+                        fg: AppColors.gold700,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(m['caption'] as String,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(12.5, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.5)),
+                  Text(
+                    m['caption'] as String,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      12.5,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                      height: 1.5,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.person_outline_rounded,
-                          size: 13, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                      Icon(
+                        Icons.person_outline_rounded,
+                        size: 13,
+                        color: context.onBrightness(
+                          light: AppColors.hint,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                       const SizedBox(width: 5),
-                      Text(t.elderContributedBy(m['contributor'] as String),
-                          style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
+                      Text(
+                        t.elderContributedBy(m['contributor'] as String),
+                        style: body(
+                          11,
+                          color: context.onBrightness(
+                            light: AppColors.hint,
+                            dark: AppColors.darkTextMuted,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -200,7 +245,11 @@ class ElderArchiveScreen extends StatelessWidget {
     );
   }
 
-  void _openDetail(BuildContext context, Map<String, dynamic> m, AppLocalizations t) {
+  void _openDetail(
+    BuildContext context,
+    Map<String, dynamic> m,
+    AppLocalizations t,
+  ) {
     final col = _tagColors[m['tag']] ?? const [0xFFF3F4F6, 0xFF374151];
     showModalBottomSheet<void>(
       context: context,
@@ -218,8 +267,9 @@ class ElderArchiveScreen extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               child: SizedBox(
                 height: 220,
                 width: double.infinity,
@@ -238,19 +288,29 @@ class ElderArchiveScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Pill(_tagLabel(m['tag'] as String, t),
-                          bg: Color(col[0]), fg: Color(col[1])),
+                      Pill(
+                        _tagLabel(m['tag'] as String, t),
+                        bg: Color(col[0]),
+                        fg: Color(col[1]),
+                      ),
                       const SizedBox(width: 8),
-                      Pill(m['year'] as String,
-                          bg: AppColors.creamDark, fg: AppColors.gold700),
+                      Pill(
+                        m['year'] as String,
+                        bg: AppColors.creamDark,
+                        fg: AppColors.gold700,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(m['title'] as String,
-                      style: display(24, color: AppColors.forest900)),
+                  Text(
+                    m['title'] as String,
+                    style: display(24, color: AppColors.forest900),
+                  ),
                   const SizedBox(height: 10),
-                  Text(m['caption'] as String,
-                      style: body(14, color: AppColors.label, height: 1.6)),
+                  Text(
+                    m['caption'] as String,
+                    style: body(14, color: AppColors.label, height: 1.6),
+                  ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -261,14 +321,21 @@ class ElderArchiveScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.archive_outlined,
-                            size: 16, color: AppColors.gold700),
+                        const Icon(
+                          Icons.archive_outlined,
+                          size: 16,
+                          color: AppColors.gold700,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(t.elderContributedBy(m['contributor'] as String),
-                              style: body(12.5,
-                                  weight: FontWeight.w600,
-                                  color: AppColors.forest900)),
+                          child: Text(
+                            t.elderContributedBy(m['contributor'] as String),
+                            style: body(
+                              12.5,
+                              weight: FontWeight.w600,
+                              color: AppColors.forest900,
+                            ),
+                          ),
                         ),
                       ],
                     ),

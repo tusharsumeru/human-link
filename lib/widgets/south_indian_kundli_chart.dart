@@ -80,8 +80,12 @@ class SouthIndianKundliChart extends StatelessWidget {
                   Expanded(
                     child: Column(
                       children: [
-                        Expanded(child: _cell(context, kSouthIndianGridLayout[1][0])),
-                        Expanded(child: _cell(context, kSouthIndianGridLayout[2][0])),
+                        Expanded(
+                          child: _cell(context, kSouthIndianGridLayout[1][0]),
+                        ),
+                        Expanded(
+                          child: _cell(context, kSouthIndianGridLayout[2][0]),
+                        ),
                       ],
                     ),
                   ),
@@ -89,8 +93,12 @@ class SouthIndianKundliChart extends StatelessWidget {
                   Expanded(
                     child: Column(
                       children: [
-                        Expanded(child: _cell(context, kSouthIndianGridLayout[1][3])),
-                        Expanded(child: _cell(context, kSouthIndianGridLayout[2][3])),
+                        Expanded(
+                          child: _cell(context, kSouthIndianGridLayout[1][3]),
+                        ),
+                        Expanded(
+                          child: _cell(context, kSouthIndianGridLayout[2][3]),
+                        ),
                       ],
                     ),
                   ),
@@ -104,20 +112,41 @@ class SouthIndianKundliChart extends StatelessWidget {
     );
   }
 
-  Widget _gridRow(BuildContext context, List<int?> rowRashiIds) =>
-      Row(children: [for (final id in rowRashiIds) Expanded(child: _cell(context, id))]);
+  Widget _gridRow(BuildContext context, List<int?> rowRashiIds) => Row(
+    children: [
+      for (final id in rowRashiIds) Expanded(child: _cell(context, id)),
+    ],
+  );
 
   Widget _centreBox(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
-        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
+        color: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
+        ),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ),
       alignment: Alignment.center,
       child: chartLabel == null
           ? null
-          : Text(chartLabel!,
-              style: body(12, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), letterSpacing: 1.2)),
+          : Text(
+              chartLabel!,
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+                letterSpacing: 1.2,
+              ),
+            ),
     );
   }
 
@@ -130,8 +159,16 @@ class SouthIndianKundliChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: isLagna
             ? AppColors.gold700.withValues(alpha: 0.10)
-            : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
-        border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder)),
+            : context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ),
       padding: const EdgeInsets.all(2),
       child: Stack(
@@ -142,15 +179,31 @@ class SouthIndianKundliChart extends StatelessWidget {
               left: 1,
               child: Text(
                 rashiName,
-                style: body(7.5, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                style: body(
+                  7.5,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
               ),
             ),
           if (isLagna)
             Positioned(
               top: 0,
               right: 1,
-              child: Text('As',
-                  style: body(8, weight: FontWeight.w800, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
+              child: Text(
+                'As',
+                style: body(
+                  8,
+                  weight: FontWeight.w800,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
+                ),
+              ),
             ),
           Center(
             child: FittedBox(
@@ -163,7 +216,17 @@ class SouthIndianKundliChart extends StatelessWidget {
                   runSpacing: 1,
                   children: [
                     for (final label in labels)
-                      Text(label, style: body(11, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+                      Text(
+                        label,
+                        style: body(
+                          11,
+                          weight: FontWeight.w700,
+                          color: context.onBrightness(
+                            light: AppColors.forest900,
+                            dark: AppColors.darkText,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

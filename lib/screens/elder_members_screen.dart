@@ -298,7 +298,10 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                           style: body(
                             15,
                             weight: FontWeight.w700,
-                            color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText),
+                            color: context.onBrightness(
+                              light: AppColors.forest900,
+                              dark: AppColors.darkText,
+                            ),
                           ),
                         ),
                       ),
@@ -323,7 +326,13 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                       '${m['age']}',
                       m['gender'] == 'M' ? t.elderMale : t.elderFemale,
                     ),
-                    style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                    style: body(
+                      12,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -331,7 +340,10 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                     style: body(
                       12,
                       weight: FontWeight.w500,
-                      color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText),
+                      color: context.onBrightness(
+                        light: AppColors.label,
+                        dark: AppColors.darkText,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -340,13 +352,22 @@ class _ElderMembersScreenState extends State<ElderMembersScreen> {
                       Icon(
                         Icons.location_on_outlined,
                         size: 12,
-                        color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted),
+                        color: context.onBrightness(
+                          light: AppColors.hint,
+                          dark: AppColors.darkTextMuted,
+                        ),
                       ),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           m['location'] as String,
-                          style: body(12, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted)),
+                          style: body(
+                            12,
+                            color: context.onBrightness(
+                              light: AppColors.textMuted,
+                              dark: AppColors.darkTextMuted,
+                            ),
+                          ),
                         ),
                       ),
                     ],

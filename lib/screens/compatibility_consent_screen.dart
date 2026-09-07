@@ -24,10 +24,12 @@ class CompatibilityConsentScreen extends StatefulWidget {
   const CompatibilityConsentScreen({super.key});
 
   @override
-  State<CompatibilityConsentScreen> createState() => _CompatibilityConsentScreenState();
+  State<CompatibilityConsentScreen> createState() =>
+      _CompatibilityConsentScreenState();
 }
 
-class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen> {
+class _CompatibilityConsentScreenState
+    extends State<CompatibilityConsentScreen> {
   bool _loading = true;
   String? _loadError;
   List<ConsentStatus> _consents = const [];
@@ -90,46 +92,52 @@ class _CompatibilityConsentScreenState extends State<CompatibilityConsentScreen>
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(t.compConsentTitle, style: display(18, color: Colors.white)),
+        title: Text(
+          t.compConsentTitle,
+          style: display(18, color: Colors.white),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _loadError!,
-                          textAlign: TextAlign.center,
-                          style: body(
-                            14,
-                            color: context.onBrightness(
-                              light: AppColors.textMuted,
-                              dark: AppColors.darkTextMuted,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        OutlinedButton(onPressed: _load, child: Text(t.commonRetry)),
-                      ],
-                    ),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _ConsentPurposeCard(
-                      icon: Icons.cake_outlined,
-                      title: t.compBirthDataMatching,
-                      description: t.compBirthDataMatchingDesc,
-                      status: _find(CompatibilityConsentType.birthDataMatching),
-                      onChanged: _applyUpdate,
+                    Text(
+                      _loadError!,
+                      textAlign: TextAlign.center,
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton(
+                      onPressed: _load,
+                      child: Text(t.commonRetry),
                     ),
                   ],
                 ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              children: [
+                _ConsentPurposeCard(
+                  icon: Icons.cake_outlined,
+                  title: t.compBirthDataMatching,
+                  description: t.compBirthDataMatchingDesc,
+                  status: _find(CompatibilityConsentType.birthDataMatching),
+                  onChanged: _applyUpdate,
+                ),
+              ],
+            ),
     );
   }
 }
@@ -162,9 +170,13 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
     setState(() => _saving = true);
     try {
       if (next) {
-        await Repository.instance.grantCompatibilityConsent(status.consentType.wireValue);
+        await Repository.instance.grantCompatibilityConsent(
+          status.consentType.wireValue,
+        );
       } else {
-        await Repository.instance.revokeCompatibilityConsent(status.consentType.wireValue);
+        await Repository.instance.revokeCompatibilityConsent(
+          status.consentType.wireValue,
+        );
       }
       // Re-read from the server rather than guessing the new policyVersion /
       // timestamps ourselves — the server is the source of truth for both.
@@ -179,11 +191,15 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e is ApiException
-            ? e.message
-            : AppLocalizations.of(context).compCouldNotSaveRetry),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException
+                ? e.message
+                : AppLocalizations.of(context).compCouldNotSaveRetry,
+          ),
+        ),
+      );
     }
   }
 
@@ -199,7 +215,8 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
     // Genuinely GRANTED, just not under the policy currently in effect — a
     // distinct state from "never asked," worth explaining rather than just
     // silently showing the switch off.
-    final outdated = status != null && status.granted && !status.isCurrentPolicy;
+    final outdated =
+        status != null && status.granted && !status.isCurrentPolicy;
 
     return AppCard(
       child: Column(
@@ -207,24 +224,57 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
         children: [
           Row(
             children: [
-              Icon(widget.icon, size: 18, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
+              Icon(
+                widget.icon,
+                size: 18,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+              ),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text(widget.title, style: display(17, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText)))),
+                child: Text(
+                  widget.title,
+                  style: display(
+                    17,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(widget.description, style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.45)),
+          Text(
+            widget.description,
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+              height: 1.45,
+            ),
+          ),
           const SizedBox(height: 14),
           if (outdated) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E8), borderRadius: BorderRadius.circular(10)),
+                color: const Color(0xFFFFF8E8),
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.gold700),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: AppColors.gold700,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -242,7 +292,14 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
               Expanded(
                 child: Text(
                   on ? t.compAllowed : t.compNotAllowed,
-                  style: body(14, weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText)),
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                 ),
               ),
               _saving
@@ -252,7 +309,12 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+                          strokeWidth: 2,
+                          color: context.onBrightness(
+                            light: AppColors.forest700,
+                            dark: AppColors.forest300,
+                          ),
+                        ),
                       ),
                     )
                   : Switch(
@@ -267,8 +329,16 @@ class _ConsentPurposeCardState extends State<_ConsentPurposeCard> {
           ),
           if (on && status?.grantedAt != null) ...[
             const SizedBox(height: 8),
-            Text(t.compGrantedOn(_formatDate(status!.grantedAt!)),
-                style: body(11, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted))),
+            Text(
+              t.compGrantedOn(_formatDate(status!.grantedAt!)),
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+            ),
           ],
         ],
       ),

@@ -71,8 +71,10 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text(AppLocalizations.of(context).heritageErrorPickFile('$e'))),
+          content: Text(
+            AppLocalizations.of(context).heritageErrorPickFile('$e'),
+          ),
+        ),
       );
     }
   }
@@ -82,17 +84,22 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
     final auth = context.read<AuthService>();
     final current = auth.user;
     if (current != null) {
-      final gotra =
-          _gotra.text.trim().isEmpty ? current.gotra : _gotra.text.trim();
-      final native =
-          _native.text.trim().isEmpty ? current.native : _native.text.trim();
+      final gotra = _gotra.text.trim().isEmpty
+          ? current.gotra
+          : _gotra.text.trim();
+      final native = _native.text.trim().isEmpty
+          ? current.native
+          : _native.text.trim();
       final bio = _bio.text.trim();
 
       // Upload the optional family document (best-effort).
       if (_document != null) {
         final bytes = await File(_document!.path).readAsBytes();
-        await Repository.instance
-            .uploadImage(phone: current.phone, type: 'familyDoc', bytes: bytes);
+        await Repository.instance.uploadImage(
+          phone: current.phone,
+          type: 'familyDoc',
+          bytes: bytes,
+        );
       }
 
       // Save to the backend (best-effort).
@@ -106,13 +113,15 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
 
       // Persist locally so it shows immediately on the profile, and mark
       // onboarding complete so the router stops redirecting here.
-      await auth.updateUser(current.copyWith(
-        gotra: gotra,
-        native: native,
-        bio: bio,
-        matrimonialOptIn: _matrimonial,
-        onboardingComplete: true,
-      ));
+      await auth.updateUser(
+        current.copyWith(
+          gotra: gotra,
+          native: native,
+          bio: bio,
+          matrimonialOptIn: _matrimonial,
+          onboardingComplete: true,
+        ),
+      );
     }
     if (!mounted) return;
     context.go('/dashboard');
@@ -132,14 +141,18 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
           children: [
             const OnboardingStepHeader(current: 3),
             const SizedBox(height: 22),
-            Text(t.heritageStepLabel,
-                style: body(12,
-                    weight: FontWeight.w700,
-                    color: context.onBrightness(
-                      light: AppColors.gold700,
-                      dark: AppColors.goldSoft,
-                    ),
-                    letterSpacing: 1.4)),
+            Text(
+              t.heritageStepLabel,
+              style: body(
+                12,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.gold700,
+                  dark: AppColors.goldSoft,
+                ),
+                letterSpacing: 1.4,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               t.heritageTitle,
@@ -169,14 +182,16 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OnboardingField(
-                      label: t.heritageGotra,
-                      controller: _gotra,
-                      hint: t.heritageGotraHint),
+                    label: t.heritageGotra,
+                    controller: _gotra,
+                    hint: t.heritageGotraHint,
+                  ),
                   const SizedBox(height: 14),
                   PlaceField(
-                      label: t.heritageNativePlace,
-                      controller: _native,
-                      hint: t.heritageNativePlaceHint),
+                    label: t.heritageNativePlace,
+                    controller: _native,
+                    hint: t.heritageNativePlaceHint,
+                  ),
                   const SizedBox(height: 14),
                   OnboardingField(
                     label: t.heritageBio,
@@ -187,8 +202,17 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                   const SizedBox(height: 14),
                   _matrimonialTile(t),
                   const SizedBox(height: 14),
-                  Text(t.heritageUploadNote,
-                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+                  Text(
+                    t.heritageUploadNote,
+                    style: body(
+                      11,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                      height: 1.4,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   _document == null ? _uploadPrompt(t) : _documentPreview(t),
                 ],
@@ -237,11 +261,17 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
                 borderRadius: BorderRadius.circular(6),
                 color: _matrimonial
                     ? AppColors.forest700
-                    : context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
+                    : context.onBrightness(
+                        light: Colors.white,
+                        dark: AppColors.darkSurface,
+                      ),
                 border: Border.all(
                   color: _matrimonial
                       ? AppColors.forest700
-                      : context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder),
+                      : context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
                   width: 1.5,
                 ),
               ),
@@ -254,12 +284,29 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.heritageMatrimonialOptIn,
-                      style: body(13,
-                          weight: FontWeight.w600, color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText))),
+                  Text(
+                    t.heritageMatrimonialOptIn,
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(t.heritageMatrimonialDesc,
-                      style: body(11, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4)),
+                  Text(
+                    t.heritageMatrimonialDesc,
+                    style: body(
+                      11,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                      height: 1.4,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -277,14 +324,39 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
         padding: const EdgeInsets.symmetric(vertical: 22),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: context.onBrightness(light: Colors.white, dark: AppColors.darkSurface),
-          border: Border.all(color: context.onBrightness(light: AppColors.border, dark: AppColors.darkBorder), width: 1.5),
+          color: context.onBrightness(
+            light: Colors.white,
+            dark: AppColors.darkSurface,
+          ),
+          border: Border.all(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+            width: 1.5,
+          ),
         ),
         child: Column(
           children: [
-            Icon(Icons.upload_file, size: 28, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft)),
+            Icon(
+              Icons.upload_file,
+              size: 28,
+              color: context.onBrightness(
+                light: AppColors.gold700,
+                dark: AppColors.goldSoft,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(t.heritageUploadPrompt, style: body(12, color: context.onBrightness(light: AppColors.label, dark: AppColors.darkText))),
+            Text(
+              t.heritageUploadPrompt,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -297,26 +369,53 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
-          child: Image.file(File(_document!.path),
-              height: 150, width: double.infinity, fit: BoxFit.cover),
+          child: Image.file(
+            File(_document!.path),
+            height: 150,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(Icons.check_circle, size: 16, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300)),
+            Icon(
+              Icons.check_circle,
+              size: 16,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
+            ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(_document!.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: body(12,
-                      weight: FontWeight.w600, color: context.onBrightness(light: AppColors.forest700, dark: AppColors.forest300))),
+              child: Text(
+                _document!.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: body(
+                  12,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.forest300,
+                  ),
+                ),
+              ),
             ),
             TextButton(
               onPressed: _pickDocument,
-              child: Text(t.heritageChange,
-                  style: body(13,
-                      weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
+              child: Text(
+                t.heritageChange,
+                style: body(
+                  13,
+                  weight: FontWeight.w700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -339,24 +438,33 @@ class _OnboardingHeritageScreenState extends State<OnboardingHeritageScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.heritageWelcomeTitle,
-              style: body(12,
-                  weight: FontWeight.w700, color: AppColors.forest300)),
+          Text(
+            t.heritageWelcomeTitle,
+            style: body(
+              12,
+              weight: FontWeight.w700,
+              color: AppColors.forest300,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(t.heritageWelcomeBody,
-              style: body(13, color: Colors.white, height: 1.5)),
+          Text(
+            t.heritageWelcomeBody,
+            style: body(13, color: Colors.white, height: 1.5),
+          ),
           const SizedBox(height: 12),
           for (final b in benefits)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle,
-                      size: 15, color: AppColors.forest500),
+                  const Icon(
+                    Icons.check_circle,
+                    size: 15,
+                    color: AppColors.forest500,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(b,
-                        style: body(12, color: AppColors.forest300)),
+                    child: Text(b, style: body(12, color: AppColors.forest300)),
                   ),
                 ],
               ),

@@ -6,7 +6,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../data/models/compatibility_summary.dart' show AstrologyAshtakootaSummary;
+import '../data/models/compatibility_summary.dart'
+    show AstrologyAshtakootaSummary;
 import '../data/models/south_indian_jataka.dart'
     show AshtakootaResult, KootaResult, kootaLabel, orderedKootas;
 import '../theme/app_theme.dart';
@@ -39,19 +40,36 @@ class AshtakootaSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const CompatibilitySectionHeader(eyebrow: 'Ashtakoota / 36 Guna', title: 'Ashtakoota Score'),
+            const CompatibilitySectionHeader(
+              eyebrow: 'Ashtakoota / 36 Guna',
+              title: 'Ashtakoota Score',
+            ),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.hourglass_top_rounded, size: 18, color: context.onBrightness(light: AppColors.hint, dark: AppColors.darkTextMuted)),
+                Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 18,
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     a.requiresReview
                         ? 'Ashtakoota is incomplete - one or more Kootas require review.'
                         : 'Ashtakoota calculation is currently unavailable.',
-                    style: body(13, color: context.onBrightness(light: AppColors.textMuted, dark: AppColors.darkTextMuted), height: 1.4),
+                    style: body(
+                      13,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
@@ -61,22 +79,46 @@ class AshtakootaSection extends StatelessWidget {
       );
     }
 
-    final pct = (summary != null && summary!.earned == a.earned) ? summary!.percentage : null;
+    final pct = (summary != null && summary!.earned == a.earned)
+        ? summary!.percentage
+        : null;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CompatibilitySectionHeader(eyebrow: 'Ashtakoota / 36 Guna', title: 'Ashtakoota Score'),
+          const CompatibilitySectionHeader(
+            eyebrow: 'Ashtakoota / 36 Guna',
+            title: 'Ashtakoota Score',
+          ),
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('${a.earned} / ${a.maximum}', style: display(26, color: context.onBrightness(light: AppColors.forest900, dark: AppColors.darkText))),
+              Text(
+                '${a.earned} / ${a.maximum}',
+                style: display(
+                  26,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               if (pct != null) ...[
                 const SizedBox(width: 10),
-                Text('${pct.toStringAsFixed(1)}%', style: body(14, weight: FontWeight.w700, color: context.onBrightness(light: AppColors.gold700, dark: AppColors.goldSoft))),
+                Text(
+                  '${pct.toStringAsFixed(1)}%',
+                  style: body(
+                    14,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
