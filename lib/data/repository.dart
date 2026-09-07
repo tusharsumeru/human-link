@@ -143,21 +143,23 @@ class Repository {
     return 0;
   }
 
-  /// POST /api/posts — multipart upload of an image/video (≤2 MB) to Cloudinary,
-  /// then stores the post. Requires a logged-in session (bearer token). Returns
-  /// the created post map.
+  /// POST /api/posts — multipart upload of one or more images/videos (≤100 MB
+  /// each) to Cloudinary, then stores the post. Multiple [filePaths] become an
+  /// Instagram-style carousel (`postType: 'multiple'`); one file keeps the
+  /// existing single image/video post. Requires a logged-in session (bearer
+  /// token). Returns the created post map.
   Future<Map<String, dynamic>> createPost({
-    required String filePath,
+    required List<String> filePaths,
     String caption = '',
     String location = '',
     List<String> hashtags = const [],
     List<String> taggedUsers = const [],
     String visibility = 'public',
   }) async {
-    final data = await _api.postMultipart(
+    final data = await _api.postMultipartFiles(
       '/api/posts',
       fileField: 'media',
-      filePath: filePath,
+      filePaths: filePaths,
       fields: {
         'caption': caption,
         'visibility': visibility,
@@ -641,23 +643,30 @@ class Repository {
   }) async {
     debugPrint('========== SAVE PROFILE START ==========');
 
-    final payload = {
-      'name': name,
-      'gotra': gotra,
-      'native': native,
-      'bio': bio,
-      'occupation': occupation,
-      'matrimonialOptIn': matrimonialOptIn,
-      'showPhoneToMembers': showPhoneToMembers,
-      'dob': dob,
-      'gender': gender,
-      'bloodGroup': bloodGroup,
-      'maritalStatus': maritalStatus,
-      'address': address,
-      'currentAddress': currentAddress,
-      'profileUrl': profileUrl,
-      'masked_aadhaar': maskedAadhaar,
-      'verified': verified,
+    // Omit anything the caller didn't pass rather than sending it as an
+    // explicit `null`. The server's $set only strips keys that are truly
+    // absent from the body — a literal null still overwrites the stored
+    // value — so callers that only care about a few fields (onboarding,
+    // registration, the DigiLocker card, all via [updateProfile] below) must
+    // not wipe out everything else the member has already saved just by
+    // omitting it from their own call.
+    final payload = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (gotra != null) 'gotra': gotra,
+      if (native != null) 'native': native,
+      if (bio != null) 'bio': bio,
+      if (occupation != null) 'occupation': occupation,
+      if (matrimonialOptIn != null) 'matrimonialOptIn': matrimonialOptIn,
+      if (showPhoneToMembers != null) 'showPhoneToMembers': showPhoneToMembers,
+      if (dob != null) 'dob': dob,
+      if (gender != null) 'gender': gender,
+      if (bloodGroup != null) 'bloodGroup': bloodGroup,
+      if (maritalStatus != null) 'maritalStatus': maritalStatus,
+      if (address != null) 'address': address,
+      if (currentAddress != null) 'currentAddress': currentAddress,
+      if (profileUrl != null) 'profileUrl': profileUrl,
+      if (maskedAadhaar != null) 'masked_aadhaar': maskedAadhaar,
+      if (verified != null) 'verified': verified,
     };
 
     debugPrint('URL: /api/user/profile');

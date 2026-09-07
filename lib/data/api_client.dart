@@ -64,7 +64,11 @@ class ApiClient {
 
   Future<dynamic> patchJson(String path, Map<String, dynamic> body) async {
     final res = await _client
-        .patch(_uri(path), headers: _headers(json: true), body: jsonEncode(body))
+        .patch(
+          _uri(path),
+          headers: _headers(json: true),
+          body: jsonEncode(body),
+        )
         .timeout(ApiConfig.timeout);
     return _decode(res);
   }
@@ -102,15 +106,52 @@ class ApiClient {
     // and video files are allowed"). Sniff the file header first (robust to a
     // missing/odd extension on picker temp files), then fall back to the path.
     final header = await File(filePath).openRead(0, 512).first;
-    final mimeType = lookupMimeType(filePath, headerBytes: header) ??
+    final mimeType =
+        lookupMimeType(filePath, headerBytes: header) ??
         lookupMimeType(filePath) ??
         'application/octet-stream';
-    req.files.add(await http.MultipartFile.fromPath(
-      fileField,
-      filePath,
-      filename: fileName, // preserves the original name (e.g. picker temp paths on iOS are UUIDs)
-      contentType: MediaType.parse(mimeType),
-    ));
+    req.files.add(
+      await http.MultipartFile.fromPath(
+        fileField,
+        filePath,
+        filename:
+            fileName, // preserves the original name (e.g. picker temp paths on iOS are UUIDs)
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+    final streamed = await _client.send(req).timeout(timeout);
+    final res = await http.Response.fromStream(streamed);
+    return _decode(res);
+  }
+
+  /// multipart/form-data upload of several files under the same repeated field
+  /// name (e.g. create post → uploads N "media" parts for a carousel). A longer
+  /// default timeout than [postMultipart] since several files take longer to
+  /// upload than one.
+  Future<dynamic> postMultipartFiles(
+    String path, {
+    required String fileField,
+    required List<String> filePaths,
+    Map<String, String> fields = const {},
+    Duration timeout = const Duration(seconds: 90),
+  }) async {
+    final req = http.MultipartRequest('POST', _uri(path));
+    req.headers.addAll(_headers()); // don't set Content-Type; multipart sets it
+    req.fields.addAll(fields);
+    for (final filePath in filePaths) {
+      final header = await File(filePath).openRead(0, 512).first;
+      final mimeType =
+          lookupMimeType(filePath, headerBytes: header) ??
+          lookupMimeType(filePath) ??
+          'application/octet-stream';
+      req.files.add(
+        await http.MultipartFile.fromPath(
+          fileField,
+          filePath,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
     final streamed = await _client.send(req).timeout(timeout);
     final res = await http.Response.fromStream(streamed);
     return _decode(res);

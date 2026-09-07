@@ -236,6 +236,7 @@ class _ChecklistPanel extends StatelessWidget {
     'native',
     'occupation',
     'profileUrl',
+    'maritalStatus',
   };
 
   @override

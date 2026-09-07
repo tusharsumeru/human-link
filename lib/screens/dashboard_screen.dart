@@ -943,8 +943,8 @@ class _Post {
     required this.comments,
     required this.time,
     this.shareCount = 0,
-    this.mediaPath,
-    this.mediaUrl,
+    this.mediaPaths = const [],
+    this.mediaUrls = const [],
     this.isReel = false,
     this.isMine = false,
     this.likedByMe = false,
@@ -962,9 +962,11 @@ class _Post {
   final int comments;
   final int shareCount;
   final String time;
-  final String?
-  mediaPath; // local upload file; null → use mediaUrl / placeholder
-  final String? mediaUrl; // remote (Cloudinary) media from the backend feed
+  // Local upload file(s); empty → use mediaUrls / placeholder. More than one
+  // (or one mediaUrls entry from a 'multiple' backend post) → carousel.
+  final List<String> mediaPaths;
+  final List<String>
+  mediaUrls; // remote (Cloudinary) media from the backend feed
   final bool isReel; // true → the media is a video
   final bool isMine; // true → the logged-in member authored this post
   final bool likedByMe; // the viewer's own like, as the server sees it
@@ -986,7 +988,7 @@ class _Post {
     likes: 0,
     comments: 0,
     time: t.timeJustNow,
-    mediaPath: p.mediaPath,
+    mediaPaths: p.mediaPaths,
     isReel: p.isReel,
     isMine: true,
   );
@@ -1001,9 +1003,9 @@ class _Post {
     String currentUserId = '',
   }) {
     final urls = m['mediaUrls'];
-    final mediaUrl = (urls is List && urls.isNotEmpty)
-        ? urls.first.toString()
-        : null;
+    final mediaUrls = urls is List
+        ? urls.map((e) => e.toString()).toList()
+        : const <String>[];
     final isVideo = (m['postType'] ?? '').toString() == 'video';
     final userField = m['userId'];
     final authorId =
@@ -1025,7 +1027,7 @@ class _Post {
       comments: (m['commentCount'] as num?)?.toInt() ?? 0,
       shareCount: (m['shareCount'] as num?)?.toInt() ?? 0,
       time: _timeAgo(t, m['createdAt']?.toString()),
-      mediaUrl: mediaUrl,
+      mediaUrls: mediaUrls,
       isReel: isVideo,
       isMine: authorId.isNotEmpty && authorId == currentUserId,
       likedByMe: m['likedByMe'] == true,
@@ -1046,8 +1048,8 @@ class _Post {
     comments: comments,
     shareCount: shareCount,
     time: time,
-    mediaPath: mediaPath,
-    mediaUrl: mediaUrl,
+    mediaPaths: mediaPaths,
+    mediaUrls: mediaUrls,
     isReel: isReel,
     isMine: isMine,
     likedByMe: likedByMe,
@@ -1055,12 +1057,13 @@ class _Post {
   );
 
   /// The bookmarkable form of this post/reel for the app-wide [SavedStore].
+  /// A carousel is bookmarked by its first image, same as Instagram's saved grid.
   SavedItem toSavedItem() => SavedItem(
     id: id,
     author: author,
     caption: caption,
-    mediaPath: mediaPath,
-    mediaUrl: mediaUrl,
+    mediaPath: mediaPaths.isNotEmpty ? mediaPaths.first : null,
+    mediaUrl: mediaUrls.isNotEmpty ? mediaUrls.first : null,
     isReel: isReel,
     emoji: emoji,
     gradient: gradient,
@@ -1550,47 +1553,28 @@ class _PostCardState extends State<_PostCard> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (p.mediaUrl != null && p.isReel)
+                if (p.isReel && p.mediaUrls.isNotEmpty)
                   _VideoTile(
-                    url: p.mediaUrl!,
+                    url: p.mediaUrls.first,
                     author: p.author,
                     caption: p.caption,
                     saved: p.toSavedItem(),
                   )
-                else if (p.mediaUrl != null)
-                  Image.network(
-                    p.mediaUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) =>
-                        progress == null
-                        ? child
-                        : const ColoredBox(
-                            color: AppColors.forest900,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white54,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                    errorBuilder: (_, __, ___) => const ColoredBox(
-                      color: AppColors.forest900,
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: Colors.white54,
-                        size: 48,
-                      ),
-                    ),
-                  )
-                else if (p.mediaPath != null && p.isReel)
+                else if (p.isReel && p.mediaPaths.isNotEmpty)
                   _VideoTile(
-                    path: p.mediaPath!,
+                    path: p.mediaPaths.first,
                     author: p.author,
                     caption: p.caption,
                     saved: p.toSavedItem(),
                   )
-                else if (p.mediaPath != null)
-                  Image.file(File(p.mediaPath!), fit: BoxFit.cover)
+                else if (p.mediaUrls.length > 1)
+                  _MediaCarousel(urls: p.mediaUrls)
+                else if (p.mediaUrls.isNotEmpty)
+                  _FeedNetworkImage(p.mediaUrls.first)
+                else if (p.mediaPaths.length > 1)
+                  _MediaCarousel(paths: p.mediaPaths)
+                else if (p.mediaPaths.isNotEmpty)
+                  Image.file(File(p.mediaPaths.first), fit: BoxFit.cover)
                 else ...[
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -1789,6 +1773,122 @@ class _PostCardState extends State<_PostCard> {
           color: context.onBrightness(
             light: AppColors.creamDark,
             dark: AppColors.darkBorder,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A single remote feed image with the shared loading/error chrome — factored
+/// out so both a single-image post and each page of [_MediaCarousel] look
+/// the same.
+class _FeedNetworkImage extends StatelessWidget {
+  const _FeedNetworkImage(this.url);
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) => progress == null
+          ? child
+          : const ColoredBox(
+              color: AppColors.forest900,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white54,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+      errorBuilder: (_, __, ___) => const ColoredBox(
+        color: AppColors.forest900,
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: Colors.white54,
+          size: 48,
+        ),
+      ),
+    );
+  }
+}
+
+/// Swipeable Instagram-style carousel for a multi-image post — either remote
+/// Cloudinary [urls] or local [paths] mid-upload, never both. Dots at the
+/// bottom track the current page; a "n/N" badge sits top-right.
+class _MediaCarousel extends StatefulWidget {
+  _MediaCarousel({this.urls = const [], this.paths = const []})
+    : assert(urls.isEmpty || paths.isEmpty, 'pass urls or paths, not both');
+  final List<String> urls;
+  final List<String> paths;
+
+  @override
+  State<_MediaCarousel> createState() => _MediaCarouselState();
+}
+
+class _MediaCarouselState extends State<_MediaCarousel> {
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remote = widget.urls.isNotEmpty;
+    final items = remote ? widget.urls : widget.paths;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _controller,
+          itemCount: items.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) => remote
+              ? _FeedNetworkImage(items[i])
+              : Image.file(File(items[i]), fit: BoxFit.cover),
+        ),
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '${_page + 1}/${items.length}',
+              style: body(11, weight: FontWeight.w600, color: Colors.white),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 10,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < items.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                  width: i == _page ? 7 : 6,
+                  height: i == _page ? 7 : 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: i == _page
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.45),
+                  ),
+                ),
+            ],
           ),
         ),
       ],

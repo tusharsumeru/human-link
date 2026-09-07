@@ -13,7 +13,7 @@ class UserPost {
     required this.id,
     required this.author,
     required this.location,
-    required this.mediaPath,
+    required this.mediaPaths,
     required this.caption,
     required this.isReel,
     this.remoteId,
@@ -24,7 +24,9 @@ class UserPost {
   final String id; // local id, stable for the session
   final String author;
   final String location; // place the author attached (Instagram-style), or ''
-  final String mediaPath; // local file path (image, or video when isReel)
+  // Local file path(s) — a single video when isReel, else one or more images
+  // (more than one → an Instagram-style carousel).
+  final List<String> mediaPaths;
   final String caption;
   final bool isReel; // true → a video reel; false → a photo post
 
@@ -61,12 +63,12 @@ class FeedStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Uploads to `POST /api/posts` (multipart: the media file + caption).
+  /// Uploads to `POST /api/posts` (multipart: the media file(s) + caption).
   /// The card appears straight away and flips out of its "Uploading…" state
   /// when the server responds. Throws on failure so the caller can show the
   /// reason; the card stays put, marked failed, so nothing is silently lost.
   Future<void> upload({
-    required String mediaPath,
+    required List<String> mediaPaths,
     required String caption,
     required bool isReel,
     required String author,
@@ -78,7 +80,7 @@ class FeedStore extends ChangeNotifier {
       id: nextId(),
       author: author,
       location: location,
-      mediaPath: mediaPath,
+      mediaPaths: mediaPaths,
       caption: caption,
       isReel: isReel,
       uploading: true,
@@ -87,7 +89,7 @@ class FeedStore extends ChangeNotifier {
 
     try {
       final created = await _repo.createPost(
-        filePath: mediaPath,
+        filePaths: mediaPaths,
         caption: caption,
         location: location,
         hashtags: hashtags,
@@ -112,7 +114,7 @@ class FeedStore extends ChangeNotifier {
     notifyListeners();
     try {
       final created = await _repo.createPost(
-        filePath: post.mediaPath,
+        filePaths: post.mediaPaths,
         caption: post.caption,
         location: post.location,
       );

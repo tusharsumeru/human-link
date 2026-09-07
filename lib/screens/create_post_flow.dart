@@ -11,41 +11,79 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/location_picker_sheet.dart';
+import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/user_search_sheet.dart';
 
 const _videoExtensions = <String>[
-  'mp4', 'mov', 'mkv', 'webm', '3gp', 'avi', 'm4v', 'flv', 'wmv',
+  'mp4',
+  'mov',
+  'mkv',
+  'webm',
+  '3gp',
+  'avi',
+  'm4v',
+  'flv',
+  'wmv',
 ];
 
 /// Create (+) → post from files only (no camera; the camera lives on the
-/// "Your Story" flow). Picks an image or video from the device, then composes
-/// and uploads it.
+/// "Your Story" flow). Picks one or more images (or a single video) from the
+/// device, then composes and uploads them as one post — multiple images
+/// become an Instagram-style carousel.
 Future<void> showCreateOptions(BuildContext context) async {
   final auth = context.read<AuthService>();
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final t = AppLocalizations.of(context);
 
-  String? path;
+  List<String> paths;
   try {
     // FileType.media = photos + videos ("anything").
-    final result = await FilePicker.platform.pickFiles(type: FileType.media);
-    path = result?.files.single.path;
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.media,
+      allowMultiple: true,
+    );
+    paths = (result?.files ?? const [])
+        .map((f) => f.path)
+        .whereType<String>()
+        .toList();
   } catch (e) {
     messenger.showSnackBar(
-        SnackBar(content: Text(t.postCouldNotPickMedia('$e'))));
+      SnackBar(content: Text(t.postCouldNotPickMedia('$e'))),
+    );
     return;
   }
-  if (path == null) return; // cancelled or no path
+  if (paths.isEmpty) return; // cancelled or no path
 
-  final isReel = _videoExtensions.contains(path.split('.').last.toLowerCase());
-  final navContext = router.routerDelegate.navigatorKey.currentContext ?? context;
+  bool isVideo(String p) =>
+      _videoExtensions.contains(p.split('.').last.toLowerCase());
+
+  bool isReel;
+  if (paths.length > 1) {
+    // A carousel is images only (Instagram-style) — a video mixed in with a
+    // multi-select doesn't have a single-post representation here, so it's
+    // silently dropped rather than blocking the whole selection.
+    paths = paths.where((p) => !isVideo(p)).toList();
+    isReel = false;
+    if (paths.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Select at least one image')),
+      );
+      return;
+    }
+  } else {
+    isReel = isVideo(paths.first);
+  }
+
+  final navContext =
+      router.routerDelegate.navigatorKey.currentContext ?? context;
   if (!navContext.mounted) return;
   await _composeAndUpload(
     navContext,
     auth: auth,
     router: router,
-    path: path,
+    paths: paths,
     isReel: isReel,
   );
 }
@@ -56,7 +94,7 @@ Future<void> _composeAndUpload(
   BuildContext navContext, {
   required AuthService auth,
   required GoRouter router,
-  required String path,
+  required List<String> paths,
   required bool isReel,
 }) async {
   final messenger = ScaffoldMessenger.of(navContext);
@@ -65,7 +103,7 @@ Future<void> _composeAndUpload(
 
   final result = await _composeCaption(
     navContext,
-    mediaPath: path,
+    mediaPaths: paths,
     isReel: isReel,
   );
   if (result == null) return; // cancelled at composer
@@ -76,7 +114,7 @@ Future<void> _composeAndUpload(
 
   try {
     await FeedStore.instance.upload(
-      mediaPath: path,
+      mediaPaths: paths,
       caption: result.caption,
       isReel: isReel,
       author: user?.name ?? t.postAuthorFallback,
@@ -84,56 +122,68 @@ Future<void> _composeAndUpload(
       // and no auto-filled native place.
       location: result.location,
       hashtags: _hashtagsIn(result.caption),
+      taggedUsers: result.tagged
+          .map((m) => (m['id'] ?? '').toString())
+          .toList(),
     );
-    messenger.showSnackBar(SnackBar(
-      content: Text(isReel ? t.postReelShared : t.postShared,
-          style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
-    ));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          isReel ? t.postReelShared : t.postShared,
+          style: body(13, color: Colors.white),
+        ),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   } catch (e) {
     // The card stays in the feed marked "Upload failed — Retry", so the user
     // never loses the pick just because the network dropped.
-    messenger.showSnackBar(SnackBar(
-      content: Text(
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
           t.postUploadFailed(
-              e is ApiException ? e.message : t.postCheckConnection),
-          style: body(13, color: Colors.white)),
-      backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 4),
-    ));
+            e is ApiException ? e.message : t.postCheckConnection,
+          ),
+          style: body(13, color: Colors.white),
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 }
 
 /// "#kumta #heritage" in the caption → `['kumta', 'heritage']` for the API's
 /// optional hashtags field.
-List<String> _hashtagsIn(String caption) => RegExp(r'#(\w+)')
-    .allMatches(caption)
-    .map((m) => m.group(1)!)
-    .toSet()
-    .toList();
+List<String> _hashtagsIn(String caption) => RegExp(
+  r'#(\w+)',
+).allMatches(caption).map((m) => m.group(1)!).toSet().toList();
 
-/// What the composer returns: the caption plus the (optional) place the author
-/// attached. `location` is '' when none was picked.
+/// What the composer returns: the caption, the (optional) place the author
+/// attached (`location` is '' when none was picked), and whoever was tagged.
 class _ComposeResult {
-  const _ComposeResult(this.caption, this.location);
+  const _ComposeResult(this.caption, this.location, this.tagged);
   final String caption;
   final String location;
+  final List<Map<String, dynamic>> tagged;
 }
 
-/// Full-screen composer: preview + caption + current location + Share. Returns the
-/// caption + location, or null if the user backed out.
+/// Full-screen composer: preview + caption + current location + tag people +
+/// Share. Returns the caption + location + tagged people, or null if the user
+/// backed out.
 Future<_ComposeResult?> _composeCaption(
   BuildContext context, {
-  required String mediaPath,
+  required List<String> mediaPaths,
   required bool isReel,
 }) {
   final controller = TextEditingController();
   final t = AppLocalizations.of(context);
   String location = ''; // the place the author picks, if any
   bool locating = false; // fetching the current GPS location
+  List<Map<String, dynamic>> tagged = const []; // people tagged in this post
   return showModalBottomSheet<_ComposeResult>(
     context: context,
     isScrollControlled: true,
@@ -160,29 +210,90 @@ Future<_ComposeResult?> _composeCaption(
                           icon: const Icon(Icons.close_rounded),
                           onPressed: () => Navigator.of(ctx).pop(),
                         ),
-                        Text(isReel ? t.postNewReel : t.postNewPost,
-                            style: display(18, color: AppColors.forest900)),
+                        Text(
+                          isReel ? t.postNewReel : t.postNewPost,
+                          style: display(18, color: AppColors.forest900),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: isReel
-                              ? Container(
-                                  width: 84,
-                                  height: 84,
-                                  color: AppColors.forest900,
-                                  child: const Center(
-                                    child: Icon(Icons.play_circle_fill_rounded,
-                                        color: Colors.white70, size: 30),
+                        if (isReel)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: 84,
+                              height: 84,
+                              color: AppColors.forest900,
+                              child: const Center(
+                                child: Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: Colors.white70,
+                                  size: 30,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (mediaPaths.length > 1)
+                          SizedBox(
+                            width: 84,
+                            height: 84,
+                            child: Stack(
+                              children: [
+                                ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: mediaPaths.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 6),
+                                  itemBuilder: (_, i) => ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      File(mediaPaths[i]),
+                                      width: 84,
+                                      height: 84,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
-                                )
-                              : Image.file(File(mediaPath),
-                                  width: 84, height: 84, fit: BoxFit.cover),
-                        ),
+                                ),
+                                Positioned(
+                                  bottom: 4,
+                                  right: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '${mediaPaths.length}',
+                                      style: body(
+                                        10,
+                                        weight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              File(mediaPaths.first),
+                              width: 84,
+                              height: 84,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
@@ -196,18 +307,22 @@ Future<_ComposeResult?> _composeCaption(
                               hintStyle: body(13, color: AppColors.hint),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    const BorderSide(color: AppColors.border),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    const BorderSide(color: AppColors.border),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                    color: AppColors.forest700, width: 1.5),
+                                  color: AppColors.forest700,
+                                  width: 1.5,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.all(12),
                             ),
@@ -234,20 +349,45 @@ Future<_ComposeResult?> _composeCaption(
                         } on LocationFailure catch (e) {
                           setSheetState(() => locating = false);
                           if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(e.message)),
-                            );
+                            ScaffoldMessenger.of(
+                              ctx,
+                            ).showSnackBar(SnackBar(content: Text(e.message)));
                           }
                         } catch (_) {
                           setSheetState(() => locating = false);
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(t.postCouldNotGetLocation)),
+                              SnackBar(
+                                content: Text(t.postCouldNotGetLocation),
+                              ),
                             );
                           }
                         }
                       },
                       onClear: () => setSheetState(() => location = ''),
+                    ),
+                    const SizedBox(height: 10),
+                    // Tag people in the post (Instagram-style) — searches all
+                    // registered members, not just the caller's family tree.
+                    _TagPeopleRow(
+                      tagged: tagged,
+                      onTap: () async {
+                        final picked = await showUserSearchSheet(
+                          ctx,
+                          title: 'Tag people',
+                          selectedIds: tagged
+                              .map((m) => (m['id'] ?? '').toString())
+                              .toSet(),
+                        );
+                        if (picked != null) {
+                          setSheetState(() => tagged = picked);
+                        }
+                      },
+                      onRemove: (id) => setSheetState(
+                        () => tagged = tagged
+                            .where((m) => (m['id'] ?? '').toString() != id)
+                            .toList(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ForestButton(
@@ -258,10 +398,11 @@ Future<_ComposeResult?> _composeCaption(
                         _ComposeResult(
                           controller.text.trim().isEmpty
                               ? (isReel
-                                  ? t.postDefaultReelCaption
-                                  : t.postDefaultPostCaption)
+                                    ? t.postDefaultReelCaption
+                                    : t.postDefaultPostCaption)
                               : controller.text.trim(),
                           location,
+                          tagged,
                         ),
                       ),
                     ),
@@ -274,6 +415,90 @@ Future<_ComposeResult?> _composeCaption(
       );
     },
   );
+}
+
+/// The "tag people" affordance in the composer — when empty, a single action
+/// that opens the member search sheet; once someone is tagged, their avatars
+/// show as a horizontal row of removable chips plus an "Add" pill.
+class _TagPeopleRow extends StatelessWidget {
+  const _TagPeopleRow({
+    required this.tagged,
+    required this.onTap,
+    required this.onRemove,
+  });
+  final List<Map<String, dynamic>> tagged;
+  final VoidCallback onTap;
+  final ValueChanged<String> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tagged.isEmpty) {
+      return _Action(
+        icon: Icons.person_add_alt_1_rounded,
+        label: 'Tag people',
+        onTap: onTap,
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final m in tagged)
+          Chip(
+            avatar: PexelsImage(
+              url: (m['profileUrl'] ?? '').toString(),
+              name: (m['name'] ?? m['userName'] ?? '').toString(),
+              size: 22,
+            ),
+            label: Text(
+              (m['name'] ?? m['userName'] ?? '').toString(),
+              style: body(
+                12,
+                weight: FontWeight.w600,
+                color: AppColors.forest800,
+              ),
+            ),
+            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+            onDeleted: () => onRemove((m['id'] ?? '').toString()),
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: AppColors.border),
+            visualDensity: VisualDensity.compact,
+          ),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: AppColors.forest700,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Add',
+                  style: body(
+                    12,
+                    weight: FontWeight.w600,
+                    color: AppColors.forest800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// The location affordance in the composer — when empty, a single "Current
@@ -309,19 +534,30 @@ class _LocationRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: [
-            const Icon(Icons.location_on_rounded,
-                size: 20, color: AppColors.gold700),
+            const Icon(
+              Icons.location_on_rounded,
+              size: 20,
+              color: AppColors.gold700,
+            ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(location,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: body(14,
-                      weight: FontWeight.w600, color: AppColors.forest900)),
+              child: Text(
+                location,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: body(
+                  14,
+                  weight: FontWeight.w600,
+                  color: AppColors.forest900,
+                ),
+              ),
             ),
             IconButton(
-              icon: const Icon(Icons.close_rounded,
-                  size: 18, color: AppColors.hint),
+              icon: const Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: AppColors.hint,
+              ),
               onPressed: onClear,
               tooltip: t.postRemoveLocation,
             ),
@@ -365,13 +601,20 @@ class _Action extends StatelessWidget {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.forest700),
+                      strokeWidth: 2,
+                      color: AppColors.forest700,
+                    ),
                   )
                 : Icon(icon, size: 18, color: AppColors.forest700),
             const SizedBox(width: 8),
-            Text(label,
-                style: body(13,
-                    weight: FontWeight.w600, color: AppColors.forest800)),
+            Text(
+              label,
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: AppColors.forest800,
+              ),
+            ),
           ],
         ),
       ),
