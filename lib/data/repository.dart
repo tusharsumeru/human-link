@@ -31,6 +31,13 @@ class Repository {
   /// the app itself only ever assigns this once, at startup.
   static Repository instance = Repository();
 
+  /// POST /api/user/login/send-otp — sends the login OTP to [phone]. Throws
+  /// [ApiException] with the server's message (e.g. "Phone number not
+  /// registered") when the number isn't a registered member.
+  Future<void> sendLoginOtp(String phone) async {
+    await _api.postJson('/api/user/login/send-otp', {'phone': phone});
+  }
+
   /// POST /api/user/login — returns `{user, token}`: the authenticated user map
   /// from MongoDB plus the JWT bearer token for subsequent protected requests.
   /// Throws [ApiException] with the server's message ("Phone number not

@@ -9,13 +9,15 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
+import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login using the fixed demo OTP (121212) verified by the backend.
+/// Phone → OTP login: `POST /api/user/login/send-otp` sends the code, then
+/// `POST /api/user/login` verifies it and signs in.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -37,17 +39,45 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Validate the number and advance to OTP entry. No SMS is sent — the
-  /// backend accepts the fixed demo OTP (matches the web login flow).
-  void _handlePhoneNext() {
+  /// Validates the number, sends the OTP via `POST /api/user/login/send-otp`,
+  /// then advances to OTP entry.
+  Future<void> _handlePhoneNext() async {
+    final t = AppLocalizations.of(context);
     if (_phoneCtrl.text.length < 10) {
-      setState(() => _error = AppLocalizations.of(context).loginErrorInvalidPhone);
+      setState(() => _error = t.loginErrorInvalidPhone);
       return;
     }
     setState(() {
+      _loading = true;
       _error = '';
-      _phoneStep = 'otp';
     });
+    try {
+      await Repository.instance.sendLoginOtp(_phoneCtrl.text.trim());
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _phoneStep = 'otp';
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
+            ? t.loginErrorNotRegistered
+            : e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = (e is SocketException ||
+                e is TimeoutException ||
+                e is HttpException ||
+                e is ClientException)
+            ? t.loginErrorServerUnreachable(ApiConfig.baseUrl)
+            : t.loginErrorNetwork;
+        _loading = false;
+      });
+    }
   }
 
   /// Verifies the OTP against the backend (`/api/user/login`) and signs in.
@@ -205,7 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
               label: t.loginSendOtp,
               icon: Icons.arrow_forward_rounded,
               expand: true,
-              onPressed: _handlePhoneNext,
+              loading: _loading,
+              onPressed: _loading ? null : _handlePhoneNext,
             ),
           ],
         ),
@@ -230,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: const Color(0xFFEAF7EE),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(t.loginOtpHint,
+            child: Text('Enter the 6-digit OTP sent to your phone',
                 style: body(12,
                     weight: FontWeight.w600, color: AppColors.forest700)),
           ),
@@ -260,16 +291,26 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _otpCtrl.text.length == 6 ? _handleOtpVerify : null,
           ),
           const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: () => setState(() {
-                _phoneStep = 'phone';
-                _error = '';
-                _otpCtrl.clear();
-              }),
-              child: Text(t.loginChangeNumber,
-                  style: body(13, color: AppColors.textMuted)),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: _loading ? null : _handlePhoneNext,
+                child: Text('Resend OTP',
+                    style: body(13,
+                        weight: FontWeight.w600, color: AppColors.forest800)),
+              ),
+              Text('·', style: body(13, color: AppColors.textMuted)),
+              TextButton(
+                onPressed: () => setState(() {
+                  _phoneStep = 'phone';
+                  _error = '';
+                  _otpCtrl.clear();
+                }),
+                child: Text(t.loginChangeNumber,
+                    style: body(13, color: AppColors.textMuted)),
+              ),
+            ],
           ),
         ],
       ),

@@ -20,9 +20,9 @@ static const String _override = '';
 
 static String get _localDev {
   if (!kIsWeb && Platform.isAndroid) {
-    return 'http://10.0.2.2:$_localDevPort';
+    return 'http://192.168.31.92:$_localDevPort';
   }
-  return 'http://localhost:$_localDevPort';
+  return 'http://192.168.31.92:$_localDevPort';
 }
 
   static String get baseUrl {
