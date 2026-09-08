@@ -1771,6 +1771,31 @@ class Repository {
     return const [];
   }
 
+  /// GET /api/posts/my-posts — the signed-in member's own posts, newest
+  /// first. [after] is the `_id` of the last post already loaded (pass it to
+  /// fetch the next page); omit it for the first page. Returns the raw
+  /// envelope, typically `{count, posts}`.
+  Future<Map<String, dynamic>> myPosts({int limit = 10, String? after}) async {
+    final q = <String>['limit=$limit'];
+    if (after != null && after.isNotEmpty) q.add('after=$after');
+    final data = await _api.getJson('/api/posts/my-posts?${q.join('&')}');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'posts': const []};
+  }
+
+  /// GET /follow-users/count/:userId — `{ followersCount, followingCount }`
+  /// for [userId], cheaper than fetching both full lists just to size them.
+  Future<({int followers, int following})> followCounts(String userId) async {
+    final data = await _api.getJson('/follow-users/count/$userId');
+    if (data is Map) {
+      return (
+        followers: ((data['followersCount'] as num?) ?? 0).toInt(),
+        following: ((data['followingCount'] as num?) ?? 0).toInt(),
+      );
+    }
+    return (followers: 0, following: 0);
+  }
+
   // ── Embedded content (same dataset the web pages use) ───────────────────────
   List<Map<String, dynamic>> familyMembers() => kFamilyMembers;
   List<Map<String, dynamic>> matrimonial() => kMatrimonialCandidates;

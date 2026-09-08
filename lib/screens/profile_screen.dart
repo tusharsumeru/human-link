@@ -186,6 +186,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             verified: (m['linkedUserId'] ?? '').toString().isNotEmpty,
             t: t,
           ),
+          // Follow stats only make sense for a member linked to a real
+          // account — a placeholder/deceased member record has no followers.
+          if ((m['linkedUserId'] ?? '').toString().isNotEmpty)
+            _FollowStatsRow(userId: (m['linkedUserId'] ?? '').toString()),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
             child: Column(
@@ -283,6 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             verified: user.verified,
             t: t,
           ),
+          _FollowStatsRow(userId: user.id, showPosts: true),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
             child: Column(
@@ -1091,6 +1096,585 @@ class _Header extends StatelessWidget {
                   fg: AppColors.goldSoft,
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Follower / following counts shown right below the profile header. Tapping
+/// either opens the matching list in a bottom sheet. Counts and lists come
+/// from `GET /follow-users/followers|following/:userId` (see
+/// [Repository.followers] / [Repository.following]).
+class _FollowStatsRow extends StatefulWidget {
+  const _FollowStatsRow({required this.userId, this.showPosts = false});
+
+  final String userId;
+
+  /// Adds a third "Posts" stat backed by `GET /api/posts/my-posts` — that
+  /// endpoint is scoped to the signed-in member via the bearer token (no
+  /// userId param), so this only makes sense on the viewer's own profile.
+  final bool showPosts;
+
+  @override
+  State<_FollowStatsRow> createState() => _FollowStatsRowState();
+}
+
+class _FollowStatsRowState extends State<_FollowStatsRow> {
+  bool _loading = true;
+  int _followers = 0;
+  int _following = 0;
+  int _posts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (widget.userId.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+    try {
+      final futures = <Future<dynamic>>[
+        Repository.instance.followCounts(widget.userId),
+        if (widget.showPosts) Repository.instance.myPosts(limit: 1),
+      ];
+      final results = await Future.wait(futures);
+      if (!mounted) return;
+      final counts = results[0] as ({int followers, int following});
+      setState(() {
+        _followers = counts.followers;
+        _following = counts.following;
+        if (widget.showPosts) {
+          final page = results[1] as Map<String, dynamic>;
+          final count = page['count'];
+          _posts = count is num
+              ? count.toInt()
+              : (page['posts'] as List? ?? const []).length;
+        }
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  void _openList(_FollowListMode mode) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FollowListSheet(userId: widget.userId, mode: mode),
+    );
+  }
+
+  void _openMyPosts() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const _MyPostsScreen()));
+  }
+
+  Widget _divider() {
+    return Container(
+      width: 1,
+      height: 30,
+      color: context.onBrightness(
+        light: AppColors.border,
+        dark: AppColors.darkBorder,
+      ),
+    );
+  }
+
+  Widget _stat(String label, int count, {VoidCallback? onTap}) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            children: [
+              Text(
+                _loading ? '—' : '$count',
+                style: display(
+                  18,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          _stat(
+            'Followers',
+            _followers,
+            onTap: widget.userId.isEmpty
+                ? null
+                : () => _openList(_FollowListMode.followers),
+          ),
+          _divider(),
+          _stat(
+            'Following',
+            _following,
+            onTap: widget.userId.isEmpty
+                ? null
+                : () => _openList(_FollowListMode.following),
+          ),
+          if (widget.showPosts) ...[
+            _divider(),
+            _stat('Posts', _posts, onTap: _openMyPosts),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+enum _FollowListMode { followers, following }
+
+/// Bottom sheet listing either side of [_FollowStatsRow]. Each relation
+/// document comes back with the other user either populated as a map
+/// (`{_id, userName, profileUrl}`) or as a bare id string, matching the same
+/// `userId` shape `_Post.fromBackend` already handles for feed posts — a bare
+/// id falls back to [Repository.userById].
+class _FollowListSheet extends StatefulWidget {
+  const _FollowListSheet({required this.userId, required this.mode});
+
+  final String userId;
+  final _FollowListMode mode;
+
+  @override
+  State<_FollowListSheet> createState() => _FollowListSheetState();
+}
+
+class _FollowListSheetState extends State<_FollowListSheet> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _people = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rels = widget.mode == _FollowListMode.followers
+          ? await Repository.instance.followers(widget.userId)
+          : await Repository.instance.following(widget.userId);
+      final key = widget.mode == _FollowListMode.followers
+          ? 'followerId'
+          : 'followingId';
+      final people = <Map<String, dynamic>>[];
+      for (final rel in rels) {
+        final field = rel[key];
+        if (field is Map) {
+          people.add(Map<String, dynamic>.from(field));
+          continue;
+        }
+        final id = (field ?? '').toString();
+        if (id.isEmpty) continue;
+        try {
+          people.add(await Repository.instance.userById(id));
+        } catch (_) {
+          /* skip a member we can no longer resolve */
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _people = people;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.mode == _FollowListMode.followers
+        ? 'Followers'
+        : 'Following';
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.35,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: context.onBrightness(
+              light: AppColors.cream,
+              dark: AppColors.darkBg,
+            ),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  title,
+                  style: display(
+                    18,
+                    color: context.onBrightness(
+                      light: AppColors.forest900,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.forest700,
+                        ),
+                      )
+                    : _people.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.mode == _FollowListMode.followers
+                              ? 'No followers yet'
+                              : 'Not following anyone yet',
+                          style: body(
+                            13,
+                            color: context.onBrightness(
+                              light: AppColors.textMuted,
+                              dark: AppColors.darkTextMuted,
+                            ),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _people.length,
+                        itemBuilder: (context, i) {
+                          final p = _people[i];
+                          final id = (p['_id'] ?? p['id'] ?? '').toString();
+                          final name = (p['userName'] ?? p['name'] ?? '')
+                              .toString();
+                          final photo =
+                              (p['profileUrl'] ?? p['photoUrl'] ?? '')
+                                  .toString();
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: PexelsImage(
+                              url: photo,
+                              name: name,
+                              size: 44,
+                            ),
+                            title: Text(
+                              name.isEmpty ? 'Samaj member' : name,
+                              style: body(
+                                14,
+                                weight: FontWeight.w600,
+                                color: context.onBrightness(
+                                  light: AppColors.ink,
+                                  dark: AppColors.darkText,
+                                ),
+                              ),
+                            ),
+                            onTap: id.isEmpty
+                                ? null
+                                : () {
+                                    Navigator.pop(context);
+                                    context.push('/profile/$id');
+                                  },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Full list of the signed-in member's own posts, opened from the "Posts"
+/// stat. Pages through `GET /api/posts/my-posts?limit=10&after=<lastId>` —
+/// [after] is the `_id` of the last post already on screen, so scrolling to
+/// the bottom just re-requests with that id as the cursor.
+class _MyPostsScreen extends StatefulWidget {
+  const _MyPostsScreen();
+
+  @override
+  State<_MyPostsScreen> createState() => _MyPostsScreenState();
+}
+
+class _MyPostsScreenState extends State<_MyPostsScreen> {
+  static const _pageSize = 10;
+
+  final _scroll = ScrollController();
+  final List<Map<String, dynamic>> _posts = [];
+  bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+    _loadFirstPage();
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_hasMore || _loadingMore || _loading) return;
+    if (_scroll.position.pixels >=
+        _scroll.position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadFirstPage() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await Repository.instance.myPosts(limit: _pageSize);
+      final posts = (data['posts'] as List? ?? const [])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _posts
+          ..clear()
+          ..addAll(posts);
+        _hasMore = posts.length >= _pageSize;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e is ApiException ? e.message : 'Could not load your posts';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_posts.isEmpty) return;
+    setState(() => _loadingMore = true);
+    try {
+      final lastId = (_posts.last['_id'] ?? '').toString();
+      final data = await Repository.instance.myPosts(
+        limit: _pageSize,
+        after: lastId,
+      );
+      final posts = (data['posts'] as List? ?? const [])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _posts.addAll(posts);
+        _hasMore = posts.length >= _pageSize;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      // Best-effort — leave what's already loaded on screen and let the
+      // next scroll-to-bottom retry.
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkBg,
+      ),
+      appBar: AppBar(
+        title: const Text('My Posts'),
+        backgroundColor: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkBg,
+        ),
+        elevation: 0,
+      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.forest700),
+            )
+          : _error != null
+          ? Center(
+              child: Text(
+                _error!,
+                style: body(13, color: AppColors.textMuted),
+              ),
+            )
+          : _posts.isEmpty
+          ? Center(
+              child: Text(
+                'No posts yet',
+                style: body(13, color: AppColors.textMuted),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadFirstPage,
+              child: ListView.separated(
+                controller: _scroll,
+                padding: const EdgeInsets.all(16),
+                itemCount: _posts.length + (_hasMore ? 1 : 0),
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) {
+                  if (i >= _posts.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.forest700,
+                        ),
+                      ),
+                    );
+                  }
+                  return _MyPostTile(post: _posts[i]);
+                },
+              ),
+            ),
+    );
+  }
+}
+
+class _MyPostTile extends StatelessWidget {
+  const _MyPostTile({required this.post});
+
+  final Map<String, dynamic> post;
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = post['mediaUrls'];
+    final mediaUrl = urls is List && urls.isNotEmpty ? urls.first.toString() : '';
+    final isVideo = (post['postType'] ?? '').toString() == 'video';
+    final caption = (post['caption'] ?? '').toString();
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  mediaUrl.isEmpty
+                      ? const ColoredBox(color: AppColors.forest900)
+                      : Image.network(
+                          mediaUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const ColoredBox(color: AppColors.forest900),
+                        ),
+                  if (isVideo)
+                    const Center(
+                      child: Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  caption.isEmpty ? '(No caption)' : caption,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(
+                    13,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    '${(post['likeCount'] as num?)?.toInt() ?? 0} likes',
+                    '${(post['commentCount'] as num?)?.toInt() ?? 0} comments',
+                  ].join(' · '),
+                  style: body(11, color: AppColors.textMuted),
+                ),
+              ],
+            ),
           ),
         ],
       ),
