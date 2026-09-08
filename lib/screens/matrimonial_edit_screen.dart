@@ -157,6 +157,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   int? _partnerAgeMin;
   int? _partnerAgeMax;
 
+  // Two boxes are what the member actually fills in; _c['income'] (still
+  // what's actually saved — the server only has a single free-text income
+  // field, not structured min/max) is recomputed from both every time either
+  // one changes, same pattern as [_heightFeet]/[_heightInches] → [_heightCm].
+  int? _incomeMin;
+  int? _incomeMax;
+
   // STEP 16 — Marriage Preferences (compact chips, wire enum values).
   String _marriageIntention = '';
   String _childrenPreference = '';
@@ -198,6 +205,21 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
       if (p is Map) {
         for (final entry in _c.entries) {
           entry.value.text = (p[entry.key] ?? '').toString();
+        }
+        // Best-effort split of whatever free-text income was saved before
+        // ("₹22-28L", "10lpa", ...) into the two boxes — the numbers found,
+        // first as "from" and second (if any) as "to". Leaves the boxes
+        // blank rather than guessing when nothing numeric is there; the
+        // original text stays in _c['income'] untouched until either box is
+        // actually edited.
+        final incomeDigits = RegExp(
+          r'\d+(\.\d+)?',
+        ).allMatches(_c['income']!.text).toList();
+        if (incomeDigits.isNotEmpty) {
+          _incomeMin = double.tryParse(incomeDigits[0].group(0)!)?.round();
+        }
+        if (incomeDigits.length > 1) {
+          _incomeMax = double.tryParse(incomeDigits[1].group(0)!)?.round();
         }
         _expectations.text = _joinLines(p['partnerExpectations']);
         _gotraExclusions.text = _joinCommas(p['partnerGotraExclusions']);
@@ -256,8 +278,27 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   List<String> _splitCommas(String s) =>
       s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
+  /// Keeps _c['income'] — the field the server actually stores — in sync with
+  /// whatever's currently in the from/to boxes. Blank when both are empty, so
+  /// income stays a fully optional field like it was before.
+  void _recomputeIncome() {
+    final min = _incomeMin;
+    final max = _incomeMax;
+    if (min == null && max == null) {
+      _c['income']!.text = '';
+    } else if (min != null && max != null) {
+      _c['income']!.text = '₹$min - ₹$max LPA';
+    } else {
+      _c['income']!.text = '₹${min ?? max} LPA';
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_incomeMin != null && _incomeMax != null && _incomeMin! > _incomeMax!) {
+      _snack(AppLocalizations.of(context).matIncomeFromToError);
+      return;
+    }
     if (_partnerAgeMin != null &&
         _partnerAgeMax != null &&
         _partnerAgeMin! > _partnerAgeMax!) {
@@ -387,7 +428,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             _text('company', t.matCompanyOrg),
             _text('designation', t.matDesignation),
           ],
-          _text('income', t.matIncomeRange, hint: t.matIncomeRangeHint),
+          _incomeRangeField(t),
 
           const SizedBox(height: 16),
           _label(t.matSectionPhysical),
@@ -1104,6 +1145,79 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "From" and "to" as two separate boxes rather than one free-text field,
+  /// with the LPA unit shown once, outside both boxes, instead of typed into
+  /// either of them.
+  Widget _incomeRangeField(AppLocalizations t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(t.matIncomeRange),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(t.matIncomeFrom),
+                    TextFormField(
+                      initialValue: _incomeMin?.toString() ?? '',
+                      keyboardType: TextInputType.number,
+                      style: body(14, color: AppColors.ink),
+                      decoration: _dec(null),
+                      onChanged: (v) => setState(() {
+                        _incomeMin = int.tryParse(v.trim());
+                        _recomputeIncome();
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(t.matIncomeTo),
+                    TextFormField(
+                      initialValue: _incomeMax?.toString() ?? '',
+                      keyboardType: TextInputType.number,
+                      style: body(14, color: AppColors.ink),
+                      decoration: _dec(null),
+                      onChanged: (v) => setState(() {
+                        _incomeMax = int.tryParse(v.trim());
+                        _recomputeIncome();
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Padding(
+                // Lines up with the boxes themselves, not their labels above.
+                padding: const EdgeInsets.only(top: 14),
+                child: Text(
+                  'LPA',
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

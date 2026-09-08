@@ -2143,6 +2143,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'पसंदीदा साथी आयु: \"से\" \"तक\" से अधिक नहीं हो सकता';
 
   @override
+  String get matIncomeFromToError =>
+      'आय सीमा: \"से\" \"तक\" से अधिक नहीं हो सकता';
+
+  @override
   String get matDetailsSaved => 'वैवाहिक विवरण सहेजा गया';
 
   @override
@@ -2174,6 +2178,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get matIncomeRangeHint => 'उदा. ₹22-28L';
+
+  @override
+  String get matIncomeFrom => 'से';
+
+  @override
+  String get matIncomeTo => 'तक';
 
   @override
   String get matSectionPhysical => 'शारीरिक';

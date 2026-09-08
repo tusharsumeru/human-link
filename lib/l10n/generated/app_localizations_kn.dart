@@ -2151,6 +2151,10 @@ class AppLocalizationsKn extends AppLocalizations {
       'ಆದ್ಯತೆಯ ಸಂಗಾತಿ ವಯಸ್ಸು: \"ಇಂದ\" \"ವರೆಗೆ\" ಗಿಂತ ಹೆಚ್ಚಿರಬಾರದು';
 
   @override
+  String get matIncomeFromToError =>
+      'ಆದಾಯ ಶ್ರೇಣಿ: \"ಇಂದ\" \"ವರೆಗೆ\" ಗಿಂತ ಹೆಚ್ಚಿರಬಾರದು';
+
+  @override
   String get matDetailsSaved => 'ವೈವಾಹಿಕ ವಿವರಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ';
 
   @override
@@ -2182,6 +2186,12 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get matIncomeRangeHint => 'ಉದಾ. ₹22-28L';
+
+  @override
+  String get matIncomeFrom => 'ಇಂದ';
+
+  @override
+  String get matIncomeTo => 'ವರೆಗೆ';
 
   @override
   String get matSectionPhysical => 'ದೈಹಿಕ';

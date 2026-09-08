@@ -2133,6 +2133,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Preferred partner age: \"from\" cannot be greater than \"to\"';
 
   @override
+  String get matIncomeFromToError =>
+      'Income range: \"from\" cannot be greater than \"to\"';
+
+  @override
   String get matDetailsSaved => 'Matrimonial details saved';
 
   @override
@@ -2164,6 +2168,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matIncomeRangeHint => 'e.g. ₹22-28L';
+
+  @override
+  String get matIncomeFrom => 'From';
+
+  @override
+  String get matIncomeTo => 'To';
 
   @override
   String get matSectionPhysical => 'PHYSICAL';

@@ -8,6 +8,7 @@ import '../data/story_store.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/family_search_sheet.dart';
+import '../widgets/story_text_overlay.dart';
 import '../widgets/ui_kit.dart';
 
 /// "Share Story" composer — shown after picking media, before it's posted.
@@ -30,6 +31,7 @@ class StoryComposeScreen extends StatefulWidget {
 
 class _StoryComposeScreenState extends State<StoryComposeScreen> {
   final _captionCtrl = TextEditingController();
+  final _overlayKey = GlobalKey<StoryTextOverlayEditorState>();
   String _visibility = 'community';
   final List<Map<String, dynamic>> _tagged = [];
   Map<String, dynamic>? _treeNode;
@@ -168,8 +170,16 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     final navigator = Navigator.of(context);
     final t = AppLocalizations.of(context);
     try {
+      // Bakes any typed-on text into the photo itself before it's uploaded —
+      // the backend just stores an image, it has no concept of a text layer.
+      // No-op (returns the original file) for a video, or an image with no
+      // text added at all.
+      final path = widget.isVideo
+          ? widget.filePath
+          : await (_overlayKey.currentState?.export() ??
+                Future.value(widget.filePath));
       await StoryStore.instance.addStory(
-        widget.filePath,
+        path,
         caption: _captionCtrl.text.trim(),
         visibility: _visibility,
         taggedMembers: _tagged.map((m) => (m['_id'] ?? '').toString()).toList(),
@@ -275,13 +285,28 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [
-                // Preview
-                Center(
-                  child: _MediaPreview(
-                    filePath: widget.filePath,
-                    isVideo: widget.isVideo,
+                // Preview — a photo gets the full text-overlay editor
+                // (tap "Aa" to type on it); a video keeps the plain preview,
+                // text-on-video isn't supported.
+                if (widget.isVideo)
+                  Center(
+                    child: _MediaPreview(
+                      filePath: widget.filePath,
+                      isVideo: true,
+                    ),
+                  )
+                else
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.55,
+                      ),
+                      child: StoryTextOverlayEditor(
+                        key: _overlayKey,
+                        imagePath: widget.filePath,
+                      ),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(

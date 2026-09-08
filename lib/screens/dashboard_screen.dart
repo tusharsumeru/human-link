@@ -358,6 +358,59 @@ class _FeedState extends State<_Feed> {
 /// Where a new story's media comes from.
 enum _CaptureSource { camera, file }
 
+/// One tappable tile in the "Your Story" source sheet — Camera and "Select
+/// file" render side by side as two of these, rather than as separate
+/// swipeable pages.
+class _SourceChoice extends StatelessWidget {
+  const _SourceChoice({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 44, color: AppColors.forest700),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: body(
+                14,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// One choice tile in the "Your Story" source sheet: an icon over a short label.
 class _SourceBox extends StatelessWidget {
   const _SourceBox({
@@ -485,7 +538,9 @@ class _StoriesShelfState extends State<_StoriesShelf> {
     );
   }
 
-  /// Small sheet: capture with the Camera, or select an image/video from files.
+  /// Small sheet: capture with the Camera, or select an image/video from
+  /// files — both options shown together on one screen, not as separate
+  /// swipeable pages.
   Future<_CaptureSource?> _chooseStorySource() {
     final t = AppLocalizations.of(context);
 
@@ -496,8 +551,6 @@ class _StoriesShelfState extends State<_StoriesShelf> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        final pageController = PageController(viewportFraction: 1);
-
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
@@ -513,85 +566,24 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
-                SizedBox(
-                  height: 130,
-                  child: PageView(
-                    controller: pageController,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(ctx).pop(_CaptureSource.camera);
-                        },
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.photo_camera_rounded,
-                              size: 80,
-                              color: AppColors.forest700,
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              t.dashCamera,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(ctx).pop(_CaptureSource.file);
-                        },
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.perm_media_rounded,
-                              size: 56,
-                              color: AppColors.forest700,
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              t.dashSelectFile,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Carousel indicator
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.forest700,
+                    Expanded(
+                      child: _SourceChoice(
+                        icon: Icons.photo_camera_rounded,
+                        label: t.dashCamera,
+                        onTap: () =>
+                            Navigator.of(ctx).pop(_CaptureSource.camera),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.border,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _SourceChoice(
+                        icon: Icons.perm_media_rounded,
+                        label: t.dashSelectFile,
+                        onTap: () => Navigator.of(ctx).pop(_CaptureSource.file),
                       ),
                     ),
                   ],

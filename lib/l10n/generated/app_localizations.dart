@@ -3964,6 +3964,12 @@ abstract class AppLocalizations {
   /// **'Preferred partner age: \"from\" cannot be greater than \"to\"'**
   String get matAgeFromToError;
 
+  /// No description provided for @matIncomeFromToError.
+  ///
+  /// In en, this message translates to:
+  /// **'Income range: \"from\" cannot be greater than \"to\"'**
+  String get matIncomeFromToError;
+
   /// No description provided for @matDetailsSaved.
   ///
   /// In en, this message translates to:
@@ -4029,6 +4035,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. ₹22-28L'**
   String get matIncomeRangeHint;
+
+  /// No description provided for @matIncomeFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get matIncomeFrom;
+
+  /// No description provided for @matIncomeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get matIncomeTo;
 
   /// No description provided for @matSectionPhysical.
   ///
