@@ -2031,6 +2031,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matInterests => 'Interests';
 
   @override
+  String get matSelectInterests => 'Select interests';
+
+  @override
   String get matPartnerExpectations => 'Partner Expectations';
 
   @override

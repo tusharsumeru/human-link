@@ -635,6 +635,7 @@
   "matTimeOfBirth": "जन्म का समय",
   "matAbout": "बारे में",
   "matInterests": "रुचियां",
+  "matSelectInterests": "रुचियां चुनें",
   "matPartnerExpectations": "साथी की अपेक्षाएं",
   "matPremiumProfileTitle": "प्रीमियम प्रोफ़ाइल",
   "matPremiumProfileBody": "यह एक प्रीमियम प्रोफ़ाइल है। कनेक्शन केवल बुजुर्ग समिति के माध्यम से व्यवस्थित किए जाते हैं। परिचय के लिए कृपया एक समाज बुजुर्ग से संपर्क करें।",

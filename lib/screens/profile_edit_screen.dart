@@ -632,14 +632,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 : const Icon(Icons.my_location_rounded, size: 18),
             label: Text(
               _locating ? t.editLocating : t.editUseCurrentLocation,
-              style: body(13, weight: FontWeight.w600),
+              // Text's own style.color always wins over the button's
+              // foregroundColor — body()'s default (AppColors.ink) is
+              // unreadable dark-on-dark, so it has to be set explicitly here
+              // too, matching the icon.
+              style: body(
+                13,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: context.onBrightness(
                 light: AppColors.forest800,
                 dark: AppColors.forest300,
               ),
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -652,9 +668,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             style: body(
               11,
               height: 1.4,
+              // Bumped to the full-contrast dark-text color rather than the
+              // usual muted tone — this status line is the only feedback the
+              // member gets after tapping "Use current location", so it has
+              // to actually be legible against the dark background, not just
+              // technically present.
               color: context.onBrightness(
                 light: AppColors.textMuted,
-                dark: AppColors.darkTextMuted,
+                dark: AppColors.darkText,
               ),
             ),
           ),
@@ -684,18 +705,37 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             maxLength: maxLength,
             keyboardType: keyboardType,
             validator: validator,
-            style: body(14, color: AppColors.ink),
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
             decoration: InputDecoration(
               hintText: hint,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
             ),
           ),
@@ -718,22 +758,45 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            // The field itself is always white — pin the popup to match
-            // rather than let it inherit the app's dark theme surface (which
-            // would leave this same ink-colored text unreadable when open).
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            // The closed field and the open popup share the same background
+            // here, so they always match regardless of theme — unlike the
+            // "pin the popup to a fixed white" workaround used elsewhere for
+            // fields whose fill deliberately stays light-only.
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: InputDecoration(
               hintText: t.editSelectGotra,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
             ),
             items: _gotraOptions
@@ -760,19 +823,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: InputDecoration(
               hintText: t.editSelectBloodGroup,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
             ),
             items: kBloodGroups
@@ -806,19 +891,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: InputDecoration(
               hintText: t.editSelectMaritalStatus,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
             ),
             items: _maritalStatusOptions
@@ -847,19 +954,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: InputDecoration(
               hintText: t.editSelectKuladevata,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
             ),
             items: [
@@ -938,14 +1067,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             child: InputDecorator(
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(
+                    color: context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(
+                    color: context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
+                  ),
                 ),
               ),
               child: Row(
@@ -954,7 +1096,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     _dobIso.isEmpty ? t.editNotSet : _dobIso,
                     style: body(
                       14,
-                      color: _dobIso.isEmpty ? AppColors.hint : AppColors.ink,
+                      color: _dobIso.isEmpty
+                          ? context.onBrightness(
+                              light: AppColors.hint,
+                              dark: AppColors.darkTextMuted,
+                            )
+                          : context.onBrightness(
+                              light: AppColors.ink,
+                              dark: AppColors.darkText,
+                            ),
                     ),
                   ),
                   const Spacer(),
@@ -964,7 +1114,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       style: body(
                         12,
                         weight: FontWeight.w600,
-                        color: AppColors.textMuted,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
                       ),
                     ),
                   const SizedBox(width: 8),

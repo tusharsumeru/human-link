@@ -6,6 +6,7 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui_kit.dart';
 
 /// The 27 nakshatras, in their fixed traditional order. Not localized — these
 /// are the same Sanskrit transliterations used throughout the compatibility
@@ -257,7 +258,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           );
       }
       setState(() => _loading = false);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('MatrimonialEditScreen._load failed: $e');
+      debugPrint('$stackTrace');
       if (!mounted) return;
       setState(() {
         _error = e is ApiException
@@ -494,25 +497,25 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionMarriagePreferences),
-          _enumChoice(
+          _enumDropdown(
             t.matMarriageIntention,
             _marriageIntentionOptionsOf(t),
             _marriageIntention,
             (v) => setState(() => _marriageIntention = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matChildren,
             _childrenPreferenceOptionsOf(t),
             _childrenPreference,
             (v) => setState(() => _childrenPreference = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matFamily2,
             _familyPreferenceOptionsOf(t),
             _familyPreference,
             (v) => setState(() => _familyPreference = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matRelocation,
             _relocationPreferenceOptionsOf(t),
             _relocationPreference,
@@ -521,7 +524,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionLifestyle),
-          _enumChoice(
+          _enumDropdown(
             t.matFoodPreference,
             _foodPreferenceOptionsOf(t),
             _foodPreference,
@@ -530,7 +533,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionInterests),
-          _multiEnumChoice('', _interestOptionsOf(t), _interests),
+          _multiEnumDropdown(t.matInterests, _interestOptionsOf(t), _interests),
 
           const SizedBox(height: 24),
           SizedBox(
@@ -776,62 +779,10 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  /// Same compact chip look as [_choice], but for a backend enum field: the
-  /// map's values are what's shown on each chip, its keys are what's actually
-  /// selected/saved — so the wire value (e.g. "ONE_TO_TWO_YEARS") never has
-  /// to match the display label (e.g. "1–2 Years").
-  Widget _enumChoice(
-    String label,
-    Map<String, String> wireToLabel,
-    String selectedWire,
-    ValueChanged<String> onPickWire,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: body(
-              13,
-              color: context.onBrightness(
-                light: AppColors.label,
-                dark: AppColors.darkText,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final entry in wireToLabel.entries)
-                ChoiceChip(
-                  label: Text(
-                    entry.value,
-                    style: body(
-                      13,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                  selected: selectedWire == entry.key,
-                  onSelected: (_) => onPickWire(entry.key),
-                  selectedColor: AppColors.forest300,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Dropdown variant of [_enumChoice], for a backend enum field with few
-  /// enough options (and little enough per-option content) that a single
-  /// tap-to-open menu reads better than a row of chips.
+  /// Dropdown for a backend enum field: the map's values are what's shown on
+  /// each menu item, its keys are what's actually selected/saved — so the
+  /// wire value (e.g. "ONE_TO_TWO_YEARS") never has to match the display
+  /// label (e.g. "1–2 Years").
   Widget _enumDropdown(
     String label,
     Map<String, String> wireToLabel,
@@ -909,65 +860,148 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  /// Multi-select variant of [_enumChoice] — any number of chips may be on at
-  /// once, and tapping a selected one turns it back off. [selectedWires] is
-  /// mutated in place ([Set.add]/[Set.remove]), matching how the other
-  /// collection-backed fields on this screen (expectations, gotra exclusions)
-  /// are edited directly rather than replaced wholesale.
-  Widget _multiEnumChoice(
+  /// Multi-select variant of [_enumDropdown] — tapping the field opens a
+  /// sheet of checkable chips (any number on at once) instead of a
+  /// single-value menu; the closed field shows the picked labels joined by
+  /// commas, same "tap to open, see the result inline" shape as every other
+  /// dropdown on this form. [selectedWires] is mutated in place
+  /// ([Set.clear]/[Set.addAll]), matching how the other collection-backed
+  /// fields on this screen (expectations, gotra exclusions) are edited
+  /// directly rather than replaced wholesale.
+  Widget _multiEnumDropdown(
     String label,
     Map<String, String> wireToLabel,
     Set<String> selectedWires,
   ) {
+    final summary = selectedWires.isEmpty
+        ? null
+        : selectedWires.map((w) => wireToLabel[w] ?? w).join(', ');
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (label.isNotEmpty) ...[
-            Text(
-              label,
-              style: body(
-                13,
-                color: context.onBrightness(
-                  light: AppColors.label,
-                  dark: AppColors.darkText,
-                ),
+          _fieldLabel(label),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _pickMultiEnum(label, wireToLabel, selectedWires),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
               ),
-            ),
-            const SizedBox(height: 6),
-          ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final entry in wireToLabel.entries)
-                FilterChip(
-                  label: Text(
-                    entry.value,
-                    style: body(
-                      13,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary ??
+                          AppLocalizations.of(context).matSelectInterests,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        14,
+                        color: summary == null ? AppColors.hint : AppColors.ink,
                       ),
                     ),
                   ),
-                  selected: selectedWires.contains(entry.key),
-                  onSelected: (on) => setState(() {
-                    if (on) {
-                      selectedWires.add(entry.key);
-                    } else {
-                      selectedWires.remove(entry.key);
-                    }
-                  }),
-                  selectedColor: AppColors.forest300,
-                ),
-            ],
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.hint,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// Sheet behind [_multiEnumDropdown]: every option as a toggle chip, picked
+  /// state confirmed with Done rather than closing on every tap — closing
+  /// immediately would make it read as a single-select despite allowing
+  /// several.
+  Future<void> _pickMultiEnum(
+    String title,
+    Map<String, String> wireToLabel,
+    Set<String> selectedWires,
+  ) async {
+    final t = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        final picked = Set<String>.from(selectedWires);
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(title, style: display(17, color: AppColors.forest900)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in wireToLabel.entries)
+                        FilterChip(
+                          label: Text(
+                            entry.value,
+                            style: body(13, color: AppColors.ink),
+                          ),
+                          selected: picked.contains(entry.key),
+                          onSelected: (on) => setSheetState(() {
+                            if (on) {
+                              picked.add(entry.key);
+                            } else {
+                              picked.remove(entry.key);
+                            }
+                          }),
+                          selectedColor: AppColors.forest300,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ForestButton(
+                    label: t.commonDone,
+                    expand: true,
+                    onPressed: () => Navigator.of(ctx).pop(picked),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (result != null) {
+      setState(() {
+        selectedWires
+          ..clear()
+          ..addAll(result);
+      });
+    }
   }
 
   Widget _heightFields(AppLocalizations t) {

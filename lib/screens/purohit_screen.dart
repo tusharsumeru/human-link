@@ -342,13 +342,19 @@ class _PurohitCard extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FBF4),
+                color: context.onBrightness(
+                  light: const Color(0xFFF0FBF4),
+                  dark: AppColors.darkSurface,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.call_rounded,
                 size: 16,
-                color: AppColors.forest700,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
               ),
             ),
           ),
@@ -359,13 +365,19 @@ class _PurohitCard extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FBF4),
+                color: context.onBrightness(
+                  light: const Color(0xFFF0FBF4),
+                  dark: AppColors.darkSurface,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 16,
-                color: AppColors.forest700,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
               ),
             ),
           ),

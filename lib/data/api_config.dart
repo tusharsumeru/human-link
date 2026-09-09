@@ -16,14 +16,14 @@ class ApiConfig {
   // --dart-define=API_BASE_URL=https://<host> (see below).
   static const String _localDevPort = '4000';
 
-static const String _override = '';
+  static const String _override = '';
 
-static String get _localDev {
-  if (!kIsWeb && Platform.isAndroid) {
-    return 'http://192.168.31.92:$_localDevPort';
+  static String get _localDev {
+    if (!kIsWeb && Platform.isAndroid) {
+      return 'http://10.0.2.2:$_localDevPort';
+    }
+    return 'http://localhost:$_localDevPort';
   }
-  return 'http://192.168.31.92:$_localDevPort';
-}
 
   static String get baseUrl {
     // Trailing slashes are stripped: request paths already start with `/`, and
