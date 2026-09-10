@@ -12,6 +12,7 @@ import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/kuladevata_thumb.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/pexels_image.dart';
 
@@ -1000,7 +1001,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
               ),
               for (final k in _kuladevataOptions)
-                DropdownMenuItem(value: k, child: Text(k)),
+                DropdownMenuItem(
+                  value: k,
+                  child: kKuladevataImages[k] == null
+                      ? Text(k)
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            KuladevataThumb(
+                              assetPath: kKuladevataImages[k]!,
+                              name: k,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(k, overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ),
+                ),
             ],
             onChanged: (v) => setState(
               () => _kuladevata = (v == null || v == _kuladevataNotSet)

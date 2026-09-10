@@ -378,15 +378,6 @@ class _SourceChoice extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: context.onBrightness(
-              light: AppColors.border,
-              dark: AppColors.darkBorder,
-            ),
-          ),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -546,7 +537,10 @@ class _StoriesShelfState extends State<_StoriesShelf> {
 
     return showModalBottomSheet<_CaptureSource>(
       context: context,
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkSurface,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -561,7 +555,10 @@ class _StoriesShelfState extends State<_StoriesShelf> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),

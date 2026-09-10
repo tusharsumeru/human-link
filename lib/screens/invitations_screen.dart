@@ -570,7 +570,19 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.refresh_rounded, size: 16),
-              label: Text(t.invUpdate, style: body(12)),
+              // A TextButton's own foregroundColor never reaches a label
+              // whose Text carries its own style.color — body(12)'s default
+              // (AppColors.ink) would otherwise render dark-on-dark here.
+              label: Text(
+                t.invUpdate,
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.forest800,
+                    dark: AppColors.forest300,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -582,12 +594,21 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     return TextField(
       controller: _searchCtrl,
       onChanged: (v) => setState(() => _query = v),
-      style: body(14, color: AppColors.ink),
+      style: body(
+        14,
+        color: context.onBrightness(
+          light: AppColors.ink,
+          dark: AppColors.darkText,
+        ),
+      ),
       decoration: InputDecoration(
         hintText: t.invSearchHint,
         hintStyle: body(13, color: AppColors.hint),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
+        ),
         isDense: true,
         prefixIcon: const Icon(Icons.search_rounded, color: AppColors.hint),
         suffixIcon: _query.isEmpty
@@ -605,7 +626,12 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -749,7 +775,10 @@ class _MapPanel extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: Container(
-                  color: const Color(0xFFF0FBF4).withValues(alpha: 0.85),
+                  color: context.onBrightness(
+                    light: const Color(0xFFF0FBF4).withValues(alpha: 0.85),
+                    dark: AppColors.darkBg.withValues(alpha: 0.85),
+                  ),
                   alignment: Alignment.center,
                   child: Text(
                     loading
@@ -758,7 +787,10 @@ class _MapPanel extends StatelessWidget {
                     style: body(
                       13,
                       weight: FontWeight.w600,
-                      color: AppColors.hint,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
                     ),
                   ),
                 ),
@@ -868,9 +900,16 @@ class _MemberCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final mutedColor = context.onBrightness(
+      light: AppColors.hint,
+      dark: AppColors.darkTextMuted,
+    );
     return AppCard(
       padding: const EdgeInsets.all(12),
-      color: selected ? const Color(0xFFF0FBF4) : Colors.white,
+      color: context.onBrightness(
+        light: selected ? const Color(0xFFF0FBF4) : Colors.white,
+        dark: selected ? AppColors.forest800 : AppColors.darkSurface,
+      ),
       shadow: const [],
       onTap: onToggle,
       child: Column(
@@ -886,7 +925,12 @@ class _MemberCard extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 2),
                 decoration: BoxDecoration(
                   gradient: selected ? AppGradients.forest : null,
-                  color: selected ? null : const Color(0xFFF3F4F6),
+                  color: selected
+                      ? null
+                      : context.onBrightness(
+                          light: const Color(0xFFF3F4F6),
+                          dark: AppColors.darkBorder,
+                        ),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -906,7 +950,12 @@ class _MemberCard extends StatelessWidget {
                 url: member.profileUrl,
                 name: member.name,
                 size: 46,
-                borderColor: selected ? AppColors.forest700 : AppColors.border,
+                borderColor: selected
+                    ? AppColors.forest700
+                    : context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
                 borderWidth: 2,
               ),
               const SizedBox(width: 12),
@@ -921,7 +970,10 @@ class _MemberCard extends StatelessWidget {
                       style: body(
                         14,
                         weight: FontWeight.w700,
-                        color: AppColors.forest900,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -929,15 +981,21 @@ class _MemberCard extends StatelessWidget {
                       member.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: body(12, color: AppColors.textMuted),
+                      style: body(
+                        12,
+                        color: context.onBrightness(
+                          light: AppColors.textMuted,
+                          dark: AppColors.darkTextMuted,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 12,
-                          color: AppColors.hint,
+                          color: mutedColor,
                         ),
                         const SizedBox(width: 2),
                         Flexible(
@@ -945,7 +1003,7 @@ class _MemberCard extends StatelessWidget {
                             _localityLine(t),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: body(11, color: AppColors.hint),
+                            style: body(11, color: mutedColor),
                           ),
                         ),
                       ],
@@ -963,7 +1021,13 @@ class _MemberCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   border: selected
                       ? null
-                      : Border.all(color: const Color(0xFFD1D5DB), width: 2),
+                      : Border.all(
+                          color: context.onBrightness(
+                            light: const Color(0xFFD1D5DB),
+                            dark: AppColors.darkBorder,
+                          ),
+                          width: 2,
+                        ),
                 ),
                 child: selected
                     ? const Icon(
@@ -981,7 +1045,14 @@ class _MemberCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 36),
               child: Text(
                 member.addressLine,
-                style: body(11, color: AppColors.textMuted, height: 1.3),
+                style: body(
+                  11,
+                  height: 1.3,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
               ),
             ),
           ],
@@ -992,13 +1063,9 @@ class _MemberCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 36),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.call_outlined,
-                    size: 12,
-                    color: AppColors.hint,
-                  ),
+                  Icon(Icons.call_outlined, size: 12, color: mutedColor),
                   const SizedBox(width: 4),
-                  Text(member.phone, style: body(11, color: AppColors.hint)),
+                  Text(member.phone, style: body(11, color: mutedColor)),
                 ],
               ),
             ),
@@ -1039,11 +1106,25 @@ class _SummaryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final mutedColor = context.onBrightness(
+      light: AppColors.textMuted,
+      dark: AppColors.darkTextMuted,
+    );
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkSurface,
+        ),
+        border: Border(
+          top: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -1068,7 +1149,10 @@ class _SummaryBar extends StatelessWidget {
                         style: body(
                           14,
                           weight: FontWeight.w700,
-                          color: AppColors.forest900,
+                          color: context.onBrightness(
+                            light: AppColors.forest900,
+                            dark: AppColors.darkText,
+                          ),
                         ),
                       ),
                     ],
@@ -1080,7 +1164,7 @@ class _SummaryBar extends StatelessWidget {
                       Icon(
                         planning ? Icons.sync_rounded : Icons.route_rounded,
                         size: 13,
-                        color: AppColors.textMuted,
+                        color: mutedColor,
                       ),
                       const SizedBox(width: 5),
                       Flexible(
@@ -1088,7 +1172,7 @@ class _SummaryBar extends StatelessWidget {
                           _tripLine(t),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: body(11, color: AppColors.textMuted),
+                          style: body(11, color: mutedColor),
                         ),
                       ),
                     ],

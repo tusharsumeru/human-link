@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/avatars.dart';
+import '../data/follow_events.dart';
 import '../data/repository.dart';
 import '../data/saved_store.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -1126,11 +1128,33 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
   int _followers = 0;
   int _following = 0;
   int _posts = 0;
+  StreamSubscription<FollowChange>? _followSub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Keeps this stat row live for as long as it's mounted, even when the
+    // follow/unfollow that changed it happened on a different, earlier-
+    // pushed route (e.g. this profile was reached via push, then covered by
+    // another profile where Follow was tapped) — otherwise it only ever
+    // shows the count fetched once at mount.
+    _followSub = FollowEvents.stream.listen((e) {
+      if (!mounted) return;
+      final delta = e.following ? 1 : -1;
+      if (e.followerId == widget.userId) {
+        setState(() => _following += delta);
+      }
+      if (e.followingId == widget.userId) {
+        setState(() => _followers += delta);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _followSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -1348,9 +1372,7 @@ class _FollowListSheetState extends State<_FollowListSheet> {
               light: AppColors.cream,
               dark: AppColors.darkBg,
             ),
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(20),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -1407,9 +1429,8 @@ class _FollowListSheetState extends State<_FollowListSheet> {
                           final id = (p['_id'] ?? p['id'] ?? '').toString();
                           final name = (p['userName'] ?? p['name'] ?? '')
                               .toString();
-                          final photo =
-                              (p['profileUrl'] ?? p['photoUrl'] ?? '')
-                                  .toString();
+                          final photo = (p['profileUrl'] ?? p['photoUrl'] ?? '')
+                              .toString();
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: PexelsImage(
@@ -1483,8 +1504,7 @@ class _MyPostsScreenState extends State<_MyPostsScreen> {
 
   void _onScroll() {
     if (!_hasMore || _loadingMore || _loading) return;
-    if (_scroll.position.pixels >=
-        _scroll.position.maxScrollExtent - 300) {
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) {
       _loadMore();
     }
   }
@@ -1565,10 +1585,7 @@ class _MyPostsScreenState extends State<_MyPostsScreen> {
             )
           : _error != null
           ? Center(
-              child: Text(
-                _error!,
-                style: body(13, color: AppColors.textMuted),
-              ),
+              child: Text(_error!, style: body(13, color: AppColors.textMuted)),
             )
           : _posts.isEmpty
           ? Center(
@@ -1612,7 +1629,9 @@ class _MyPostTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final urls = post['mediaUrls'];
-    final mediaUrl = urls is List && urls.isNotEmpty ? urls.first.toString() : '';
+    final mediaUrl = urls is List && urls.isNotEmpty
+        ? urls.first.toString()
+        : '';
     final isVideo = (post['postType'] ?? '').toString() == 'video';
     final caption = (post['caption'] ?? '').toString();
     return AppCard(

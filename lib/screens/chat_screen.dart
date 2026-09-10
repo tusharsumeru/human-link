@@ -54,8 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     // Prefer the JWT's `sub` (always present when logged in) so bubble sides are
     // correct even for a session persisted before AppUser carried an id.
-    _myId = _jwtSub(ApiAuth.token) ??
-        (context.read<AuthService>().user?.id ?? '');
+    _myId =
+        _jwtSub(ApiAuth.token) ?? (context.read<AuthService>().user?.id ?? '');
     ChatService.instance.ensureConnected();
     _sub = ChatService.instance.onMessage.listen(_onIncoming);
     _readSub = ChatService.instance.onRead.listen(_onRead);
@@ -64,8 +64,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _load() async {
     try {
-      final history =
-          await Repository.instance.messageHistory(widget.otherUserId);
+      final history = await Repository.instance.messageHistory(
+        widget.otherUserId,
+      );
       for (final m in history) {
         _insert(m, notify: false);
       }
@@ -117,9 +118,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (id.isEmpty || _seenIds.contains(id)) return;
     _seenIds.add(id);
     _messages.add(m);
-    _messages.sort((a, b) => (a['createdAt'] ?? '')
-        .toString()
-        .compareTo((b['createdAt'] ?? '').toString()));
+    _messages.sort(
+      (a, b) => (a['createdAt'] ?? '').toString().compareTo(
+        (b['createdAt'] ?? '').toString(),
+      ),
+    );
     if (notify && mounted) setState(() {});
   }
 
@@ -136,9 +139,11 @@ class _ChatScreenState extends State<ChatScreen> {
       _input.text = text; // let them retry
       if (mounted) {
         final t = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e is ApiException ? e.message : t.chatMessageNotSent),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is ApiException ? e.message : t.chatMessageNotSent),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -150,7 +155,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final t = AppLocalizations.of(context);
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -158,18 +166,54 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_outlined, color: AppColors.forest800),
-              title: Text(t.chatPhotosVideos, style: body(14, color: AppColors.ink)),
+              leading: const Icon(
+                Icons.photo_outlined,
+                color: AppColors.forest800,
+              ),
+              title: Text(
+                t.chatPhotosVideos,
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               onTap: () => Navigator.pop(ctx, 'gallery_media'),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.forest800),
-              title: Text(t.chatCamera, style: body(14, color: AppColors.ink)),
+              leading: const Icon(
+                Icons.camera_alt_outlined,
+                color: AppColors.forest800,
+              ),
+              title: Text(
+                t.chatCamera,
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               onTap: () => Navigator.pop(ctx, 'camera_photo'),
             ),
             ListTile(
-              leading: const Icon(Icons.insert_drive_file_outlined, color: AppColors.forest800),
-              title: Text(t.chatDocuments, style: body(14, color: AppColors.ink)),
+              leading: const Icon(
+                Icons.insert_drive_file_outlined,
+                color: AppColors.forest800,
+              ),
+              title: Text(
+                t.chatDocuments,
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               onTap: () => Navigator.pop(ctx, 'document'),
             ),
           ],
@@ -182,7 +226,14 @@ class _ChatScreenState extends State<ChatScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
-          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+          'pdf',
+          'doc',
+          'docx',
+          'xls',
+          'xlsx',
+          'ppt',
+          'pptx',
+          'txt',
         ],
       );
       final picked = result?.files.single;
@@ -201,7 +252,10 @@ class _ChatScreenState extends State<ChatScreen> {
         break;
       case 'camera_photo':
         file = await _picker.pickImage(
-            source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+          source: ImageSource.camera,
+          maxWidth: 1600,
+          imageQuality: 85,
+        );
         break;
     }
     if (file == null || !mounted) return;
@@ -212,16 +266,22 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _uploading = true);
     try {
       final saved = await Repository.instance.sendAttachmentMessage(
-          widget.otherUserId, filePath,
-          fileName: fileName);
+        widget.otherUserId,
+        filePath,
+        fileName: fileName,
+      );
       _insert(saved);
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
         final t = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e is ApiException ? e.message : t.chatCouldNotSendFile),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e is ApiException ? e.message : t.chatCouldNotSendFile,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -299,37 +359,36 @@ class _ChatScreenState extends State<ChatScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
-                    ? Center(
-                        child: Text(
-                          t.chatSayHello,
-                          style: body(
-                            14,
-                            color: context.onBrightness(
-                              light: AppColors.hint,
-                              dark: AppColors.darkTextMuted,
-                            ),
-                          ),
+                ? Center(
+                    child: Text(
+                      t.chatSayHello,
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.hint,
+                          dark: AppColors.darkTextMuted,
                         ),
-                      )
-                    : ListView.builder(
-                        controller: _scroll,
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) {
-                          final m = _messages[i];
-                          final mine =
-                              (m['senderId'] ?? '').toString() == _myId;
-                          return _Bubble(
-                            text: (m['text'] ?? '').toString(),
-                            mediaUrl: (m['mediaUrl'] ?? '').toString(),
-                            mediaType: (m['mediaType'] ?? '').toString(),
-                            mediaName: (m['mediaName'] ?? '').toString(),
-                            mine: mine,
-                            read: m['readAt'] != null,
-                            time: _formatMessageTime(m['createdAt']),
-                          );
-                        },
                       ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                    itemCount: _messages.length,
+                    itemBuilder: (_, i) {
+                      final m = _messages[i];
+                      final mine = (m['senderId'] ?? '').toString() == _myId;
+                      return _Bubble(
+                        text: (m['text'] ?? '').toString(),
+                        mediaUrl: (m['mediaUrl'] ?? '').toString(),
+                        mediaType: (m['mediaType'] ?? '').toString(),
+                        mediaName: (m['mediaName'] ?? '').toString(),
+                        mine: mine,
+                        read: m['readAt'] != null,
+                        time: _formatMessageTime(m['createdAt']),
+                      );
+                    },
+                  ),
           ),
           _composer(t),
         ],
@@ -342,9 +401,19 @@ class _ChatScreenState extends State<ChatScreen> {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
-          border: Border(top: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          color: context.onBrightness(
+            light: AppColors.cream,
+            dark: AppColors.darkSurface,
+          ),
+          border: Border(
+            top: BorderSide(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -362,10 +431,15 @@ class _ChatScreenState extends State<ChatScreen> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.forest800),
+                            strokeWidth: 2,
+                            color: AppColors.forest800,
+                          ),
                         )
-                      : const Icon(Icons.add_circle_outline,
-                          color: AppColors.forest800, size: 24),
+                      : const Icon(
+                          Icons.add_circle_outline,
+                          color: AppColors.forest800,
+                          size: 24,
+                        ),
                 ),
               ),
             ),
@@ -376,26 +450,49 @@ class _ChatScreenState extends State<ChatScreen> {
                 maxLines: 5,
                 textCapitalization: TextCapitalization.sentences,
                 onSubmitted: (_) => _send(),
-                style: body(14, color: AppColors.ink),
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+                ),
                 decoration: InputDecoration(
                   hintText: t.chatMessageHint,
                   hintStyle: body(14, color: AppColors.hint),
                   filled: true,
-                  fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  fillColor: context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkBg,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(22),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(
+                      color: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(22),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(
+                      color: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(22),
-                    borderSide:
-                        const BorderSide(color: AppColors.forest700, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.forest700,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -409,7 +506,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: _sending ? null : _send,
                 child: const Padding(
                   padding: EdgeInsets.all(12),
-                  child: Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                  child: Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
@@ -436,7 +537,9 @@ String? _jwtSub(String? token) {
   final parts = token.split('.');
   if (parts.length != 3) return null;
   try {
-    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    final payload = utf8.decode(
+      base64Url.decode(base64Url.normalize(parts[1])),
+    );
     final sub = (jsonDecode(payload) as Map<String, dynamic>)['sub'];
     return (sub == null || sub.toString().isEmpty) ? null : sub.toString();
   } catch (_) {
@@ -466,22 +569,25 @@ class _Bubble extends StatelessWidget {
 
   Future<void> _openMedia(BuildContext context) async {
     if (mediaType == 'video') {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => FullScreenReelPage(url: mediaUrl),
-      ));
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => FullScreenReelPage(url: mediaUrl)),
+      );
     } else if (mediaType == 'document') {
       final uri = Uri.tryParse(mediaUrl);
       final opened =
-          uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
+          uri != null &&
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).chatNoAppForFile),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).chatNoAppForFile),
+          ),
+        );
       }
     } else {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => _FullScreenImage(url: mediaUrl),
-      ));
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => _FullScreenImage(url: mediaUrl)),
+      );
     }
   }
 
@@ -494,8 +600,9 @@ class _Bubble extends StatelessWidget {
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
-        crossAxisAlignment:
-            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: mine
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -505,14 +612,26 @@ class _Bubble extends StatelessWidget {
                 : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             constraints: BoxConstraints(maxWidth: maxWidth),
             decoration: BoxDecoration(
-              color: mine ? AppColors.forest800 : Colors.white,
+              color: mine
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: Colors.white,
+                      dark: AppColors.darkSurface,
+                    ),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(16),
                 topRight: const Radius.circular(16),
                 bottomLeft: Radius.circular(mine ? 16 : 4),
                 bottomRight: Radius.circular(mine ? 4 : 16),
               ),
-              border: mine ? null : Border.all(color: AppColors.border),
+              border: mine
+                  ? null
+                  : Border.all(
+                      color: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
+                    ),
             ),
             child: Column(
               // Only stretch to the bubble's max width for an image (which
@@ -543,15 +662,20 @@ class _Bubble extends StatelessWidget {
                                 width: maxWidth,
                                 height: maxWidth * 0.75,
                                 child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
                               ),
                               errorWidget: (_, __, ___) => SizedBox(
                                 width: maxWidth,
                                 height: maxWidth * 0.75,
                                 child: const Center(
-                                    child: Icon(Icons.broken_image_outlined,
-                                        color: AppColors.hint)),
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: AppColors.hint,
+                                  ),
+                                ),
                               ),
                             ),
                     ),
@@ -561,12 +685,19 @@ class _Bubble extends StatelessWidget {
                     padding: hasMedia && !isDocument
                         ? const EdgeInsets.fromLTRB(10, 6, 10, 4)
                         : hasMedia
-                            ? const EdgeInsets.only(top: 8)
-                            : EdgeInsets.zero,
+                        ? const EdgeInsets.only(top: 8)
+                        : EdgeInsets.zero,
                     child: Text(
                       text,
-                      style:
-                          body(14, color: mine ? Colors.white : AppColors.ink),
+                      style: body(
+                        14,
+                        color: mine
+                            ? Colors.white
+                            : context.onBrightness(
+                                light: AppColors.ink,
+                                dark: AppColors.darkText,
+                              ),
+                      ),
                     ),
                   ),
               ],
@@ -574,7 +705,12 @@ class _Bubble extends StatelessWidget {
           ),
           if (time.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 2, bottom: 3, left: 4, right: 4),
+              padding: const EdgeInsets.only(
+                top: 2,
+                bottom: 3,
+                left: 4,
+                right: 4,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -627,7 +763,9 @@ class _DocumentCard extends StatelessWidget {
         const SizedBox(width: 8),
         Flexible(
           child: Text(
-            name.isEmpty ? AppLocalizations.of(context).chatDocumentFallback : name,
+            name.isEmpty
+                ? AppLocalizations.of(context).chatDocumentFallback
+                : name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: body(13, weight: FontWeight.w600, color: fg),
@@ -651,8 +789,11 @@ class _VideoThumb extends StatelessWidget {
       height: maxWidth * 0.75,
       color: Colors.black87,
       alignment: Alignment.center,
-      child: const Icon(Icons.play_circle_fill_rounded,
-          color: Colors.white, size: 44),
+      child: const Icon(
+        Icons.play_circle_fill_rounded,
+        color: Colors.white,
+        size: 44,
+      ),
     );
   }
 }
@@ -690,11 +831,11 @@ class _InitialsAvatar extends StatelessWidget {
     final initials = name.trim().isEmpty
         ? '?'
         : name
-            .trim()
-            .split(RegExp(r'\s+'))
-            .take(2)
-            .map((w) => w[0].toUpperCase())
-            .join();
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join();
     return Container(
       width: size,
       height: size,
@@ -703,8 +844,10 @@ class _InitialsAvatar extends StatelessWidget {
         color: AppColors.forest700,
         shape: BoxShape.circle,
       ),
-      child: Text(initials,
-          style: body(13, weight: FontWeight.w700, color: Colors.white)),
+      child: Text(
+        initials,
+        style: body(13, weight: FontWeight.w700, color: Colors.white),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/digilocker_card.dart';
+import '../widgets/kuladevata_thumb.dart';
 import '../widgets/place_field.dart';
 import '../widgets/ui_kit.dart';
 
@@ -220,7 +221,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.cream,
+                  color: context.onBrightness(
+                    light: AppColors.cream,
+                    dark: AppColors.darkSurface,
+                  ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: AppShadows.card,
                 ),
@@ -262,18 +266,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           t.registerJoinTitle,
-          style: display(26, color: AppColors.forest900),
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           t.registerJoinSubtitle,
-          style: body(13, color: AppColors.textMuted),
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF7EE),
+            color: context.onBrightness(
+              light: const Color(0xFFEAF7EE),
+              dark: AppColors.darkBg,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -281,7 +300,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: body(
               12,
               weight: FontWeight.w600,
-              color: AppColors.forest700,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
             ),
           ),
         ),
@@ -310,8 +332,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _label(t.registerMaritalStatus),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
+            color: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkBg,
+            ),
+            border: Border.all(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -323,8 +353,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Icons.keyboard_arrow_down_rounded,
                 color: AppColors.hint,
               ),
-              style: body(14, color: AppColors.ink),
-              dropdownColor: Colors.white,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
+              dropdownColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkBg,
+              ),
               items:
                   [
                         ('unmarried', t.registerUnmarried),
@@ -344,8 +383,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _label(t.registerGotra),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
+            color: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkBg,
+            ),
+            border: Border.all(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -357,12 +404,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Icons.keyboard_arrow_down_rounded,
                 color: AppColors.hint,
               ),
-              style: body(14, color: AppColors.ink),
-              // The field itself is always white — pin the popup to match
-              // rather than let it inherit the app's dark theme surface,
-              // which would leave this same ink-colored text unreadable
-              // when open.
-              dropdownColor: Colors.white,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
+              dropdownColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkBg,
+              ),
               items: kDaivajnaGotras
                   .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                   .toList(),
@@ -374,8 +426,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _label(t.registerKuladevata, hint: t.registerOptional),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
+            color: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkBg,
+            ),
+            border: Border.all(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -391,10 +451,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Icons.keyboard_arrow_down_rounded,
                 color: AppColors.hint,
               ),
-              style: body(14, color: AppColors.ink),
-              dropdownColor: Colors.white,
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
+              dropdownColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkBg,
+              ),
               items: kKuladevatas
-                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+                  .map(
+                    (k) => DropdownMenuItem(
+                      value: k,
+                      child: kKuladevataImages[k] == null
+                          ? Text(k)
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                KuladevataThumb(
+                                  assetPath: kKuladevataImages[k]!,
+                                  name: k,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    k,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _kuladevata = v),
             ),
@@ -427,9 +518,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkBg,
+              ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
             ),
             child: DigilockerCard(
               description: t.registerDigilockerDetailsDesc,
@@ -454,7 +553,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Text(
                 t.registerAlreadyMember,
-                style: body(13, color: AppColors.textMuted),
+                style: body(
+                  13,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
               ),
               GestureDetector(
                 onTap: () => context.go('/login'),
@@ -463,7 +568,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: body(
                     13,
                     weight: FontWeight.w700,
-                    color: AppColors.forest800,
+                    color: context.onBrightness(
+                      light: AppColors.forest800,
+                      dark: AppColors.forest300,
+                    ),
                   ),
                 ),
               ),
@@ -481,12 +589,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           t.registerVerifyNumber,
-          style: display(26, color: AppColors.forest900),
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         Text.rich(
           TextSpan(
-            style: body(13, color: AppColors.textMuted),
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
             children: [
               TextSpan(text: t.registerOtpSentToPrefix),
               TextSpan(
@@ -494,7 +614,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: body(
                   13,
                   weight: FontWeight.w700,
-                  color: AppColors.forest800,
+                  color: context.onBrightness(
+                    light: AppColors.forest800,
+                    dark: AppColors.forest300,
+                  ),
                 ),
               ),
             ],
@@ -504,7 +627,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF7EE),
+            color: context.onBrightness(
+              light: const Color(0xFFEAF7EE),
+              dark: AppColors.darkBg,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -512,7 +638,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: body(
               12,
               weight: FontWeight.w600,
-              color: AppColors.forest700,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
             ),
           ),
         ),
@@ -524,7 +653,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           textAlign: TextAlign.center,
           autofocus: true,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: display(26, color: AppColors.forest900),
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
           onChanged: (_) => setState(() {
             if (_error.isNotEmpty) _error = '';
           }),
@@ -532,14 +667,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             hintText: '1 2 1 2 1 2',
             counterText: '',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkBg,
+            ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 14,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -572,7 +715,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }),
             child: Text(
               t.registerBack,
-              style: body(13, color: AppColors.textMuted),
+              style: body(
+                13,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
           ),
         ),
@@ -611,14 +760,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 10),
         Text(
           _identityVerified ? t.registerAllSet : t.registerVerifyIdentity,
-          style: display(26, color: AppColors.forest900),
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           _identityVerified
               ? t.registerAadhaarVerifiedSubtitle
               : t.registerAadhaarUnverifiedSubtitle,
-          style: body(13, color: AppColors.textMuted, height: 1.5),
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 16),
         AppCard(
@@ -653,9 +815,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FBF4),
+        color: context.onBrightness(
+          light: const Color(0xFFF0FBF4),
+          dark: AppColors.darkSurface,
+        ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFB7E4C7)),
+        border: Border.all(
+          color: context.onBrightness(
+            light: const Color(0xFFB7E4C7),
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -674,13 +844,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: body(
                     12,
                     weight: FontWeight.w700,
-                    color: AppColors.forest800,
+                    color: context.onBrightness(
+                      light: AppColors.forest800,
+                      dark: AppColors.forest300,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   detail.isEmpty ? t.registerKycSavedOnSignup : detail,
-                  style: body(11, color: AppColors.forest700, height: 1.4),
+                  style: body(
+                    11,
+                    color: context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    ),
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -694,7 +874,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     padding: const EdgeInsets.only(bottom: 6),
     child: RichText(
       text: TextSpan(
-        style: body(13, weight: FontWeight.w700, color: AppColors.forest800),
+        style: body(
+          13,
+          weight: FontWeight.w700,
+          color: context.onBrightness(
+            light: AppColors.forest800,
+            dark: AppColors.forest300,
+          ),
+        ),
         children: [
           TextSpan(text: text),
           if (hint != null)
@@ -703,7 +890,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: body(
                 12,
                 weight: FontWeight.w500,
-                color: AppColors.textMuted,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
               ),
             ),
         ],
@@ -720,9 +910,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: const EdgeInsets.symmetric(vertical: 11),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? AppColors.forest800 : Colors.white,
+            color: active
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkBg,
+                  ),
             border: Border.all(
-              color: active ? AppColors.forest800 : AppColors.border,
+              color: active
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -731,7 +931,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: body(
               13,
               weight: FontWeight.w600,
-              color: active ? Colors.white : AppColors.label,
+              color: active
+                  ? Colors.white
+                  : context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
             ),
           ),
         ),
@@ -748,9 +953,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: const EdgeInsets.symmetric(vertical: 11),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? AppColors.forest800 : Colors.white,
+            color: active
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkBg,
+                  ),
             border: Border.all(
-              color: active ? AppColors.forest800 : AppColors.border,
+              color: active
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -759,7 +974,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: body(
               13,
               weight: FontWeight.w600,
-              color: active ? Colors.white : AppColors.label,
+              color: active
+                  ? Colors.white
+                  : context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
             ),
           ),
         ),
@@ -784,19 +1004,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onChanged: (_) {
         if (_error.isNotEmpty) setState(() => _error = '');
       },
-      style: body(14, color: AppColors.ink),
+      style: body(
+        14,
+        color: context.onBrightness(
+          light: AppColors.ink,
+          dark: AppColors.darkText,
+        ),
+      ),
       decoration: InputDecoration(
         hintText: hint,
         counterText: '',
         filled: true,
-        fillColor: Colors.white,
+        fillColor: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkBg,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

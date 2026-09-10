@@ -9,14 +9,14 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
-import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login: `POST /api/user/login/send-otp` sends the code, then
+/// Phone → OTP login: the backend has no OTP-dispatch step (same as
+/// registration) — the fixed demo OTP (121212) is entered directly, then
 /// `POST /api/user/login` verifies it and signs in.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,45 +39,19 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Validates the number, sends the OTP via `POST /api/user/login/send-otp`,
-  /// then advances to OTP entry.
-  Future<void> _handlePhoneNext() async {
+  /// Validates the number and advances to OTP entry. No network call here —
+  /// the backend has no send-otp route; it validates the fixed demo OTP
+  /// directly against `/api/user/login` (same as registration).
+  void _handlePhoneNext() {
     final t = AppLocalizations.of(context);
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = t.loginErrorInvalidPhone);
       return;
     }
     setState(() {
-      _loading = true;
       _error = '';
+      _phoneStep = 'otp';
     });
-    try {
-      await Repository.instance.sendLoginOtp(_phoneCtrl.text.trim());
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _phoneStep = 'otp';
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
-            ? t.loginErrorNotRegistered
-            : e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = (e is SocketException ||
-                e is TimeoutException ||
-                e is HttpException ||
-                e is ClientException)
-            ? t.loginErrorServerUnreachable(ApiConfig.baseUrl)
-            : t.loginErrorNetwork;
-        _loading = false;
-      });
-    }
   }
 
   /// Verifies the OTP against the backend (`/api/user/login`) and signs in.
@@ -110,7 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = (e.statusCode == 404 || e.message == 'Phone number not registered')
+        _error =
+            (e.statusCode == 404 || e.message == 'Phone number not registered')
             ? t.loginErrorNotRegistered
             : e.message;
         _loading = false;
@@ -121,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
         // Name the server we failed to reach. "Network error" alone sent us
         // hunting for a wrong phone number when the real cause was a stale
         // API_BASE_URL pointing at a dead tunnel.
-        _error = (e is SocketException ||
+        _error =
+            (e is SocketException ||
                 e is TimeoutException ||
                 e is HttpException ||
                 e is ClientException)
@@ -152,14 +128,21 @@ class _LoginScreenState extends State<LoginScreen> {
               OutlinedButton.icon(
                 onPressed: () => context.push('/'),
                 icon: const Icon(Icons.auto_stories_rounded, size: 16),
-                label: Text(t.loginAboutCommunity,
-                    style: body(14, weight: FontWeight.w600, color: AppColors.gold500)),
+                label: Text(
+                  t.loginAboutCommunity,
+                  style: body(
+                    14,
+                    weight: FontWeight.w600,
+                    color: AppColors.gold500,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.gold500,
                   side: const BorderSide(color: AppColors.gold500, width: 1.4),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -167,14 +150,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   children: [
-                    Text(t.loginNewMember,
-                        style: body(13, color: AppColors.forest300)),
+                    Text(
+                      t.loginNewMember,
+                      style: body(13, color: AppColors.forest300),
+                    ),
                     GestureDetector(
                       onTap: () => context.go('/register'),
-                      child: Text(t.loginCreateAccount,
-                          style: body(13,
-                              weight: FontWeight.w700,
-                              color: AppColors.gold500)),
+                      child: Text(
+                        t.loginCreateAccount,
+                        style: body(
+                          13,
+                          weight: FontWeight.w700,
+                          color: AppColors.gold500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -191,9 +180,27 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(t.loginTitle, style: display(26, color: AppColors.forest900)),
+        Text(
+          t.loginTitle,
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
         const SizedBox(height: 6),
-        Text(t.loginSubtitle, style: body(13, color: AppColors.textMuted)),
+        Text(
+          t.loginSubtitle,
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
+        ),
         const SizedBox(height: 18),
         _buildPhone(t),
       ],
@@ -204,23 +211,46 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_phoneStep == 'phone') {
       return Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.border),
+          color: context.onBrightness(
+            light: Colors.white,
+            dark: AppColors.darkBg,
+          ),
+          border: Border.all(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.loginPhoneLabel,
-                style: body(13,
-                    weight: FontWeight.w700, color: AppColors.forest800)),
+            Text(
+              t.loginPhoneLabel,
+              style: body(
+                13,
+                weight: FontWeight.w700,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
               maxLength: 10,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
               onChanged: (_) {
                 if (_error.isNotEmpty) setState(() => _error = '');
               },
@@ -244,26 +274,53 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
+        color: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkBg,
+        ),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.loginOtpSentTo(_phoneCtrl.text),
-              style: body(13, color: AppColors.textMuted)),
+          Text(
+            t.loginOtpSentTo(_phoneCtrl.text),
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF7EE),
+              color: context.onBrightness(
+                light: const Color(0xFFEAF7EE),
+                dark: AppColors.darkSurface,
+              ),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('Enter the 6-digit OTP sent to your phone',
-                style: body(12,
-                    weight: FontWeight.w600, color: AppColors.forest700)),
+            child: Text(
+              'Enter the 6-digit OTP  ·  use 121212 for this demo',
+              style: body(
+                12,
+                weight: FontWeight.w600,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -272,7 +329,13 @@ class _LoginScreenState extends State<LoginScreen> {
             maxLength: 6,
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: display(24, color: AppColors.forest900),
+            style: display(
+              24,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
+            ),
             onChanged: (_) => setState(() {
               if (_error.isNotEmpty) _error = '';
             }),
@@ -296,19 +359,44 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               TextButton(
                 onPressed: _loading ? null : _handlePhoneNext,
-                child: Text('Resend OTP',
-                    style: body(13,
-                        weight: FontWeight.w600, color: AppColors.forest800)),
+                child: Text(
+                  'Resend OTP',
+                  style: body(
+                    13,
+                    weight: FontWeight.w600,
+                    color: context.onBrightness(
+                      light: AppColors.forest800,
+                      dark: AppColors.forest300,
+                    ),
+                  ),
+                ),
               ),
-              Text('·', style: body(13, color: AppColors.textMuted)),
+              Text(
+                '·',
+                style: body(
+                  13,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
               TextButton(
                 onPressed: () => setState(() {
                   _phoneStep = 'phone';
                   _error = '';
                   _otpCtrl.clear();
                 }),
-                child: Text(t.loginChangeNumber,
-                    style: body(13, color: AppColors.textMuted)),
+                child: Text(
+                  t.loginChangeNumber,
+                  style: body(
+                    13,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -318,21 +406,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+    hintText: hint,
+    counterText: '',
+    filled: true,
+    fillColor: context.onBrightness(
+      light: Colors.white,
+      dark: AppColors.darkBg,
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.forest800, width: 1.5),
-        ),
-      );
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.forest800, width: 1.5),
+    ),
+  );
 }
 
 // ─── Header card ─────────────────────────────────────────────────────────────
@@ -349,7 +444,11 @@ class _HeaderCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.forest950, AppColors.forest900, AppColors.forest800],
+          colors: [
+            AppColors.forest950,
+            AppColors.forest900,
+            AppColors.forest800,
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.forestGlow,
@@ -370,27 +469,36 @@ class _HeaderCard extends StatelessWidget {
                     gradient: AppGradients.gold,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.park_rounded,
-                      size: 20, color: Colors.white),
+                  child: const Icon(
+                    Icons.park_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(t.appName, style: display(16, color: Colors.white)),
-                    Text(t.appTagline,
-                        style: body(11, color: AppColors.forest500)),
+                    Text(
+                      t.appTagline,
+                      style: body(11, color: AppColors.forest500),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Text(t.loginHeroHeadline,
-              style: display(24, color: Colors.white, height: 1.25)),
+          Text(
+            t.loginHeroHeadline,
+            style: display(24, color: Colors.white, height: 1.25),
+          ),
           const SizedBox(height: 10),
-          Text(t.loginHeroBody,
-              style: body(13, color: AppColors.forest300, height: 1.5)),
+          Text(
+            t.loginHeroBody,
+            style: body(13, color: AppColors.forest300, height: 1.5),
+          ),
         ],
       ),
     );
@@ -406,7 +514,10 @@ class _FormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cream,
+        color: context.onBrightness(
+          light: AppColors.cream,
+          dark: AppColors.darkSurface,
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.card,
       ),

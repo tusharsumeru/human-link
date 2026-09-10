@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'api_config.dart';
 import 'demo_data.dart';
+import 'follow_events.dart';
 import 'invitation_member.dart';
 import 'models/compatibility_astrology_modules.dart';
 import 'models/compatibility_models.dart';
@@ -30,13 +31,6 @@ class Repository {
   /// FakeApiClient())` for a screen under test, then restore the real one —
   /// the app itself only ever assigns this once, at startup.
   static Repository instance = Repository();
-
-  /// POST /api/user/login/send-otp — sends the login OTP to [phone]. Throws
-  /// [ApiException] with the server's message (e.g. "Phone number not
-  /// registered") when the number isn't a registered member.
-  Future<void> sendLoginOtp(String phone) async {
-    await _api.postJson('/api/user/login/send-otp', {'phone': phone});
-  }
 
   /// POST /api/user/login — returns `{user, token}`: the authenticated user map
   /// from MongoDB plus the JWT bearer token for subsequent protected requests.
@@ -1739,7 +1733,14 @@ class Repository {
       'followerId': followerId,
       'followingId': followingId,
     });
-    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is Map) {
+      FollowEvents.emit(
+        followerId: followerId,
+        followingId: followingId,
+        following: true,
+      );
+      return Map<String, dynamic>.from(data);
+    }
     throw ApiException('Could not follow user');
   }
 
@@ -1754,10 +1755,15 @@ class Repository {
       'followerId': followerId,
       'followingId': followingId,
     });
-    if (data is Map) {
-      return (data['deletedCount'] as num?) != 0;
+    final removed = data is Map && (data['deletedCount'] as num?) != 0;
+    if (removed) {
+      FollowEvents.emit(
+        followerId: followerId,
+        followingId: followingId,
+        following: false,
+      );
     }
-    return false;
+    return removed;
   }
 
   /// GET /follow-users/followers/:userId — everyone who follows [userId].

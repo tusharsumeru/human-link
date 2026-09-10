@@ -589,14 +589,27 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   InputDecoration _dec(String? hint) => InputDecoration(
     hintText: hint,
     filled: true,
-    fillColor: Colors.white,
+    fillColor: context.onBrightness(
+      light: Colors.white,
+      dark: AppColors.darkSurface,
+    ),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
   );
 
@@ -633,7 +646,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c[key],
           maxLines: maxLines,
           maxLength: maxLength,
-          style: body(14, color: AppColors.ink),
+          style: body(
+            14,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: _dec(hint),
         ),
       ],
@@ -654,7 +673,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c['siblings'],
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: body(14, color: AppColors.ink),
+          style: body(
+            14,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: _dec(t.matSiblingsHint),
           validator: (v) {
             if (v == null || v.trim().isEmpty) return null;
@@ -677,7 +702,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             TextFormField(
               controller: c,
               maxLines: 3,
-              style: body(14, color: AppColors.ink),
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
               decoration: _dec(hint),
             ),
           ],
@@ -802,11 +833,19 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            // The field itself is always white — pin the popup to match
-            // rather than let it inherit the app's dark theme surface (which
-            // would leave this same ink-colored text unreadable when open).
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            // The closed field and the open popup share the same
+            // theme-aware background, so they always match each other.
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: _dec(null),
             items: [
               for (final entry in wireToLabel.entries)
@@ -846,8 +885,17 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: _dec(hint),
             items: [
               for (final o in options)
@@ -889,9 +937,17 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
@@ -903,7 +959,12 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: body(
                         14,
-                        color: summary == null ? AppColors.hint : AppColors.ink,
+                        color: summary == null
+                            ? AppColors.hint
+                            : context.onBrightness(
+                                light: AppColors.ink,
+                                dark: AppColors.darkText,
+                              ),
                       ),
                     ),
                   ),
@@ -933,7 +994,10 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     final result = await showModalBottomSheet<Set<String>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cream,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkSurface,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -952,13 +1016,25 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.border,
+                        color: context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(title, style: display(17, color: AppColors.forest900)),
+                  Text(
+                    title,
+                    style: display(
+                      17,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -968,7 +1044,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                         FilterChip(
                           label: Text(
                             entry.value,
-                            style: body(13, color: AppColors.ink),
+                            style: body(
+                              13,
+                              color: context.onBrightness(
+                                light: AppColors.ink,
+                                dark: AppColors.darkText,
+                              ),
+                            ),
                           ),
                           selected: picked.contains(entry.key),
                           onSelected: (on) => setSheetState(() {
@@ -1021,7 +1103,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightFeet?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(t.matHeightFeetHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
@@ -1047,7 +1135,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightInches?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(t.matHeightInchesHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
@@ -1157,7 +1251,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMin?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
                 ),
@@ -1173,7 +1273,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMax?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
                 ),
@@ -1206,7 +1312,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     TextFormField(
                       initialValue: _incomeMin?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      style: body(14, color: AppColors.ink),
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                       decoration: _dec(null),
                       onChanged: (v) => setState(() {
                         _incomeMin = int.tryParse(v.trim());
@@ -1225,7 +1337,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     TextFormField(
                       initialValue: _incomeMax?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      style: body(14, color: AppColors.ink),
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                       decoration: _dec(null),
                       onChanged: (v) => setState(() {
                         _incomeMax = int.tryParse(v.trim());
@@ -1284,10 +1402,20 @@ class _ComplexionOption extends StatelessWidget {
         width: 80,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.forest300 : Colors.white,
+          color: selected
+              ? AppColors.forest300
+              : context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppColors.forest700 : AppColors.creamDark,
+            color: selected
+                ? AppColors.forest700
+                : context.onBrightness(
+                    light: AppColors.creamDark,
+                    dark: AppColors.darkBorder,
+                  ),
             width: selected ? 2 : 1,
           ),
         ),
@@ -1304,7 +1432,10 @@ class _ComplexionOption extends StatelessWidget {
               style: body(
                 12,
                 weight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: AppColors.label,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
               ),
             ),
           ],
