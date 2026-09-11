@@ -251,7 +251,13 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           child: TextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _search = v),
-            style: body(14, color: AppColors.ink),
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
             decoration: InputDecoration(
               isDense: true,
               hintText: t.dirSearchHint,
@@ -266,10 +272,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                 vertical: 12,
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

@@ -2933,7 +2933,6 @@
 //   return t.ftSomeone;
 // }
 
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -3219,7 +3218,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Future<void> _openAddSheet() async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -3245,7 +3247,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Future<void> _openRequests() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -3258,7 +3263,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Future<void> _openInvites() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -3271,7 +3279,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Future<void> _openNotifications() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -3358,7 +3369,10 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
   Future<void> _openLinks() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -4673,7 +4687,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -4685,14 +4702,23 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                   Expanded(
                     child: Text(
                       t.ftAddFamilyMember,
-                      style: display(20, color: AppColors.forest900),
+                      style: display(
+                        20,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: AppColors.textMuted,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
                     ),
                   ),
                 ],
@@ -4737,12 +4763,21 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
+                        color: context.onBrightness(
+                          light: const Color(0xFFFEF2F2),
+                          dark: const Color(0xFF3A1518),
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         _err,
-                        style: body(12, color: const Color(0xFFB91C1C)),
+                        style: body(
+                          12,
+                          color: context.onBrightness(
+                            light: const Color(0xFFB91C1C),
+                            dark: const Color(0xFFFCA5A5),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -4784,6 +4819,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   Widget _modeChip(_AddMode mode, String label, IconData icon) {
     final selected = _mode == mode;
+    final accent = context.onBrightness(
+      light: AppColors.forest800,
+      dark: AppColors.forest300,
+    );
     return Expanded(
       child: InkWell(
         onTap: () => setState(() {
@@ -4795,27 +4834,38 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.forest800 : Colors.white,
+            color: selected
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkSurface,
+                  ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.forest800 : AppColors.border,
+              color: selected
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 15,
-                color: selected ? Colors.white : AppColors.forest800,
-              ),
+              Icon(icon, size: 15, color: selected ? Colors.white : accent),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: body(
                   13,
                   weight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.label,
+                  color: selected
+                      ? Colors.white
+                      : context.onBrightness(
+                          light: AppColors.label,
+                          dark: AppColors.darkText,
+                        ),
                 ),
               ),
             ],
@@ -4836,7 +4886,13 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               child: TextField(
                 controller: _search,
                 onSubmitted: (_) => _runSearch(),
-                style: body(14, color: AppColors.ink),
+                style: body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+                ),
                 decoration: _inputDecoration(t.ftSearchHint),
               ),
             ),
@@ -4847,7 +4903,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         const SizedBox(height: 4),
         Text(
           t.ftAccountRequestNote,
-          style: body(11, color: AppColors.hint, height: 1.4),
+          style: body(
+            11,
+            height: 1.4,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         if (_searching)
@@ -4875,10 +4938,23 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF0F6F1) : Colors.white,
+          color: selected
+              ? context.onBrightness(
+                  light: const Color(0xFFF0F6F1),
+                  dark: AppColors.forest800,
+                )
+              : context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppColors.forest700 : AppColors.border,
+            color: selected
+                ? AppColors.forest700
+                : context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -4913,7 +4989,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                     style: body(
                       14,
                       weight: FontWeight.w700,
-                      color: AppColors.forest900,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -4922,7 +5001,13 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                       (u['samajId'] ?? '').toString(),
                       (u['native'] ?? '').toString(),
                     ].where((s) => s.isNotEmpty).join(' · '),
-                    style: body(11, color: AppColors.textMuted),
+                    style: body(
+                      11,
+                      color: context.onBrightness(
+                        light: AppColors.textMuted,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -4967,7 +5052,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         const SizedBox(height: 4),
         Text(
           _isDeceased ? t.ftDeceasedNote : t.ftAliveNote,
-          style: body(11, color: AppColors.hint, height: 1.4),
+          style: body(
+            11,
+            height: 1.4,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
         if (!_isDeceased) ...[
@@ -4998,7 +5090,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 Expanded(
                   child: Text(
                     'Do you have a smart phone?',
-                    style: body(13, weight: FontWeight.w600, color: AppColors.ink),
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: context.onBrightness(
+                        light: AppColors.ink,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -5015,12 +5114,26 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             const SizedBox(height: 8),
             if (_phoneVerified)
               Row(
-                children: const [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppColors.forest700, size: 16),
-                  SizedBox(width: 6),
-                  Text('Phone verified',
-                      style: TextStyle(color: AppColors.forest700, fontSize: 12)),
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    ),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Phone verified',
+                    style: TextStyle(
+                      color: context.onBrightness(
+                        light: AppColors.forest700,
+                        dark: AppColors.forest300,
+                      ),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               )
             else ...[
@@ -5053,7 +5166,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           const SizedBox(height: 4),
           Text(
             t.ftPhoneLinkNote,
-            style: body(11, color: AppColors.hint, height: 1.4),
+            style: body(
+              11,
+              height: 1.4,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           _dateField(t.ftDateOfBirth, _dob, () => _pickDate(true), t),
@@ -5099,7 +5219,14 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(
       text,
-      style: body(12, weight: FontWeight.w700, color: AppColors.forest800),
+      style: body(
+        12,
+        weight: FontWeight.w700,
+        color: context.onBrightness(
+          light: AppColors.forest800,
+          dark: AppColors.forest300,
+        ),
+      ),
     ),
   );
 
@@ -5118,7 +5245,13 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           controller: c,
           keyboardType: keyboard,
           maxLines: maxLines,
-          style: body(14, color: AppColors.ink),
+          style: body(
+            14,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: _inputDecoration(hint),
         ),
       ],
@@ -5142,21 +5275,37 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today_rounded,
                   size: 15,
-                  color: AppColors.gold700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.goldSoft,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   value.isEmpty ? t.ftSelect : value,
                   style: body(
                     14,
-                    color: value.isEmpty ? AppColors.hint : AppColors.ink,
+                    color: value.isEmpty
+                        ? context.onBrightness(
+                            light: AppColors.hint,
+                            dark: AppColors.darkTextMuted,
+                          )
+                        : context.onBrightness(
+                            light: AppColors.ink,
+                            dark: AppColors.darkText,
+                          ),
                   ),
                 ),
               ],
@@ -5177,14 +5326,26 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       isExpanded: true,
       items: items,
       onChanged: onChanged,
-      style: body(14, color: AppColors.ink),
-      // This sheet is always white — pin the popup to match rather than let
-      // it inherit the app's dark theme surface, which would leave this
-      // same ink-colored text unreadable when open.
-      dropdownColor: Colors.white,
-      icon: const Icon(
+      style: body(
+        14,
+        color: context.onBrightness(
+          light: AppColors.ink,
+          dark: AppColors.darkText,
+        ),
+      ),
+      // The sheet's own background now follows the theme (see _openAddSheet),
+      // so the popup can just match it instead of being pinned to a fixed
+      // white — the two are always the same color as each other now.
+      dropdownColor: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
+      icon: Icon(
         Icons.keyboard_arrow_down_rounded,
-        color: AppColors.textMuted,
+        color: context.onBrightness(
+          light: AppColors.textMuted,
+          dark: AppColors.darkTextMuted,
+        ),
       ),
       decoration: _inputDecoration(''),
     );
@@ -5192,12 +5353,23 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
     hintText: hint,
-    hintStyle: body(14, color: AppColors.hint),
+    hintStyle: body(
+      14,
+      color: context.onBrightness(
+        light: AppColors.hint,
+        dark: AppColors.darkTextMuted,
+      ),
+    ),
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -5216,10 +5388,20 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.forest800 : Colors.white,
+            color: selected
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkSurface,
+                  ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.forest800 : AppColors.border,
+              color: selected
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
             ),
           ),
           child: Text(
@@ -5227,7 +5409,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             style: body(
               14,
               weight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.label,
+              color: selected
+                  ? Colors.white
+                  : context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
             ),
           ),
         ),
@@ -5248,10 +5435,20 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.forest800 : Colors.white,
+            color: selected
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkSurface,
+                  ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.forest800 : AppColors.border,
+              color: selected
+                  ? AppColors.forest800
+                  : context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
             ),
           ),
           child: Text(
@@ -5259,7 +5456,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             style: body(
               14,
               weight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.label,
+              color: selected
+                  ? Colors.white
+                  : context.onBrightness(
+                      light: AppColors.label,
+                      dark: AppColors.darkText,
+                    ),
             ),
           ),
         ),
@@ -5355,10 +5557,15 @@ class _RequestsSheetState extends State<_RequestsSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_items.isEmpty)
-            _emptyState(t.ftNoPendingRequests, t.ftNoPendingRequestsDesc)
+            _emptyState(
+              context,
+              t.ftNoPendingRequests,
+              t.ftNoPendingRequestsDesc,
+            )
           else
             for (final r in _items)
               _requestTile(
+                context: context,
                 t: t,
                 name: _nameOf(r['requester'], t),
                 profileUrl: (r['profileUrl'] ?? '').toString(),
@@ -5374,13 +5581,23 @@ class _RequestsSheetState extends State<_RequestsSheet> {
               style: body(
                 12,
                 weight: FontWeight.w700,
-                color: AppColors.forest800,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               t.ftWaitingOnThemDesc,
-              style: body(11, color: AppColors.hint, height: 1.4),
+              style: body(
+                11,
+                height: 1.4,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             for (final r in _sent) _sentTile(r, t),
@@ -5400,9 +5617,17 @@ class _RequestsSheetState extends State<_RequestsSheet> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBF8F3),
+        color: context.onBrightness(
+          light: const Color(0xFFFBF8F3),
+          dark: AppColors.darkSurface,
+        ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5412,14 +5637,23 @@ class _RequestsSheetState extends State<_RequestsSheet> {
             style: body(
               13,
               weight: FontWeight.w700,
-              color: AppColors.forest900,
+              color: context.onBrightness(
+                light: AppColors.forest900,
+                dark: AppColors.darkText,
+              ),
             ),
           ),
           if (relation.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
               t.ftAddedAsYourRelation(relation),
-              style: body(11, color: AppColors.textMuted),
+              style: body(
+                11,
+                color: context.onBrightness(
+                  light: AppColors.textMuted,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 10),
@@ -5502,9 +5736,9 @@ class _InvitesSheetState extends State<_InvitesSheet> {
     return _SheetScaffold(
       title: t.ftYourInvitations,
       child: _done.isNotEmpty
-          ? _emptyState(t.ftAllSet, _done)
+          ? _emptyState(context, t.ftAllSet, _done)
           : widget.invites.isEmpty
-          ? _emptyState(t.ftNoInvitations, t.ftNoInvitationsDesc)
+          ? _emptyState(context, t.ftNoInvitations, t.ftNoInvitationsDesc)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -5665,7 +5899,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
               ),
             )
           : _items.isEmpty
-          ? _emptyState(t.ftNoNotifications, t.ftNoNotificationsDesc)
+          ? _emptyState(context, t.ftNoNotifications, t.ftNoNotificationsDesc)
           : Column(children: [for (final n in _items) _notificationTile(n, t)]),
     );
   }
@@ -5784,7 +6018,11 @@ class _LinksSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (links.isEmpty)
-            _emptyState(t.ftNoRelationshipsYet, t.ftNoRelationshipsYetDesc)
+            _emptyState(
+              context,
+              t.ftNoRelationshipsYet,
+              t.ftNoRelationshipsYetDesc,
+            )
           else ...[
             Text(
               t.ftRemovingLinkNote,
@@ -5884,7 +6122,10 @@ class _SheetScaffold extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -5896,15 +6137,24 @@ class _SheetScaffold extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: display(20, color: AppColors.forest900),
+                    style: display(
+                      20,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
                   ),
                 ),
                 ?action,
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close_rounded,
-                    color: AppColors.textMuted,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
                   ),
                 ),
               ],
@@ -5924,6 +6174,7 @@ class _SheetScaffold extends StatelessWidget {
 }
 
 Widget _requestTile({
+  required BuildContext context,
   required AppLocalizations t,
   required String name,
   required String message,
@@ -5936,9 +6187,17 @@ Widget _requestTile({
     margin: const EdgeInsets.only(bottom: 10),
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: context.onBrightness(
+        light: Colors.white,
+        dark: AppColors.darkSurface,
+      ),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5951,7 +6210,14 @@ Widget _requestTile({
             Expanded(
               child: Text(
                 message.isNotEmpty ? message : t.ftWantsToConnect(name),
-                style: body(13, color: AppColors.forest900, height: 1.4),
+                style: body(
+                  13,
+                  height: 1.4,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
               ),
             ),
           ],
@@ -5982,7 +6248,7 @@ Widget _requestTile({
   );
 }
 
-Widget _emptyState(String title, String subtitle) {
+Widget _emptyState(BuildContext context, String title, String subtitle) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 8),
     child: Column(
@@ -5992,13 +6258,26 @@ Widget _emptyState(String title, String subtitle) {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: display(18, color: AppColors.forest900),
+          style: display(
+            18,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: body(13, color: AppColors.textMuted, height: 1.5),
+          style: body(
+            13,
+            height: 1.5,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
         ),
       ],
     ),

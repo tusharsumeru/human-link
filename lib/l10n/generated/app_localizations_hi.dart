@@ -2041,6 +2041,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get matInterests => 'रुचियां';
 
   @override
+  String get matSelectInterests => 'रुचियां चुनें';
+
+  @override
   String get matPartnerExpectations => 'साथी की अपेक्षाएं';
 
   @override

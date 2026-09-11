@@ -2048,6 +2048,9 @@ class AppLocalizationsKn extends AppLocalizations {
   String get matInterests => 'ಆಸಕ್ತಿಗಳು';
 
   @override
+  String get matSelectInterests => 'ಆಸಕ್ತಿಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ';
+
+  @override
   String get matPartnerExpectations => 'ಸಂಗಾತಿ ನಿರೀಕ್ಷೆಗಳು';
 
   @override

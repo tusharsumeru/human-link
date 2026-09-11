@@ -43,7 +43,8 @@ class _ShareSheetState extends State<_ShareSheet> {
   // Stable wire value for the deep-link slug — never localized.
   String get _kind => widget.isReel ? 'reel' : 'post';
 
-  String _kindLabel(AppLocalizations t) => widget.isReel ? t.shareReel : t.sharePost;
+  String _kindLabel(AppLocalizations t) =>
+      widget.isReel ? t.shareReel : t.sharePost;
 
   // A shareable deep link for this item (placeholder domain).
   String get _link {
@@ -51,8 +52,8 @@ class _ShareSheetState extends State<_ShareSheet> {
     return 'https://samaj.app/$_kind/$slug';
   }
 
-  String _shareText(AppLocalizations t) => t.shareTextTemplate(
-      widget.author, _kindLabel(t), widget.caption, _link);
+  String _shareText(AppLocalizations t) =>
+      t.shareTextTemplate(widget.author, _kindLabel(t), widget.caption, _link);
 
   void _toggleSend(Map<String, dynamic> member) {
     final id = member['id'] as String;
@@ -74,7 +75,10 @@ class _ShareSheetState extends State<_ShareSheet> {
 
   Future<void> _shareExternal(AppLocalizations t) async {
     // Native OS share sheet (WhatsApp, Gmail, etc.).
-    await Share.share(_shareText(t), subject: t.shareSubjectTemplate(_kindLabel(t)));
+    await Share.share(
+      _shareText(t),
+      subject: t.shareSubjectTemplate(_kindLabel(t)),
+    );
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -87,8 +91,11 @@ class _ShareSheetState extends State<_ShareSheet> {
     return SizedBox(
       height: mq.size.height * 0.62,
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
+        decoration: BoxDecoration(
+          color: context.onBrightness(
+            light: AppColors.cream,
+            dark: AppColors.darkSurface,
+          ),
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
@@ -98,24 +105,50 @@ class _ShareSheetState extends State<_ShareSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999)),
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
             const SizedBox(height: 10),
-            Text(t.shareTitle, style: display(17, color: AppColors.forest900)),
+            Text(
+              t.shareTitle,
+              style: display(
+                17,
+                color: context.onBrightness(
+                  light: AppColors.forest900,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.border),
+            Divider(
+              height: 1,
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
 
             // Send to Samaj members
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(t.shareSendTo,
-                    style: body(12,
-                        weight: FontWeight.w700,
-                        color: AppColors.gold700,
-                        letterSpacing: 1.2)),
+                child: Text(
+                  t.shareSendTo,
+                  style: body(
+                    12,
+                    weight: FontWeight.w700,
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
+                    ),
+                    letterSpacing: 1.2,
+                  ),
+                ),
               ),
             ),
             SizedBox(
@@ -123,8 +156,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               child: GridView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisExtent: 82,
                   crossAxisSpacing: 8,
@@ -153,21 +185,33 @@ class _ShareSheetState extends State<_ShareSheet> {
                       backgroundColor: AppColors.forest700,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: () {
                       final n = _sentTo.length;
                       Navigator.of(context).pop();
                       _toast(context, t.shareSentToMembers(n));
                     },
-                    child: Text(t.shareSendButton,
-                        style: body(15,
-                            weight: FontWeight.w700, color: Colors.white)),
+                    child: Text(
+                      t.shareSendButton,
+                      style: body(
+                        15,
+                        weight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),
 
-            const Divider(height: 20, color: AppColors.border),
+            Divider(
+              height: 20,
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
 
             // Quick actions
             Padding(
@@ -205,8 +249,11 @@ class _ShareSheetState extends State<_ShareSheet> {
 }
 
 class _MemberChip extends StatelessWidget {
-  const _MemberChip(
-      {required this.name, required this.sent, required this.onTap});
+  const _MemberChip({
+    required this.name,
+    required this.sent,
+    required this.onTap,
+  });
   final String name;
   final bool sent;
   final VoidCallback onTap;
@@ -229,20 +276,37 @@ class _MemberChip extends StatelessWidget {
                 if (sent)
                   Container(
                     decoration: const BoxDecoration(
-                        color: AppColors.forest700, shape: BoxShape.circle),
+                      color: AppColors.forest700,
+                      shape: BoxShape.circle,
+                    ),
                     padding: const EdgeInsets.all(2),
-                    child: const Icon(Icons.check_rounded,
-                        size: 14, color: Colors.white),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
               ],
             ),
             const SizedBox(height: 6),
-            Text(first,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: body(12,
-                    color: sent ? AppColors.forest800 : AppColors.label,
-                    weight: sent ? FontWeight.w700 : FontWeight.w400)),
+            Text(
+              first,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: body(
+                12,
+                color: sent
+                    ? context.onBrightness(
+                        light: AppColors.forest800,
+                        dark: AppColors.forest300,
+                      )
+                    : context.onBrightness(
+                        light: AppColors.label,
+                        dark: AppColors.darkText,
+                      ),
+                weight: sent ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
           ],
         ),
       ),
@@ -251,8 +315,7 @@ class _MemberChip extends StatelessWidget {
 }
 
 class _Action extends StatelessWidget {
-  const _Action(
-      {required this.icon, required this.label, required this.onTap});
+  const _Action({required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -271,14 +334,38 @@ class _Action extends StatelessWidget {
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+                ),
               ),
-              child: Icon(icon, color: AppColors.forest800, size: 24),
+              child: Icon(
+                icon,
+                color: context.onBrightness(
+                  light: AppColors.forest800,
+                  dark: AppColors.forest300,
+                ),
+                size: 24,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(label, style: body(12, color: AppColors.label)),
+            Text(
+              label,
+              style: body(
+                12,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -289,10 +376,12 @@ class _Action extends StatelessWidget {
 void _toast(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message, style: body(13, color: Colors.white)),
-      backgroundColor: AppColors.forest800,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message, style: body(13, color: Colors.white)),
+        backgroundColor: AppColors.forest800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
 }

@@ -6,6 +6,7 @@ import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui_kit.dart';
 
 /// The 27 nakshatras, in their fixed traditional order. Not localized — these
 /// are the same Sanskrit transliterations used throughout the compatibility
@@ -257,7 +258,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           );
       }
       setState(() => _loading = false);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('MatrimonialEditScreen._load failed: $e');
+      debugPrint('$stackTrace');
       if (!mounted) return;
       setState(() {
         _error = e is ApiException
@@ -494,25 +497,25 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionMarriagePreferences),
-          _enumChoice(
+          _enumDropdown(
             t.matMarriageIntention,
             _marriageIntentionOptionsOf(t),
             _marriageIntention,
             (v) => setState(() => _marriageIntention = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matChildren,
             _childrenPreferenceOptionsOf(t),
             _childrenPreference,
             (v) => setState(() => _childrenPreference = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matFamily2,
             _familyPreferenceOptionsOf(t),
             _familyPreference,
             (v) => setState(() => _familyPreference = v),
           ),
-          _enumChoice(
+          _enumDropdown(
             t.matRelocation,
             _relocationPreferenceOptionsOf(t),
             _relocationPreference,
@@ -521,7 +524,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionLifestyle),
-          _enumChoice(
+          _enumDropdown(
             t.matFoodPreference,
             _foodPreferenceOptionsOf(t),
             _foodPreference,
@@ -530,7 +533,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
           const SizedBox(height: 16),
           _label(t.matSectionInterests),
-          _multiEnumChoice('', _interestOptionsOf(t), _interests),
+          _multiEnumDropdown(t.matInterests, _interestOptionsOf(t), _interests),
 
           const SizedBox(height: 24),
           SizedBox(
@@ -586,14 +589,27 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   InputDecoration _dec(String? hint) => InputDecoration(
     hintText: hint,
     filled: true,
-    fillColor: Colors.white,
+    fillColor: context.onBrightness(
+      light: Colors.white,
+      dark: AppColors.darkSurface,
+    ),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(
+        color: context.onBrightness(
+          light: AppColors.border,
+          dark: AppColors.darkBorder,
+        ),
+      ),
     ),
   );
 
@@ -630,7 +646,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c[key],
           maxLines: maxLines,
           maxLength: maxLength,
-          style: body(14, color: AppColors.ink),
+          style: body(
+            14,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: _dec(hint),
         ),
       ],
@@ -651,7 +673,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c['siblings'],
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: body(14, color: AppColors.ink),
+          style: body(
+            14,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: _dec(t.matSiblingsHint),
           validator: (v) {
             if (v == null || v.trim().isEmpty) return null;
@@ -674,7 +702,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             TextFormField(
               controller: c,
               maxLines: 3,
-              style: body(14, color: AppColors.ink),
+              style: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.ink,
+                  dark: AppColors.darkText,
+                ),
+              ),
               decoration: _dec(hint),
             ),
           ],
@@ -776,62 +810,10 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  /// Same compact chip look as [_choice], but for a backend enum field: the
-  /// map's values are what's shown on each chip, its keys are what's actually
-  /// selected/saved — so the wire value (e.g. "ONE_TO_TWO_YEARS") never has
-  /// to match the display label (e.g. "1–2 Years").
-  Widget _enumChoice(
-    String label,
-    Map<String, String> wireToLabel,
-    String selectedWire,
-    ValueChanged<String> onPickWire,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: body(
-              13,
-              color: context.onBrightness(
-                light: AppColors.label,
-                dark: AppColors.darkText,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final entry in wireToLabel.entries)
-                ChoiceChip(
-                  label: Text(
-                    entry.value,
-                    style: body(
-                      13,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                  selected: selectedWire == entry.key,
-                  onSelected: (_) => onPickWire(entry.key),
-                  selectedColor: AppColors.forest300,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Dropdown variant of [_enumChoice], for a backend enum field with few
-  /// enough options (and little enough per-option content) that a single
-  /// tap-to-open menu reads better than a row of chips.
+  /// Dropdown for a backend enum field: the map's values are what's shown on
+  /// each menu item, its keys are what's actually selected/saved — so the
+  /// wire value (e.g. "ONE_TO_TWO_YEARS") never has to match the display
+  /// label (e.g. "1–2 Years").
   Widget _enumDropdown(
     String label,
     Map<String, String> wireToLabel,
@@ -851,11 +833,19 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            // The field itself is always white — pin the popup to match
-            // rather than let it inherit the app's dark theme surface (which
-            // would leave this same ink-colored text unreadable when open).
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            // The closed field and the open popup share the same
+            // theme-aware background, so they always match each other.
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: _dec(null),
             items: [
               for (final entry in wireToLabel.entries)
@@ -895,8 +885,17 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.hint,
             ),
-            style: body(14, color: AppColors.ink),
-            dropdownColor: Colors.white,
+            style: body(
+              14,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
+            ),
+            dropdownColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             decoration: _dec(hint),
             items: [
               for (final o in options)
@@ -909,65 +908,182 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
-  /// Multi-select variant of [_enumChoice] — any number of chips may be on at
-  /// once, and tapping a selected one turns it back off. [selectedWires] is
-  /// mutated in place ([Set.add]/[Set.remove]), matching how the other
-  /// collection-backed fields on this screen (expectations, gotra exclusions)
-  /// are edited directly rather than replaced wholesale.
-  Widget _multiEnumChoice(
+  /// Multi-select variant of [_enumDropdown] — tapping the field opens a
+  /// sheet of checkable chips (any number on at once) instead of a
+  /// single-value menu; the closed field shows the picked labels joined by
+  /// commas, same "tap to open, see the result inline" shape as every other
+  /// dropdown on this form. [selectedWires] is mutated in place
+  /// ([Set.clear]/[Set.addAll]), matching how the other collection-backed
+  /// fields on this screen (expectations, gotra exclusions) are edited
+  /// directly rather than replaced wholesale.
+  Widget _multiEnumDropdown(
     String label,
     Map<String, String> wireToLabel,
     Set<String> selectedWires,
   ) {
+    final summary = selectedWires.isEmpty
+        ? null
+        : selectedWires.map((w) => wireToLabel[w] ?? w).join(', ');
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (label.isNotEmpty) ...[
-            Text(
-              label,
-              style: body(
-                13,
+          _fieldLabel(label),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _pickMultiEnum(label, wireToLabel, selectedWires),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
                 color: context.onBrightness(
-                  light: AppColors.label,
-                  dark: AppColors.darkText,
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-          ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final entry in wireToLabel.entries)
-                FilterChip(
-                  label: Text(
-                    entry.value,
-                    style: body(
-                      13,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary ??
+                          AppLocalizations.of(context).matSelectInterests,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        14,
+                        color: summary == null
+                            ? AppColors.hint
+                            : context.onBrightness(
+                                light: AppColors.ink,
+                                dark: AppColors.darkText,
+                              ),
                       ),
                     ),
                   ),
-                  selected: selectedWires.contains(entry.key),
-                  onSelected: (on) => setState(() {
-                    if (on) {
-                      selectedWires.add(entry.key);
-                    } else {
-                      selectedWires.remove(entry.key);
-                    }
-                  }),
-                  selectedColor: AppColors.forest300,
-                ),
-            ],
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.hint,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// Sheet behind [_multiEnumDropdown]: every option as a toggle chip, picked
+  /// state confirmed with Done rather than closing on every tap — closing
+  /// immediately would make it read as a single-select despite allowing
+  /// several.
+  Future<void> _pickMultiEnum(
+    String title,
+    Map<String, String> wireToLabel,
+    Set<String> selectedWires,
+  ) async {
+    final t = AppLocalizations.of(context);
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkSurface,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        final picked = Set<String>.from(selectedWires);
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    title,
+                    style: display(
+                      17,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in wireToLabel.entries)
+                        FilterChip(
+                          label: Text(
+                            entry.value,
+                            style: body(
+                              13,
+                              color: context.onBrightness(
+                                light: AppColors.ink,
+                                dark: AppColors.darkText,
+                              ),
+                            ),
+                          ),
+                          selected: picked.contains(entry.key),
+                          onSelected: (on) => setSheetState(() {
+                            if (on) {
+                              picked.add(entry.key);
+                            } else {
+                              picked.remove(entry.key);
+                            }
+                          }),
+                          selectedColor: AppColors.forest300,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ForestButton(
+                    label: t.commonDone,
+                    expand: true,
+                    onPressed: () => Navigator.of(ctx).pop(picked),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (result != null) {
+      setState(() {
+        selectedWires
+          ..clear()
+          ..addAll(result);
+      });
+    }
   }
 
   Widget _heightFields(AppLocalizations t) {
@@ -987,7 +1103,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightFeet?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(t.matHeightFeetHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
@@ -1013,7 +1135,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightInches?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(t.matHeightInchesHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
@@ -1123,7 +1251,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMin?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
                 ),
@@ -1139,7 +1273,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMax?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(14, color: AppColors.ink),
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.ink,
+                      dark: AppColors.darkText,
+                    ),
+                  ),
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
                 ),
@@ -1172,7 +1312,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     TextFormField(
                       initialValue: _incomeMin?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      style: body(14, color: AppColors.ink),
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                       decoration: _dec(null),
                       onChanged: (v) => setState(() {
                         _incomeMin = int.tryParse(v.trim());
@@ -1191,7 +1337,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     TextFormField(
                       initialValue: _incomeMax?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      style: body(14, color: AppColors.ink),
+                      style: body(
+                        14,
+                        color: context.onBrightness(
+                          light: AppColors.ink,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
                       decoration: _dec(null),
                       onChanged: (v) => setState(() {
                         _incomeMax = int.tryParse(v.trim());
@@ -1250,10 +1402,20 @@ class _ComplexionOption extends StatelessWidget {
         width: 80,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.forest300 : Colors.white,
+          color: selected
+              ? AppColors.forest300
+              : context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppColors.forest700 : AppColors.creamDark,
+            color: selected
+                ? AppColors.forest700
+                : context.onBrightness(
+                    light: AppColors.creamDark,
+                    dark: AppColors.darkBorder,
+                  ),
             width: selected ? 2 : 1,
           ),
         ),
@@ -1270,7 +1432,10 @@ class _ComplexionOption extends StatelessWidget {
               style: body(
                 12,
                 weight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: AppColors.label,
+                color: context.onBrightness(
+                  light: AppColors.label,
+                  dark: AppColors.darkText,
+                ),
               ),
             ),
           ],

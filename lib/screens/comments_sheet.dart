@@ -25,8 +25,7 @@ final List<String> _taggableNames = () {
   final names = <String>{
     for (final m in kCommunityMembers) m['name'] as String,
     for (final m in kFamilyMembers) m['name'] as String,
-  }.toList()
-    ..sort();
+  }.toList()..sort();
   return names;
 }();
 
@@ -77,10 +76,13 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       return;
     }
     final q = match.group(1)!.toLowerCase();
-    final results = _taggableNames.where((n) {
-      final flat = n.toLowerCase().replaceAll(' ', '');
-      return q.isEmpty || flat.contains(q) || n.toLowerCase().contains(q);
-    }).take(6).toList();
+    final results = _taggableNames
+        .where((n) {
+          final flat = n.toLowerCase().replaceAll(' ', '');
+          return q.isEmpty || flat.contains(q) || n.toLowerCase().contains(q);
+        })
+        .take(6)
+        .toList();
     _setSuggestions(results);
   }
 
@@ -96,7 +98,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     if (match == null) return;
     final mention = '${_handleOf(name)} ';
     final newText =
-        text.replaceRange(match.start, cursor, mention) + text.substring(cursor);
+        text.replaceRange(match.start, cursor, mention) +
+        text.substring(cursor);
     _controller.value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: match.start + mention.length),
@@ -117,8 +120,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     _setSuggestions(const []);
     setState(() => _sending = true);
     try {
-      await CommentStore.instance
-          .send(widget.postId, text: text, author: me);
+      await CommentStore.instance.send(widget.postId, text: text, author: me);
     } catch (e) {
       if (!mounted) return;
       _controller.text = text; // give the user their text back to retry
@@ -137,7 +139,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final mq = MediaQuery.of(context);
-    final available = mq.size.height - mq.padding.top - mq.viewInsets.bottom - 8;
+    final available =
+        mq.size.height - mq.padding.top - mq.viewInsets.bottom - 8;
     final height = (mq.size.height * 0.85).clamp(240.0, available);
     final me = context.watch<AuthService>().user;
 
@@ -146,8 +149,11 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       child: SizedBox(
         height: height,
         child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.cream,
+          decoration: BoxDecoration(
+            color: context.onBrightness(
+              light: AppColors.cream,
+              dark: AppColors.darkSurface,
+            ),
             borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
           ),
           child: Column(
@@ -158,37 +164,68 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
               const SizedBox(height: 10),
-              Text(t.commentTitle, style: display(17, color: AppColors.forest900)),
+              Text(
+                t.commentTitle,
+                style: display(
+                  17,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
-              const Divider(height: 1, color: AppColors.border),
+              Divider(
+                height: 1,
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
 
               // Comment list
               Expanded(
                 child: ListenableBuilder(
                   listenable: CommentStore.instance,
                   builder: (context, _) {
-                    final comments =
-                        CommentStore.instance.commentsFor(widget.postId);
+                    final comments = CommentStore.instance.commentsFor(
+                      widget.postId,
+                    );
                     if (comments.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.mode_comment_outlined,
-                                size: 40, color: AppColors.hint),
+                            const Icon(
+                              Icons.mode_comment_outlined,
+                              size: 40,
+                              color: AppColors.hint,
+                            ),
                             const SizedBox(height: 10),
-                            Text(t.commentNoneYet,
-                                style: body(15,
-                                    weight: FontWeight.w600,
-                                    color: AppColors.label)),
+                            Text(
+                              t.commentNoneYet,
+                              style: body(
+                                15,
+                                weight: FontWeight.w600,
+                                color: context.onBrightness(
+                                  light: AppColors.label,
+                                  dark: AppColors.darkText,
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(t.commentStartConversation,
-                                style: body(13, color: AppColors.hint)),
+                            Text(
+                              t.commentStartConversation,
+                              style: body(13, color: AppColors.hint),
+                            ),
                           ],
                         ),
                       );
@@ -197,7 +234,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       itemCount: comments.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (_, i) => _CommentRow(comment: comments[i], t: t),
+                      itemBuilder: (_, i) =>
+                          _CommentRow(comment: comments[i], t: t),
                     );
                   },
                 ),
@@ -207,8 +245,15 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               if (_suggestions.isNotEmpty)
                 Container(
                   constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: AppColors.border)),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
+                      ),
+                    ),
                   ),
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -218,12 +263,21 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       return ListTile(
                         dense: true,
                         leading: PexelsImage(url: '', name: name, size: 34),
-                        title: Text(name,
-                            style: body(13,
-                                weight: FontWeight.w600,
-                                color: AppColors.forest900)),
-                        subtitle: Text(_handleOf(name),
-                            style: body(11, color: AppColors.hint)),
+                        title: Text(
+                          name,
+                          style: body(
+                            13,
+                            weight: FontWeight.w600,
+                            color: context.onBrightness(
+                              light: AppColors.forest900,
+                              dark: AppColors.darkText,
+                            ),
+                          ),
+                        ),
+                        subtitle: Text(
+                          _handleOf(name),
+                          style: body(11, color: AppColors.hint),
+                        ),
                         onTap: () => _insertMention(name),
                       );
                     },
@@ -234,13 +288,24 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               SafeArea(
                 top: false,
                 child: Container(
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: AppColors.border)),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
+                      ),
+                    ),
                   ),
                   padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                   child: Row(
                     children: [
-                      PexelsImage(url: '', name: me?.name ?? t.postAuthorFallback, size: 34),
+                      PexelsImage(
+                        url: '',
+                        name: me?.name ?? t.postAuthorFallback,
+                        size: 34,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
@@ -250,7 +315,13 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           textCapitalization: TextCapitalization.sentences,
                           minLines: 1,
                           maxLines: 4,
-                          style: body(14, color: AppColors.ink),
+                          style: body(
+                            14,
+                            color: context.onBrightness(
+                              light: AppColors.ink,
+                              dark: AppColors.darkText,
+                            ),
+                          ),
                           decoration: InputDecoration(
                             hintText: t.commentHint,
                             hintStyle: body(13, color: AppColors.hint),
@@ -267,12 +338,16 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                               value.text.trim().isNotEmpty && !_sending;
                           return TextButton(
                             onPressed: enabled ? _send : null,
-                            child: Text(_sending ? t.commentPosting : t.commentPost,
-                                style: body(14,
-                                    weight: FontWeight.w700,
-                                    color: enabled
-                                        ? AppColors.forest700
-                                        : AppColors.hint)),
+                            child: Text(
+                              _sending ? t.commentPosting : t.commentPost,
+                              style: body(
+                                14,
+                                weight: FontWeight.w700,
+                                color: enabled
+                                    ? AppColors.forest700
+                                    : AppColors.hint,
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -305,14 +380,22 @@ class _CommentRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text.rich(
-                TextSpan(children: [
-                  TextSpan(
-                    text: '${comment.author}  ',
-                    style: body(13,
-                        weight: FontWeight.w700, color: AppColors.forest900),
-                  ),
-                  ..._withMentions(comment.text),
-                ]),
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${comment.author}  ',
+                      style: body(
+                        13,
+                        weight: FontWeight.w700,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
+                    ),
+                    ..._withMentions(context, comment.text),
+                  ],
+                ),
               ),
               const SizedBox(height: 4),
               Row(
@@ -322,8 +405,11 @@ class _CommentRow extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       t.commentLikeCount(comment.likeCount),
-                      style: body(11,
-                          weight: FontWeight.w600, color: AppColors.hint),
+                      style: body(
+                        11,
+                        weight: FontWeight.w600,
+                        color: AppColors.hint,
+                      ),
                     ),
                   ],
                 ],
@@ -341,9 +427,7 @@ class _CommentRow extends StatelessWidget {
             comment.likedByMe
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,
-            color: comment.likedByMe
-                ? const Color(0xFFE0245E)
-                : AppColors.hint,
+            color: comment.likedByMe ? const Color(0xFFE0245E) : AppColors.hint,
           ),
           onPressed: comment.id == null
               ? null
@@ -352,10 +436,17 @@ class _CommentRow extends StatelessWidget {
                     await CommentStore.instance.toggleLike(comment);
                   } catch (e) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(t.commentCouldNotLike(
-                          e is ApiException ? e.message : t.commentCheckConnection)),
-                    ));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          t.commentCouldNotLike(
+                            e is ApiException
+                                ? e.message
+                                : t.commentCheckConnection,
+                          ),
+                        ),
+                      ),
+                    );
                   }
                 },
         ),
@@ -364,23 +455,45 @@ class _CommentRow extends StatelessWidget {
   }
 
   /// Splits a comment body, styling @mentions in forest green.
-  List<TextSpan> _withMentions(String text) {
+  List<TextSpan> _withMentions(BuildContext context, String text) {
     final spans = <TextSpan>[];
     var last = 0;
     for (final m in _mentionRegExp.allMatches(text)) {
       if (m.start > last) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: text.substring(last, m.start),
-            style: body(13, color: AppColors.label)));
+            style: body(
+              13,
+              color: context.onBrightness(
+                light: AppColors.label,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ),
+        );
       }
-      spans.add(TextSpan(
+      spans.add(
+        TextSpan(
           text: m.group(0),
-          style: body(13, weight: FontWeight.w600, color: AppColors.forest700)));
+          style: body(13, weight: FontWeight.w600, color: AppColors.forest700),
+        ),
+      );
       last = m.end;
     }
     if (last < text.length) {
-      spans.add(TextSpan(
-          text: text.substring(last), style: body(13, color: AppColors.label)));
+      spans.add(
+        TextSpan(
+          text: text.substring(last),
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.label,
+              dark: AppColors.darkText,
+            ),
+          ),
+        ),
+      );
     }
     return spans;
   }

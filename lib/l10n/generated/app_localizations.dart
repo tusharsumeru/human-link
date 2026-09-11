@@ -3766,6 +3766,12 @@ abstract class AppLocalizations {
   /// **'Interests'**
   String get matInterests;
 
+  /// No description provided for @matSelectInterests.
+  ///
+  /// In en, this message translates to:
+  /// **'Select interests'**
+  String get matSelectInterests;
+
   /// No description provided for @matPartnerExpectations.
   ///
   /// In en, this message translates to:
