@@ -235,6 +235,14 @@ class AppUser {
   final String dob;
   final String maskedAadhaar;
   final bool verified;
+  // The one-time registration donation gate. false only for a brand-new
+  // registration — the router sends the app to DonationGateScreen until this
+  // flips true (server-side, once a donation payment is verified) and stays
+  // true forever after; it never renews. Defaults to true here (not false)
+  // so a session cached before this field existed, or a payload that omits
+  // it, never locks an already-donated member out — only an explicit `false`
+  // from the server gates, matching [onboardingComplete]'s convention.
+  final bool hasDonated;
 
   const AppUser({
     this.id = '',
@@ -261,6 +269,7 @@ class AppUser {
     this.dob = '',
     this.maskedAadhaar = '',
     this.verified = false,
+    this.hasDonated = true,
   });
 
   bool get isElder => role == 'elder';
@@ -294,6 +303,7 @@ class AppUser {
     dob: (m['dob'] ?? '') as String,
     maskedAadhaar: (m['masked_aadhaar'] ?? m['maskedAadhaar'] ?? '') as String,
     verified: (m['verified'] ?? false) as bool,
+    hasDonated: (m['hasDonated'] ?? true) as bool,
   );
 
   Map<String, dynamic> toMap() => {
@@ -321,6 +331,7 @@ class AppUser {
     'dob': dob,
     'masked_aadhaar': maskedAadhaar,
     'verified': verified,
+    'hasDonated': hasDonated,
   };
 
   AppUser copyWith({
@@ -348,6 +359,7 @@ class AppUser {
     String? dob,
     String? maskedAadhaar,
     bool? verified,
+    bool? hasDonated,
   }) => AppUser(
     id: id ?? this.id,
     samajId: samajId ?? this.samajId,
@@ -373,6 +385,7 @@ class AppUser {
     dob: dob ?? this.dob,
     maskedAadhaar: maskedAadhaar ?? this.maskedAadhaar,
     verified: verified ?? this.verified,
+    hasDonated: hasDonated ?? this.hasDonated,
   );
 }
 

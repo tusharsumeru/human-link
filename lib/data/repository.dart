@@ -445,6 +445,37 @@ class Repository {
     throw ApiException('Member not found');
   }
 
+  // ── Payments (registration donation gate) ─────────────────────────────────
+  // See DonationGateScreen. This is the one-time, non-renewing donation every
+  // new member pays before the app unlocks — a Razorpay Order, not a
+  // Subscription, and separate from the (currently demo-only) Welfare giving
+  // flow below.
+
+  /// POST /api/payments/donations/order — creates a Razorpay order for the
+  /// fixed donation price the backend has on file (nothing sent from here
+  /// decides the amount). Returns `{ key, orderId, amount, currency, plan }`;
+  /// `amount` is in paise, as Razorpay Checkout expects.
+  Future<Map<String, dynamic>> createDonationOrder() async {
+    final data = await _api.postJson('/api/payments/donations/order', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not start the donation payment');
+  }
+
+  /// POST /api/payments/donations/verify — confirms the payment Razorpay
+  /// Checkout returned. On success the backend also flips the caller's own
+  /// `hasDonated` to true, which is what the router acts on next.
+  Future<void> verifyDonation({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    await _api.postJson('/api/payments/donations/verify', {
+      'razorpay_order_id': orderId,
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature,
+    });
+  }
+
   /// GET /api/family/search — member records whose name contains [q] (powers
   /// "Tag Family Members" and "Link to Tree Node"):
   /// `[{ _id, name, gender, status, profileUrl, isPlaceholder, linkedUserId }]`.

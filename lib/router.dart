@@ -6,6 +6,7 @@ import 'screens/landing_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/donation_gate_screen.dart';
 import 'screens/family_tree_screen.dart';
 import 'screens/directory_screen.dart';
 import 'screens/invitations_screen.dart';
@@ -51,13 +52,38 @@ GoRouter buildRouter(AuthService auth) {
       final inOnboarding = path.startsWith('/onboarding');
       final isPublic = _publicPaths.contains(path) || inOnboarding;
       final needsOnboarding = loggedIn && !(user?.onboardingComplete ?? true);
+      // A one-time gate, not per-session: it stays true forever once a
+      // donation is verified (see AppUser.hasDonated), so a member who paid
+      // once is never asked again — including after closing the app and
+      // logging back in, since this is read straight from the account, not a
+      // local "did I see this screen" flag.
+      final needsDonation = loggedIn && !(user?.hasDonated ?? true);
 
       if (!loggedIn && !isPublic) return '/login';
 
-      // A freshly-registered user must finish onboarding before anything else.
-      if (needsOnboarding && !inOnboarding) return '/onboarding/identity';
+      // The donation gate comes before onboarding: register → donate → the
+      // rest of the app (onboarding included). It has to run even mid-way
+      // through onboarding if a session is restored there without having paid.
+      if (needsDonation && path != '/donation') return '/donation';
+
+      // A freshly-registered user must finish onboarding before anything else
+      // — but only once the donation gate is cleared. Without the
+      // `!needsDonation` guard, a member stuck on '/donation' who also
+      // hasn't onboarded would get bounced to '/onboarding/identity', which
+      // would then bounce straight back to '/donation' (line above):
+      // an infinite redirect loop between the two.
+      if (needsOnboarding && !inOnboarding && !needsDonation) {
+        return '/onboarding/identity';
+      }
 
       if (loggedIn && (path == '/login' || path == '/register')) {
+        // needsDonation is already handled above (it matches any path other
+        // than '/donation'), so this only ever has onboarding left to check.
+        if (needsOnboarding) return '/onboarding/identity';
+        return user!.isElder ? '/elder' : '/dashboard';
+      }
+      // Paid — no reason to sit on the donation screen once it's done.
+      if (loggedIn && path == '/donation' && !needsDonation) {
         if (needsOnboarding) return '/onboarding/identity';
         return user!.isElder ? '/elder' : '/dashboard';
       }
@@ -73,6 +99,12 @@ GoRouter buildRouter(AuthService auth) {
       GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+
+      // One-time registration donation gate. Not in _publicPaths — it needs a
+      // logged-in session (the bearer token) to create the Razorpay order —
+      // but the redirect above sends every unpaid session here regardless of
+      // where else they were headed.
+      GoRoute(path: '/donation', builder: (_, __) => const DonationGateScreen()),
 
       // Member area
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
