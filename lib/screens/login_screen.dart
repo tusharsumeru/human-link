@@ -9,15 +9,16 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
+import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login: the backend has no OTP-dispatch step (same as
-/// registration) — the fixed demo OTP (121212) is entered directly, then
-/// `POST /api/user/login` verifies it and signs in.
+/// Phone → OTP login: `POST /api/user/login/send-otp` triggers a real SMS
+/// OTP (via 2Factor) and returns a session id, which is echoed back along
+/// with the entered OTP to `POST /api/user/login` to verify and sign in.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -32,6 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = '';
   bool _loading = false;
 
+  /// 2Factor session id from the last `send-otp` call — required alongside
+  /// the OTP itself to verify against `/api/user/login`.
+  String _sessionId = '';
+
   @override
   void dispose() {
     _phoneCtrl.dispose();
@@ -39,19 +44,50 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Validates the number and advances to OTP entry. No network call here —
-  /// the backend has no send-otp route; it validates the fixed demo OTP
-  /// directly against `/api/user/login` (same as registration).
-  void _handlePhoneNext() {
+  /// Validates the number, sends the OTP via `POST /api/user/login/send-otp`
+  /// (capturing the session id it returns), then advances to OTP entry.
+  Future<void> _handlePhoneNext() async {
     final t = AppLocalizations.of(context);
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = t.loginErrorInvalidPhone);
       return;
     }
     setState(() {
+      _loading = true;
       _error = '';
-      _phoneStep = 'otp';
     });
+    try {
+      final sessionId = await Repository.instance.sendLoginOtp(
+        _phoneCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _sessionId = sessionId;
+        _loading = false;
+        _phoneStep = 'otp';
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error =
+            (e.statusCode == 404 || e.message == 'Phone number not registered')
+            ? t.loginErrorNotRegistered
+            : e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error =
+            (e is SocketException ||
+                e is TimeoutException ||
+                e is HttpException ||
+                e is ClientException)
+            ? t.loginErrorServerUnreachable(ApiConfig.baseUrl)
+            : t.loginErrorNetwork;
+        _loading = false;
+      });
+    }
   }
 
   /// Verifies the OTP against the backend (`/api/user/login`) and signs in.
@@ -70,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthService>();
     final existing = auth.user;
     try {
-      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text);
+      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text, _sessionId);
       if (existing != null && existing.phone == user.phone) {
         user = user.copyWith(
           photoPath: existing.photoPath.isNotEmpty ? existing.photoPath : null,
@@ -311,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'Enter the 6-digit OTP  ·  use 121212 for this demo',
+              'Enter the 6-digit OTP sent to your phone',
               style: body(
                 12,
                 weight: FontWeight.w600,

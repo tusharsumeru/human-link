@@ -16,7 +16,14 @@ class ApiConfig {
   // --dart-define=API_BASE_URL=https://<host> (see below).
   static const String _localDevPort = '4000';
 
-  static const String _override = '';
+  // Production backend. NOTE: the public domain only proxies `/api/*` to the
+  // backend (everything else hits the Next.js site) — and the backend itself
+  // only registers a handful of routes (auth) under an `api/` prefix. Routes
+  // like `/follow-users/...` are registered WITHOUT that prefix on the
+  // backend, so they 404 through this domain until the backend adds a global
+  // `api` prefix. Login and anything already under `/api/user/...` works;
+  // follow/unfollow will fail until that's fixed server-side.
+  static const String _override = 'https://daivajnasamaj.in';
 
   static String get _localDev {
     if (!kIsWeb && Platform.isAndroid) {

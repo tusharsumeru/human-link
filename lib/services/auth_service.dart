@@ -475,8 +475,8 @@ class AuthService extends ChangeNotifier {
 
   /// Logs in via the API. Captures the JWT token for subsequent protected
   /// requests. Throws [ApiException] with a human message on failure.
-  Future<AppUser> login(String phone, String otp) async {
-    final res = await _repo.login(phone, otp);
+  Future<AppUser> login(String phone, String otp, String sessionId) async {
+    final res = await _repo.login(phone, otp, sessionId);
     final user = AppUser.fromMap(res['user'] as Map<String, dynamic>);
     final token = (res['token'] ?? '') as String;
     await _persist(user, token: token.isEmpty ? null : token);
