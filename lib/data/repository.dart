@@ -284,6 +284,13 @@ class Repository {
     String? treeNodeId,
     String? locationName,
     String? locationKind,
+    // Text stamped on the media as {text, x, y, fontSize?, color?,
+    // backgroundColor?, rotation?} per item — x/y are fractions (0..1) of the
+    // media's own width/height, top-left origin. Baked into the pixels for a
+    // photo (the editor exports a flattened file, so this stays empty); for a
+    // video, sent as data and composited live by the viewer instead, since
+    // burning text into every frame would mean real video encoding.
+    List<Map<String, dynamic>> textOverlays = const [],
   }) async {
     final data = await _api.postMultipart(
       '/api/stories',
@@ -301,6 +308,7 @@ class Repository {
           'locationName': locationName,
         if (locationKind != null && locationKind.isNotEmpty)
           'locationKind': locationKind,
+        if (textOverlays.isNotEmpty) 'textOverlays': jsonEncode(textOverlays),
       },
     );
     if (data is Map) return Map<String, dynamic>.from(data);

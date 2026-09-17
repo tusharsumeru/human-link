@@ -7,7 +7,7 @@ import 'south_indian_jataka.dart' show AshtakootaResult, AstrologyModuleStatus;
 
 /// GROOM/BRIDE — matches `TRADITIONAL_ROLES` in the backend's
 /// compatibility-report.types.ts. Derived from the existing `gender` field
-/// ('M'/'F') everywhere in this app; never asked for separately.
+/// ('M'/'F') everywhere in this app; never asked for separately. 
 enum TraditionalRole {
   groom('GROOM'),
   bride('BRIDE');

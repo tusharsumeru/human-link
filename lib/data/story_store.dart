@@ -11,7 +11,9 @@ class StoryAuthor {
   factory StoryAuthor.from(dynamic u) {
     if (u is Map) {
       return StoryAuthor(
-          (u['_id'] ?? '').toString(), (u['userName'] ?? '').toString());
+        (u['_id'] ?? '').toString(),
+        (u['userName'] ?? '').toString(),
+      );
     }
     return StoryAuthor(u?.toString() ?? '', '');
   }
@@ -28,6 +30,7 @@ class Story {
     required this.createdAt,
     required this.expiresAt,
     required this.viewCount,
+    this.textOverlays = const [],
   });
 
   final String id;
@@ -38,6 +41,10 @@ class Story {
   final DateTime createdAt;
   final DateTime expiresAt;
   final int viewCount;
+  // Text stamped on the media, as {text, x, y, fontSize?, color?,
+  // backgroundColor?, rotation?} — only ever populated for a video (a photo
+  // has its text baked into the pixels instead, so this stays empty).
+  final List<Map<String, dynamic>> textOverlays;
 
   factory Story.fromMap(Map<String, dynamic> m, {StoryAuthor? author}) {
     return Story(
@@ -47,17 +54,27 @@ class Story {
       isVideo: (m['storyType'] ?? '').toString() == 'video',
       caption: (m['caption'] ?? '').toString(),
       createdAt:
-          DateTime.tryParse((m['createdAt'] ?? '').toString()) ?? DateTime.now(),
+          DateTime.tryParse((m['createdAt'] ?? '').toString()) ??
+          DateTime.now(),
       expiresAt:
-          DateTime.tryParse((m['expiresAt'] ?? '').toString()) ?? DateTime.now(),
+          DateTime.tryParse((m['expiresAt'] ?? '').toString()) ??
+          DateTime.now(),
       viewCount: (m['viewCount'] as num?)?.toInt() ?? 0,
+      textOverlays: ((m['textOverlays'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList(),
     );
   }
 }
 
 /// One author's stack of active stories.
 class StoryTray {
-  StoryTray({required this.author, required this.latestAt, required this.stories});
+  StoryTray({
+    required this.author,
+    required this.latestAt,
+    required this.stories,
+  });
   final StoryAuthor author;
   final DateTime latestAt;
   final List<Story> stories;
@@ -143,6 +160,7 @@ class StoryStore extends ChangeNotifier {
     String? treeNodeId,
     String? locationName,
     String? locationKind,
+    List<Map<String, dynamic>> textOverlays = const [],
   }) async {
     await _repo.createStory(
       filePath: filePath,
@@ -152,6 +170,7 @@ class StoryStore extends ChangeNotifier {
       treeNodeId: treeNodeId,
       locationName: locationName,
       locationKind: locationKind,
+      textOverlays: textOverlays,
     );
     await refresh();
   }
@@ -161,7 +180,9 @@ class StoryStore extends ChangeNotifier {
     if (_viewed.add(storyId)) notifyListeners();
     try {
       await _repo.markStoryViewed(storyId);
-    } catch (_) {/* view is best-effort */}
+    } catch (_) {
+      /* view is best-effort */
+    }
   }
 
   Future<List<Map<String, dynamic>>> viewers(String storyId) =>

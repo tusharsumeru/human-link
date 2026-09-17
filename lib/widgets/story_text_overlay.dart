@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
 
 import '../theme/app_theme.dart';
 
@@ -476,4 +478,242 @@ Future<_ComposerResult?> _showTextComposer(
       );
     },
   );
+}
+
+// ── Color <-> hex, shared between video export and the story viewer ────────
+// Photos bake text straight into pixels (see [StoryTextOverlayEditor.export])
+// so never need this; a video can't, so its overlays travel to the backend —
+// and back to whoever's watching — as plain data instead.
+
+/// `Color` → `#RRGGBB` (alpha dropped; every overlay here is fully opaque).
+String storyOverlayColorToHex(Color c) =>
+    '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+/// `#RRGGBB` / `#RGB` → `Color`. Defaults to white on anything unparseable —
+/// a story should never fail to render over a malformed swatch.
+Color storyOverlayColorFromHex(String? hex) {
+  if (hex == null || hex.isEmpty) return Colors.white;
+  var h = hex.startsWith('#') ? hex.substring(1) : hex;
+  if (h.length == 3) {
+    h = h.split('').map((c) => '$c$c').join();
+  }
+  final value = int.tryParse(h, radix: 16);
+  return value == null ? Colors.white : Color(0xFF000000 | value);
+}
+
+/// Instagram-style "type on your video" editor — same add/drag/pinch/edit
+/// interaction as [StoryTextOverlayEditor], but a video's pixels are never
+/// touched: [exportOverlays] hands back each text layer as plain data
+/// (fractional x/y, degrees, hex colors) matching the backend's
+/// `TextOverlayDto`, for the viewer to composite live during playback.
+class StoryVideoTextOverlayEditor extends StatefulWidget {
+  const StoryVideoTextOverlayEditor({super.key, required this.videoPath});
+  final String videoPath;
+
+  @override
+  State<StoryVideoTextOverlayEditor> createState() =>
+      StoryVideoTextOverlayEditorState();
+}
+
+class StoryVideoTextOverlayEditorState
+    extends State<StoryVideoTextOverlayEditor> {
+  final List<_TextItem> _items = [];
+  int _seq = 0;
+  VideoPlayerController? _vc;
+  Size _layoutSize = Size.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    final vc = VideoPlayerController.file(File(widget.videoPath));
+    _vc = vc;
+    vc
+        .initialize()
+        .then((_) {
+          if (!mounted) return;
+          setState(() {});
+          vc
+            ..setLooping(true)
+            ..setVolume(0)
+            ..play();
+        })
+        .catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _vc?.dispose();
+    super.dispose();
+  }
+
+  /// Each item's on-screen box, normalized to the 0..1 / degrees shape the
+  /// backend's `TextOverlayDto` expects. Base font size 26 (the on-screen
+  /// render size in [_textLayer]) scaled by the pinch gesture, clamped to the
+  /// backend's 8-120 range.
+  List<Map<String, dynamic>> exportOverlays() {
+    if (_layoutSize == Size.zero) return const [];
+    return [
+      for (final item in _items)
+        {
+          'text': item.text,
+          'x': (item.offset.dx / _layoutSize.width).clamp(0.0, 1.0),
+          'y': (item.offset.dy / _layoutSize.height).clamp(0.0, 1.0),
+          'fontSize': (26 * item.scale).clamp(8.0, 120.0).round(),
+          'color': storyOverlayColorToHex(item.color),
+          if (item.background)
+            'backgroundColor': storyOverlayColorToHex(Colors.black),
+          'rotation': (item.rotation * 180 / math.pi).clamp(-180.0, 180.0),
+        },
+    ];
+  }
+
+  Future<void> _addText() async {
+    final result = await _showTextComposer(context);
+    if (result == null || result.text.trim().isEmpty) return;
+    final center = Offset(_layoutSize.width / 2, _layoutSize.height / 2);
+    setState(() {
+      _items.add(
+        _TextItem(
+          id: ++_seq,
+          text: result.text.trim(),
+          color: result.color,
+          background: result.background,
+          offset: center - const Offset(70, 16),
+        ),
+      );
+    });
+  }
+
+  Future<void> _editText(_TextItem item) async {
+    final result = await _showTextComposer(
+      context,
+      initialText: item.text,
+      initialColor: item.color,
+      initialBackground: item.background,
+      allowRemove: true,
+    );
+    if (result == null) return;
+    setState(() {
+      if (result.removed || result.text.trim().isEmpty) {
+        _items.removeWhere((e) => e.id == item.id);
+        return;
+      }
+      item
+        ..text = result.text.trim()
+        ..color = result.color
+        ..background = result.background;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vc = _vc;
+    if (vc == null || !vc.value.isInitialized) {
+      return const AspectRatio(
+        aspectRatio: 9 / 16,
+        child: ColoredBox(
+          color: AppColors.forest900,
+          child: Center(
+            child: CircularProgressIndicator(color: Colors.white54),
+          ),
+        ),
+      );
+    }
+    return AspectRatio(
+      aspectRatio: vc.value.aspectRatio == 0 ? 9 / 16 : vc.value.aspectRatio,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                VideoPlayer(vc),
+                for (final item in _items) _textLayer(item),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: _AaButton(onTap: _addText),
+                ),
+                if (_items.isNotEmpty)
+                  Positioned(
+                    bottom: 10,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'Drag to move · pinch to resize · tap to edit',
+                          style: body(11, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _textLayer(_TextItem item) {
+    return Positioned(
+      left: item.offset.dx,
+      top: item.offset.dy,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => _editText(item),
+        onScaleStart: (_) {
+          item._gestureBaseScale = item.scale;
+          item._gestureBaseRotation = item.rotation;
+        },
+        onScaleUpdate: (d) {
+          setState(() {
+            item.offset += d.focalPointDelta;
+            item.scale = (item._gestureBaseScale * d.scale).clamp(0.4, 4.0);
+            item.rotation = item._gestureBaseRotation + d.rotation;
+          });
+        },
+        child: Transform.rotate(
+          angle: item.rotation,
+          child: Transform.scale(
+            scale: item.scale,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 260),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: item.background
+                  ? BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(8),
+                    )
+                  : null,
+              child: Text(
+                item.text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: item.color,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  shadows: item.background
+                      ? null
+                      : const [Shadow(blurRadius: 8, color: Colors.black54)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

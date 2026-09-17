@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 
 import '../data/api_client.dart';
 import '../data/story_store.dart';
@@ -32,6 +29,7 @@ class StoryComposeScreen extends StatefulWidget {
 class _StoryComposeScreenState extends State<StoryComposeScreen> {
   final _captionCtrl = TextEditingController();
   final _overlayKey = GlobalKey<StoryTextOverlayEditorState>();
+  final _videoOverlayKey = GlobalKey<StoryVideoTextOverlayEditorState>();
   String _visibility = 'community';
   final List<Map<String, dynamic>> _tagged = [];
   Map<String, dynamic>? _treeNode;
@@ -170,14 +168,17 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     final navigator = Navigator.of(context);
     final t = AppLocalizations.of(context);
     try {
-      // Bakes any typed-on text into the photo itself before it's uploaded —
-      // the backend just stores an image, it has no concept of a text layer.
-      // No-op (returns the original file) for a video, or an image with no
-      // text added at all.
+      // A photo's text is baked straight into the pixels before upload — the
+      // backend just stores an image, it has no concept of a text layer. A
+      // video can't be baked the same way (that means real encoding), so its
+      // text travels as data instead and is composited live by the viewer.
       final path = widget.isVideo
           ? widget.filePath
           : await (_overlayKey.currentState?.export() ??
                 Future.value(widget.filePath));
+      final textOverlays = widget.isVideo
+          ? (_videoOverlayKey.currentState?.exportOverlays() ?? const [])
+          : const <Map<String, dynamic>>[];
       await StoryStore.instance.addStory(
         path,
         caption: _captionCtrl.text.trim(),
@@ -188,6 +189,7 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             : _treeNode!['_id'].toString(),
         locationName: _locationName,
         locationKind: _locationKind,
+        textOverlays: textOverlays,
       );
       if (!mounted) return;
       navigator.pop(); // back to the feed
@@ -285,14 +287,19 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [
-                // Preview — a photo gets the full text-overlay editor
-                // (tap "Aa" to type on it); a video keeps the plain preview,
-                // text-on-video isn't supported.
+                // Preview — both get the "Aa" text-overlay editor. A photo's
+                // text is baked into the pixels on post; a video's travels as
+                // data and is composited live by the story viewer instead.
                 if (widget.isVideo)
                   Center(
-                    child: _MediaPreview(
-                      filePath: widget.filePath,
-                      isVideo: true,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.55,
+                      ),
+                      child: StoryVideoTextOverlayEditor(
+                        key: _videoOverlayKey,
+                        videoPath: widget.filePath,
+                      ),
                     ),
                   )
                 else
@@ -511,131 +518,6 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Media preview: a tall rounded frame. Video shows the first frame with a
-/// play/pause toggle and a duration badge; image just fills the frame.
-class _MediaPreview extends StatefulWidget {
-  const _MediaPreview({required this.filePath, required this.isVideo});
-  final String filePath;
-  final bool isVideo;
-
-  @override
-  State<_MediaPreview> createState() => _MediaPreviewState();
-}
-
-class _MediaPreviewState extends State<_MediaPreview> {
-  VideoPlayerController? _vc;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isVideo) {
-      final vc = VideoPlayerController.file(File(widget.filePath));
-      _vc = vc;
-      vc
-          .initialize()
-          .then((_) {
-            if (mounted) setState(() {});
-          })
-          .catchError((_) {});
-    }
-  }
-
-  @override
-  void dispose() {
-    _vc?.dispose();
-    super.dispose();
-  }
-
-  String _fmt(Duration d) {
-    final s = d.inSeconds;
-    return s < 60
-        ? '${s}s'
-        : '${d.inMinutes}:${(s % 60).toString().padLeft(2, '0')}';
-  }
-
-  void _toggle() {
-    final vc = _vc;
-    if (vc == null || !vc.value.isInitialized) return;
-    setState(() => vc.value.isPlaying ? vc.pause() : vc.play());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: 210,
-        height: 300,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (!widget.isVideo)
-              Image.file(File(widget.filePath), fit: BoxFit.cover)
-            else if (_vc?.value.isInitialized ?? false)
-              FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _vc!.value.size.width,
-                  height: _vc!.value.size.height,
-                  child: VideoPlayer(_vc!),
-                ),
-              )
-            else
-              const ColoredBox(color: AppColors.forest900),
-
-            if (widget.isVideo)
-              GestureDetector(
-                onTap: _toggle,
-                behavior: HitTestBehavior.opaque,
-                child: Center(
-                  child: (_vc?.value.isPlaying ?? false)
-                      ? const SizedBox.shrink()
-                      : Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.35),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                ),
-              ),
-
-            if (widget.isVideo && (_vc?.value.isInitialized ?? false))
-              Positioned(
-                left: 10,
-                bottom: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    _fmt(_vc!.value.duration),
-                    style: body(
-                      11,
-                      weight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

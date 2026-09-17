@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/story_store.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../widgets/story_text_overlay.dart' show storyOverlayColorFromHex;
 
 /// One frame in the story viewer. Media is a Cloudinary URL (image or video);
 /// the gradient+emoji path is a fallback when there's no media.
@@ -19,6 +22,7 @@ class StorySlide {
     this.isMine = false,
     this.storyId,
     this.viewCount = 0,
+    this.textOverlays = const [],
     this.onShown,
     this.onDeleted,
   });
@@ -33,6 +37,11 @@ class StorySlide {
   final bool isMine;
   final String? storyId; // links to the backend for views / delete
   final int viewCount;
+  // Text stamped on the media, as {text, x, y, fontSize?, color?,
+  // backgroundColor?, rotation?} — a photo's text is already baked into its
+  // pixels, so this only ever has entries for a video (see
+  // StoryVideoTextOverlayEditor.exportOverlays).
+  final List<Map<String, dynamic>> textOverlays;
   final VoidCallback? onShown; // e.g. mark viewed on the backend
   final VoidCallback? onDeleted; // refresh the rail after a delete
 }
@@ -92,24 +101,27 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     if (s.isVideo && s.mediaUrl != null && s.mediaUrl!.isNotEmpty) {
       final vc = VideoPlayerController.networkUrl(Uri.parse(s.mediaUrl!));
       _video = vc;
-      vc.initialize().then((_) {
-        if (!mounted || _video != vc) return;
-        vc
-          ..setLooping(false)
-          ..play();
-        final ms = vc.value.duration.inMilliseconds.clamp(3000, 30000);
-        _progress
-          ..duration = Duration(milliseconds: ms)
-          ..reset()
-          ..forward();
-        setState(() {});
-      }).catchError((_) {
-        if (!mounted || _video != vc) return;
-        _progress
-          ..duration = _imageDuration
-          ..reset()
-          ..forward();
-      });
+      vc
+          .initialize()
+          .then((_) {
+            if (!mounted || _video != vc) return;
+            vc
+              ..setLooping(false)
+              ..play();
+            final ms = vc.value.duration.inMilliseconds.clamp(3000, 30000);
+            _progress
+              ..duration = Duration(milliseconds: ms)
+              ..reset()
+              ..forward();
+            setState(() {});
+          })
+          .catchError((_) {
+            if (!mounted || _video != vc) return;
+            _progress
+              ..duration = _imageDuration
+              ..reset()
+              ..forward();
+          });
     } else {
       _progress
         ..duration = _imageDuration
@@ -177,18 +189,28 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cream,
-        title: Text(t.storyDeleteTitle, style: display(18, color: AppColors.forest900)),
-        content: Text(t.storyDeleteBody,
-            style: body(13, color: AppColors.textMuted)),
+        title: Text(
+          t.storyDeleteTitle,
+          style: display(18, color: AppColors.forest900),
+        ),
+        content: Text(
+          t.storyDeleteBody,
+          style: body(13, color: AppColors.textMuted),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.commonCancel, style: body(14, color: AppColors.textMuted)),
+            child: Text(
+              t.commonCancel,
+              style: body(14, color: AppColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.storyDeleteAction,
-                style: body(14, weight: FontWeight.w700, color: Colors.red)),
+            child: Text(
+              t.storyDeleteAction,
+              style: body(14, weight: FontWeight.w700, color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -200,7 +222,9 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     try {
       await StoryStore.instance.deleteStory(slide.storyId!);
       slide.onDeleted?.call();
-    } catch (_) {/* ignore; keep going */}
+    } catch (_) {
+      /* ignore; keep going */
+    }
     if (mounted) Navigator.of(context).maybePop();
   }
 
@@ -247,10 +271,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               left: 16,
               right: 16,
               bottom: slide.isMine ? 84 : 28,
-              child: Text(slide.caption,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: body(14, color: Colors.white, height: 1.4)),
+              child: Text(
+                slide.caption,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: body(14, color: Colors.white, height: 1.4),
+              ),
             ),
 
           if (slide.isMine && slide.storyId != null)
@@ -270,11 +296,28 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     if (s.isVideo && vc != null && vc.value.isInitialized) {
       return AspectRatio(
         aspectRatio: vc.value.aspectRatio == 0 ? 9 / 16 : vc.value.aspectRatio,
-        child: VideoPlayer(vc),
+        child: s.textOverlays.isEmpty
+            ? VideoPlayer(vc)
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final box = Size(constraints.maxWidth, constraints.maxHeight);
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      VideoPlayer(vc),
+                      for (final overlay in s.textOverlays)
+                        _textOverlay(overlay, box),
+                    ],
+                  );
+                },
+              ),
       );
     }
     if (s.isVideo && s.mediaUrl != null) {
-      return const CircularProgressIndicator(color: Colors.white54, strokeWidth: 2);
+      return const CircularProgressIndicator(
+        color: Colors.white54,
+        strokeWidth: 2,
+      );
     }
     if (s.mediaUrl != null && s.mediaUrl!.isNotEmpty) {
       return Image.network(
@@ -284,9 +327,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             ? child
             : const Center(
                 child: CircularProgressIndicator(
-                    color: Colors.white54, strokeWidth: 2)),
-        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined,
-            color: Colors.white54, size: 48),
+                  color: Colors.white54,
+                  strokeWidth: 2,
+                ),
+              ),
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.broken_image_outlined,
+          color: Colors.white54,
+          size: 48,
+        ),
       );
     }
     return DecoratedBox(
@@ -298,7 +347,49 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
         ),
       ),
       child: Center(
-          child: Text(s.emoji ?? '✦', style: const TextStyle(fontSize: 96))),
+        child: Text(s.emoji ?? '✦', style: const TextStyle(fontSize: 96)),
+      ),
+    );
+  }
+
+  /// One text layer from [StorySlide.textOverlays], positioned as the same
+  /// fraction-of-the-media coordinates it was placed at in the composer (see
+  /// StoryVideoTextOverlayEditor._textLayer, which this mirrors).
+  Widget _textOverlay(Map<String, dynamic> overlay, Size box) {
+    final x = ((overlay['x'] as num?) ?? 0).toDouble() * box.width;
+    final y = ((overlay['y'] as num?) ?? 0).toDouble() * box.height;
+    final fontSize = ((overlay['fontSize'] as num?) ?? 24).toDouble();
+    final rotationDeg = ((overlay['rotation'] as num?) ?? 0).toDouble();
+    final backgroundHex = overlay['backgroundColor'] as String?;
+    return Positioned(
+      left: x,
+      top: y,
+      child: Transform.rotate(
+        angle: rotationDeg * math.pi / 180,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: backgroundHex == null
+              ? null
+              : BoxDecoration(
+                  color: storyOverlayColorFromHex(backgroundHex),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+          child: Text(
+            (overlay['text'] ?? '').toString(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: storyOverlayColorFromHex(overlay['color'] as String?),
+              fontSize: fontSize,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+              shadows: backgroundHex == null
+                  ? const [Shadow(blurRadius: 8, color: Colors.black54)]
+                  : null,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -317,11 +408,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               child: idx < _i
                   ? _fill(1)
                   : idx == _i
-                      ? AnimatedBuilder(
-                          animation: _progress,
-                          builder: (_, __) => _fill(_progress.value),
-                        )
-                      : const SizedBox.shrink(),
+                  ? AnimatedBuilder(
+                      animation: _progress,
+                      builder: (_, __) => _fill(_progress.value),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
       ],
@@ -329,15 +420,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   }
 
   Widget _fill(double v) => FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: v.clamp(0.0, 1.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      );
+    alignment: Alignment.centerLeft,
+    widthFactor: v.clamp(0.0, 1.0),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    ),
+  );
 
   Widget _header(StorySlide s, AppLocalizations t) {
     return Padding(
@@ -357,25 +448,40 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             child: Row(
               children: [
                 Flexible(
-                  child: Text(s.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(14,
-                          weight: FontWeight.w700, color: Colors.white)),
+                  child: Text(
+                    s.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      14,
+                      weight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text(_ago(s.createdAt, t), style: body(12, color: Colors.white70)),
+                Text(
+                  _ago(s.createdAt, t),
+                  style: body(12, color: Colors.white70),
+                ),
               ],
             ),
           ),
           if (s.isMine && s.storyId != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.white, size: 24),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
               onPressed: () => _confirmDelete(s),
             ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+            icon: const Icon(
+              Icons.close_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ],
@@ -393,7 +499,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.visibility_outlined, color: Colors.white, size: 20),
+            const Icon(
+              Icons.visibility_outlined,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text(
               slide.viewCount == 0
@@ -402,8 +512,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               style: body(14, weight: FontWeight.w600, color: Colors.white),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_up_rounded,
-                color: Colors.white70, size: 20),
+            const Icon(
+              Icons.keyboard_arrow_up_rounded,
+              color: Colors.white70,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -458,14 +571,18 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.visibility_outlined,
-                        size: 18, color: AppColors.forest700),
+                    const Icon(
+                      Icons.visibility_outlined,
+                      size: 18,
+                      color: AppColors.forest700,
+                    ),
                     const SizedBox(width: 8),
                     Text(
-                        loading
-                            ? t.storyViewers
-                            : t.storyViewersCount(viewers.length),
-                        style: display(16, color: AppColors.forest900)),
+                      loading
+                          ? t.storyViewers
+                          : t.storyViewersCount(viewers.length),
+                      style: display(16, color: AppColors.forest900),
+                    ),
                   ],
                 ),
               ),
@@ -474,15 +591,20 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 28),
                   child: Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.forest700, strokeWidth: 2)),
+                    child: CircularProgressIndicator(
+                      color: AppColors.forest700,
+                      strokeWidth: 2,
+                    ),
+                  ),
                 )
               else if (viewers.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 28),
                   child: Center(
-                    child: Text(t.storyNoOneViewedYet,
-                        style: body(13, color: AppColors.textMuted)),
+                    child: Text(
+                      t.storyNoOneViewedYet,
+                      style: body(13, color: AppColors.textMuted),
+                    ),
                   ),
                 )
               else
@@ -496,11 +618,12 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                     itemBuilder: (context, i) {
                       final v = viewers[i];
                       final user = v['user'];
-                      final name = (user is Map ? user['userName'] : null)
-                              ?.toString() ??
+                      final name =
+                          (user is Map ? user['userName'] : null)?.toString() ??
                           t.storyMemberFallback;
-                      final at =
-                          DateTime.tryParse((v['viewedAt'] ?? '').toString());
+                      final at = DateTime.tryParse(
+                        (v['viewedAt'] ?? '').toString(),
+                      );
                       return ListTile(
                         dense: true,
                         leading: CircleAvatar(
@@ -510,16 +633,27 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                             name.trim().isEmpty
                                 ? '?'
                                 : name.trim()[0].toUpperCase(),
-                            style: body(14,
-                                weight: FontWeight.w700, color: Colors.white),
+                            style: body(
+                              14,
+                              weight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                        title: Text(name,
-                            style: body(14,
-                                weight: FontWeight.w600, color: AppColors.ink)),
+                        title: Text(
+                          name,
+                          style: body(
+                            14,
+                            weight: FontWeight.w600,
+                            color: AppColors.ink,
+                          ),
+                        ),
                         trailing: at == null
                             ? null
-                            : Text(_ago(at, t), style: body(12, color: AppColors.hint)),
+                            : Text(
+                                _ago(at, t),
+                                style: body(12, color: AppColors.hint),
+                              ),
                       );
                     },
                   ),
