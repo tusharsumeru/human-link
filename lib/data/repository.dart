@@ -32,14 +32,36 @@ class Repository {
   /// the app itself only ever assigns this once, at startup.
   static Repository instance = Repository();
 
-  /// POST /api/user/login — returns `{user, token}`: the authenticated user map
-  /// from MongoDB plus the JWT bearer token for subsequent protected requests.
+  /// POST /api/user/login/send-otp — dispatches the login OTP via 2Factor and
+  /// returns the session id (2Factor's `Details` field) that
+  /// `/api/user/login` needs alongside the code the member enters. Throws
+  /// [ApiException] with the server's message (e.g. an invalid phone shape) —
+  /// note this endpoint does NOT check whether the phone is registered; that
+  /// happens on verify, same as before this existed.
+  Future<String> sendLoginOtp(String phone) async {
+    final data = await _api.postJson('/api/user/login/send-otp', {
+      'phone': phone,
+    });
+    if (data is Map && data['Status'] == 'Success') {
+      return (data['Details'] ?? '').toString();
+    }
+    throw ApiException('Could not send OTP. Please try again.');
+  }
+
+  /// POST /api/user/login — verifies the OTP against the session [sendLoginOtp]
+  /// started, returning `{user, token}`: the authenticated user map from
+  /// MongoDB plus the JWT bearer token for subsequent protected requests.
   /// Throws [ApiException] with the server's message ("Phone number not
-  /// registered", "Invalid OTP") — the backend validates the OTP.
-  Future<Map<String, dynamic>> login(String phone, String otp) async {
+  /// registered", "Invalid OTP").
+  Future<Map<String, dynamic>> login(
+    String phone,
+    String otp,
+    String sessionId,
+  ) async {
     final data = await _api.postJson('/api/user/login', {
       'phone': phone,
       'otp': otp,
+      'sessionId': sessionId,
     });
     if (data is Map && data['user'] is Map) {
       return {
@@ -48,6 +70,37 @@ class Repository {
       };
     }
     throw ApiException('Login failed');
+  }
+
+  /// POST /api/user/send-otp — sends a verification OTP for a family member
+  /// whose phone must be validated before direct addition without a smartphone.
+  /// The backend may return either a direct `sessionId` or the 2Factor `Details`
+  /// field; both are treated as the same thing for the follow-up verify call.
+  Future<String> sendPhoneOtp(String phone) async {
+    final data = await _api.postJson('/api/user/send-otp', {'phone': phone});
+    if (data is Map) {
+      final sessionId = (data['sessionId'] ?? data['Details'] ?? '').toString();
+      if (data['success'] == true || data['Status'] == 'Success') {
+        if (sessionId.isNotEmpty) return sessionId;
+      }
+      if (data['message'] != null) {
+        throw ApiException(data['message'].toString());
+      }
+    }
+    throw ApiException('Could not send OTP. Please try again.');
+  }
+
+  /// POST /api/user/verify-otp — verifies the OTP for a family member phone.
+  Future<bool> verifyPhoneOtp(String otp, String sessionId) async {
+    final data = await _api.postJson('/api/user/verify-otp', {
+      'otp': otp,
+      'sessionId': sessionId,
+    });
+    if (data is Map && data['success'] == true) return true;
+    if (data is Map && data['message'] != null) {
+      throw ApiException(data['message'].toString());
+    }
+    throw ApiException('Invalid OTP');
   }
 
   /// GET /api/user/username/check — Instagram-style availability. Returns
@@ -1139,6 +1192,8 @@ class Repository {
     String? placeOfDeath,
     String? biography,
     String? profileUrl,
+    bool? smartphone,
+    bool? phoneVerified,
   }) async {
     final body = <String, dynamic>{'relation': relation};
 
@@ -1152,6 +1207,10 @@ class Repository {
       }
 
       body['status'] = status;
+      body['smartphone'] = smartphone ?? true;
+      if (phoneVerified != null) {
+        body['phoneVerified'] = phoneVerified;
+      }
 
       if (phone != null && phone.isNotEmpty) {
         body['phone'] = phone;

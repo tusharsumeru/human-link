@@ -9,15 +9,19 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/api_config.dart';
+import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login: the backend has no OTP-dispatch step (same as
-/// registration) — the fixed demo OTP (121212) is entered directly, then
-/// `POST /api/user/login` verifies it and signs in.
+/// Phone → OTP login: `POST /api/user/login/send-otp` dispatches a real OTP
+/// via 2Factor and hands back a session id; `POST /api/user/login` then
+/// verifies the entered code against that session and signs in. (A fixed
+/// test number bypasses 2Factor server-side for reviewers — see
+/// AuthService.sendOtpLogin on the backend — but the client-side flow is
+/// identical either way.)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -32,6 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = '';
   bool _loading = false;
 
+  // Set by _handlePhoneNext from /api/user/login/send-otp's response; sent
+  // back on verify so the backend knows which 2Factor session the entered
+  // code belongs to. Without this, /api/user/login 400s with "sessionId must
+  // be a string" — send-otp must run before verify can ever succeed.
+  String? _sessionId;
+
   @override
   void dispose() {
     _phoneCtrl.dispose();
@@ -39,19 +49,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Validates the number and advances to OTP entry. No network call here —
-  /// the backend has no send-otp route; it validates the fixed demo OTP
-  /// directly against `/api/user/login` (same as registration).
-  void _handlePhoneNext() {
+  /// Validates the number, sends the OTP, and (on success) advances to entry.
+  /// Also what the "Resend OTP" button on the next step calls.
+  Future<void> _handlePhoneNext() async {
     final t = AppLocalizations.of(context);
     if (_phoneCtrl.text.length < 10) {
       setState(() => _error = t.loginErrorInvalidPhone);
       return;
     }
     setState(() {
+      _loading = true;
       _error = '';
-      _phoneStep = 'otp';
     });
+    try {
+      final sessionId = await Repository.instance.sendLoginOtp(
+        _phoneCtrl.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _sessionId = sessionId;
+        _phoneStep = 'otp';
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = t.loginErrorNetwork;
+        _loading = false;
+      });
+    }
   }
 
   /// Verifies the OTP against the backend (`/api/user/login`) and signs in.
@@ -63,6 +95,16 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = t.loginErrorInvalidOtp);
       return;
     }
+    final sessionId = _sessionId;
+    if (sessionId == null) {
+      // Shouldn't happen — the OTP step only shows after send-otp succeeded —
+      // but recover cleanly rather than sending a request that will 400.
+      setState(() {
+        _phoneStep = 'phone';
+        _error = 'Session expired — please request the OTP again.';
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = '';
@@ -70,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthService>();
     final existing = auth.user;
     try {
-      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text);
+      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text, sessionId);
       if (existing != null && existing.phone == user.phone) {
         user = user.copyWith(
           photoPath: existing.photoPath.isNotEmpty ? existing.photoPath : null,
@@ -311,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'Enter the 6-digit OTP  ·  use 121212 for this demo',
+              'Enter 6 digit OTP',
               style: body(
                 12,
                 weight: FontWeight.w600,
