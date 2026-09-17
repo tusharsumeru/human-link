@@ -166,9 +166,10 @@ class Repository {
 
   // ── Feed & posts ────────────────────────────────────────────────────────────
 
-  /// GET /feed — cursor-based feed. Pass [before] (a lastVisiblePostId) to load
-  /// older posts, or [after] (a firstVisiblePostId) to load newer ones. Returns
-  /// the raw envelope: `{count, posts, firstVisiblePostId, lastVisiblePostId}`.
+  /// GET /api/feed — cursor-based feed. Pass [before] (a lastVisiblePostId) to
+  /// load older posts, or [after] (a firstVisiblePostId) to load newer ones.
+  /// Returns the raw envelope: `{count, posts, firstVisiblePostId,
+  /// lastVisiblePostId}`.
   Future<Map<String, dynamic>> feed({
     int limit = 20,
     String? before,
@@ -177,16 +178,16 @@ class Repository {
     final q = <String>['limit=$limit'];
     if (before != null && before.isNotEmpty) q.add('before=$before');
     if (after != null && after.isNotEmpty) q.add('after=$after');
-    final data = await _api.getJson('/feed?${q.join('&')}');
+    final data = await _api.getJson('/api/feed?${q.join('&')}');
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'posts': const []};
   }
 
-  /// GET /feed/new-count — exact number of posts newer than [afterPostId], for
-  /// the "N new posts" banner.
+  /// GET /api/feed/new-count — exact number of posts newer than
+  /// [afterPostId], for the "N new posts" banner.
   Future<int> feedNewCount(String afterPostId) async {
     try {
-      final data = await _api.getJson('/feed/new-count?after=$afterPostId');
+      final data = await _api.getJson('/api/feed/new-count?after=$afterPostId');
 
       if (data is Map && data['count'] is num) {
         return (data['count'] as num).toInt();
@@ -315,6 +316,13 @@ class Repository {
     String? treeNodeId,
     String? locationName,
     String? locationKind,
+    // Text stamped on the media as {text, x, y, fontSize?, color?,
+    // backgroundColor?, rotation?} per item — x/y are fractions (0..1) of the
+    // media's own width/height, top-left origin. Baked into the pixels for a
+    // photo (the editor exports a flattened file, so this stays empty); for a
+    // video, sent as data and composited live by the viewer instead, since
+    // burning text into every frame would mean real video encoding.
+    List<Map<String, dynamic>> textOverlays = const [],
   }) async {
     final data = await _api.postMultipart(
       '/api/stories',
@@ -332,6 +340,7 @@ class Repository {
           'locationName': locationName,
         if (locationKind != null && locationKind.isNotEmpty)
           'locationKind': locationKind,
+        if (textOverlays.isNotEmpty) 'textOverlays': jsonEncode(textOverlays),
       },
     );
     if (data is Map) return Map<String, dynamic>.from(data);
@@ -1807,19 +1816,14 @@ class Repository {
   }
 
   // ── Follow / Unfollow ────────────────────────────────────────────────────
-  // NOTE: these routes are NOT behind the `/api` prefix every other endpoint
-  // in this file uses — confirmed against the backend's live Swagger spec
-  // (`/api/docs-json`), which lists them at the bare `/follow-users/...`
-  // paths. Don't "fix" this to match the rest of the file without checking
-  // the spec again first.
 
-  /// POST /follow-users/followRequest — `followerId` follows `followingId`.
-  /// Returns the created follow-relationship document.
+  /// POST /api/follow-users/followRequest — `followerId` follows
+  /// `followingId`. Returns the created follow-relationship document.
   Future<Map<String, dynamic>> followUser({
     required String followerId,
     required String followingId,
   }) async {
-    final data = await _api.postJson('/follow-users/followRequest', {
+    final data = await _api.postJson('/api/follow-users/followRequest', {
       'followerId': followerId,
       'followingId': followingId,
     });
@@ -1834,14 +1838,14 @@ class Repository {
     throw ApiException('Could not follow user');
   }
 
-  /// PATCH /follow-users/unfollowRequest — removes the follow relationship
-  /// (`followerId` → `followingId`). `deletedCount` is 0 if it never
-  /// existed — not an error, just a no-op.
+  /// PATCH /api/follow-users/unfollowRequest — removes the follow
+  /// relationship (`followerId` → `followingId`). `deletedCount` is 0 if it
+  /// never existed — not an error, just a no-op.
   Future<bool> unfollowUser({
     required String followerId,
     required String followingId,
   }) async {
-    final data = await _api.patchJson('/follow-users/unfollowRequest', {
+    final data = await _api.patchJson('/api/follow-users/unfollowRequest', {
       'followerId': followerId,
       'followingId': followingId,
     });
@@ -1856,18 +1860,19 @@ class Repository {
     return removed;
   }
 
-  /// GET /follow-users/followers/:userId — everyone who follows [userId].
+  /// GET /api/follow-users/followers/:userId — everyone who follows
+  /// [userId].
   Future<List<Map<String, dynamic>>> followers(String userId) async {
-    final data = await _api.getJson('/follow-users/followers/$userId');
+    final data = await _api.getJson('/api/follow-users/followers/$userId');
     if (data is List) {
       return data.whereType<Map>().map(Map<String, dynamic>.from).toList();
     }
     return const [];
   }
 
-  /// GET /follow-users/following/:userId — everyone [userId] follows.
+  /// GET /api/follow-users/following/:userId — everyone [userId] follows.
   Future<List<Map<String, dynamic>>> following(String userId) async {
-    final data = await _api.getJson('/follow-users/following/$userId');
+    final data = await _api.getJson('/api/follow-users/following/$userId');
     if (data is List) {
       return data.whereType<Map>().map(Map<String, dynamic>.from).toList();
     }
@@ -1886,10 +1891,11 @@ class Repository {
     return {'posts': const []};
   }
 
-  /// GET /follow-users/count/:userId — `{ followersCount, followingCount }`
-  /// for [userId], cheaper than fetching both full lists just to size them.
+  /// GET /api/follow-users/count/:userId — `{ followersCount,
+  /// followingCount }` for [userId], cheaper than fetching both full lists
+  /// just to size them.
   Future<({int followers, int following})> followCounts(String userId) async {
-    final data = await _api.getJson('/follow-users/count/$userId');
+    final data = await _api.getJson('/api/follow-users/count/$userId');
     if (data is Map) {
       return (
         followers: ((data['followersCount'] as num?) ?? 0).toInt(),

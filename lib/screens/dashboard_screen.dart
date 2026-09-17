@@ -611,6 +611,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
           isMine: true,
           storyId: s.id,
           viewCount: s.viewCount,
+          textOverlays: s.textOverlays,
           onDeleted: () => StoryStore.instance.refresh(),
         ),
     ];
@@ -633,6 +634,7 @@ class _StoriesShelfState extends State<_StoriesShelf> {
             isVideo: s.isVideo,
             caption: s.caption,
             storyId: s.id,
+            textOverlays: s.textOverlays,
             onShown: () => StoryStore.instance.markViewed(s.id),
           ),
     ];

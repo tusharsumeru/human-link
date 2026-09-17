@@ -353,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'Enter 6 digit OTP',
+              'Enter the 6-digit OTP sent to your phone',
               style: body(
                 12,
                 weight: FontWeight.w600,
