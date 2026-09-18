@@ -1822,6 +1822,21 @@ class Repository {
     return {'posts': const []};
   }
 
+  /// GET /api/posts/user/:id — another member's own posts (public-visibility
+  /// only), for their profile grid. Returns `{posts, count}`, same shape as
+  /// [myPosts]. [before] is a post `_id` cursor to load older posts.
+  Future<Map<String, dynamic>> userPosts(
+    String userId, {
+    int limit = 30,
+    String? before,
+  }) async {
+    final q = <String>['limit=$limit'];
+    if (before != null && before.isNotEmpty) q.add('before=$before');
+    final data = await _api.getJson('/api/posts/user/$userId?${q.join('&')}');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {'posts': const [], 'count': 0};
+  }
+
   /// GET /api/follow-users/count/:userId — `{ followersCount,
   /// followingCount }` for [userId], cheaper than fetching both full lists
   /// just to size them.

@@ -3946,15 +3946,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storyPleaseTryAgain => 'please try again';
 
   @override
-  String storyComingSoon(String label) {
-    return '$label - coming soon';
-  }
-
-  @override
   String get storyShareTitle => 'Share Story';
-
-  @override
-  String get storyHelp => 'HELP';
 
   @override
   String get storyReviewRecording => 'Review your recording';
@@ -3989,16 +3981,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get storyAdvancedSettings => 'ADVANCED SETTINGS';
-
-  @override
   String get storyVisibleTo => 'Visible to';
 
   @override
   String get storyPostToCommunity => 'Post to Community';
-
-  @override
-  String get storyDrafts => 'Drafts';
 
   @override
   String get storyLocationHint => 'e.g. Kumta, Mahalasa Temple…';

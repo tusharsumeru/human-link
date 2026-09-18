@@ -7222,23 +7222,11 @@ abstract class AppLocalizations {
   /// **'please try again'**
   String get storyPleaseTryAgain;
 
-  /// No description provided for @storyComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'{label} - coming soon'**
-  String storyComingSoon(String label);
-
   /// No description provided for @storyShareTitle.
   ///
   /// In en, this message translates to:
   /// **'Share Story'**
   String get storyShareTitle;
-
-  /// No description provided for @storyHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'HELP'**
-  String get storyHelp;
 
   /// No description provided for @storyReviewRecording.
   ///
@@ -7300,12 +7288,6 @@ abstract class AppLocalizations {
   /// **'Linked to {name}'**
   String storyLinkedTo(String name);
 
-  /// No description provided for @storyAdvancedSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'ADVANCED SETTINGS'**
-  String get storyAdvancedSettings;
-
   /// No description provided for @storyVisibleTo.
   ///
   /// In en, this message translates to:
@@ -7317,12 +7299,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Post to Community'**
   String get storyPostToCommunity;
-
-  /// No description provided for @storyDrafts.
-  ///
-  /// In en, this message translates to:
-  /// **'Drafts'**
-  String get storyDrafts;
 
   /// No description provided for @storyLocationHint.
   ///

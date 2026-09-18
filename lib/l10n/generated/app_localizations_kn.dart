@@ -3973,15 +3973,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get storyPleaseTryAgain => 'ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
 
   @override
-  String storyComingSoon(String label) {
-    return '$label - ಶೀಘ್ರದಲ್ಲೇ ಬರುತ್ತಿದೆ';
-  }
-
-  @override
   String get storyShareTitle => 'ಸ್ಟೋರಿ ಹಂಚಿಕೊಳ್ಳಿ';
-
-  @override
-  String get storyHelp => 'ಸಹಾಯ';
 
   @override
   String get storyReviewRecording => 'ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಪರಿಶೀಲಿಸಿ';
@@ -4017,16 +4009,10 @@ class AppLocalizationsKn extends AppLocalizations {
   }
 
   @override
-  String get storyAdvancedSettings => 'ಸುಧಾರಿತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು';
-
-  @override
   String get storyVisibleTo => 'ಇವರಿಗೆ ಗೋಚರಿಸುತ್ತದೆ';
 
   @override
   String get storyPostToCommunity => 'ಸಮುದಾಯಕ್ಕೆ ಪೋಸ್ಟ್ ಮಾಡಿ';
-
-  @override
-  String get storyDrafts => 'ಡ್ರಾಫ್ಟ್‌ಗಳು';
 
   @override
   String get storyLocationHint => 'ಉದಾ. ಕುಮಟಾ, ಮಹಾಲಸಾ ದೇವಸ್ಥಾನ…';

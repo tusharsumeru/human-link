@@ -1416,14 +1416,7 @@
     }
   },
   "storyPleaseTryAgain": "please try again",
-  "storyComingSoon": "{label} - coming soon",
-  "@storyComingSoon": {
-    "placeholders": {
-      "label": {"type": "String"}
-    }
-  },
   "storyShareTitle": "Share Story",
-  "storyHelp": "HELP",
   "storyReviewRecording": "Review your recording",
   "storyReviewPhoto": "Review your photo",
   "storyCaption": "Caption",
@@ -1439,10 +1432,8 @@
       "name": {"type": "String"}
     }
   },
-  "storyAdvancedSettings": "ADVANCED SETTINGS",
   "storyVisibleTo": "Visible to",
   "storyPostToCommunity": "Post to Community",
-  "storyDrafts": "Drafts",
   "storyLocationHint": "e.g. Kumta, Mahalasa Temple…",
   "storyKindVillage": "Village",
   "storyKindTemple": "Temple",
