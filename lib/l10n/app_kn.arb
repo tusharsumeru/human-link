@@ -1291,14 +1291,7 @@
     }
   },
   "storyPleaseTryAgain": "ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  "storyComingSoon": "{label} - ಶೀಘ್ರದಲ್ಲೇ ಬರುತ್ತಿದೆ",
-  "@storyComingSoon": {
-    "placeholders": {
-      "label": {"type": "String"}
-    }
-  },
   "storyShareTitle": "ಸ್ಟೋರಿ ಹಂಚಿಕೊಳ್ಳಿ",
-  "storyHelp": "ಸಹಾಯ",
   "storyReviewRecording": "ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಪರಿಶೀಲಿಸಿ",
   "storyReviewPhoto": "ನಿಮ್ಮ ಫೋಟೋ ಪರಿಶೀಲಿಸಿ",
   "storyCaption": "ಶೀರ್ಷಿಕೆ",
@@ -1314,10 +1307,8 @@
       "name": {"type": "String"}
     }
   },
-  "storyAdvancedSettings": "ಸುಧಾರಿತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
   "storyVisibleTo": "ಇವರಿಗೆ ಗೋಚರಿಸುತ್ತದೆ",
   "storyPostToCommunity": "ಸಮುದಾಯಕ್ಕೆ ಪೋಸ್ಟ್ ಮಾಡಿ",
-  "storyDrafts": "ಡ್ರಾಫ್ಟ್‌ಗಳು",
   "storyLocationHint": "ಉದಾ. ಕುಮಟಾ, ಮಹಾಲಸಾ ದೇವಸ್ಥಾನ…",
   "storyKindVillage": "ಹಳ್ಳಿ",
   "storyKindTemple": "ದೇವಾಲಯ",

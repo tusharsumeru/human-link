@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' show ClientException;
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -1123,6 +1124,20 @@ class _PostCardState extends State<_PostCard> {
     super.dispose();
   }
 
+  /// Instagram-style: tapping the avatar or name on a post opens that
+  /// member's profile — my own profile for my own post, their public account
+  /// profile (posts grid + followers/following, not the family-tree-scoped
+  /// '/profile/:id') otherwise. No-ops if the author reference is missing
+  /// (see the same guard on the Follow button, just above this in build()).
+  void _openAuthorProfile(BuildContext context) {
+    final p = widget.post;
+    if (p.isMine) {
+      context.push('/profile/me');
+    } else if (p.authorId.isNotEmpty) {
+      context.push('/user/${p.authorId}');
+    }
+  }
+
   /// POST /follow-users/followRequest and PATCH /follow-users/unfollowRequest
   /// — flips immediately and reverts if the request fails, same pattern as
   /// [_toggleLike]. Busy-guarded rather than request-id-guarded: unlike
@@ -1448,74 +1463,85 @@ class _PostCardState extends State<_PostCard> {
           padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.gold500, AppColors.forest600],
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.cream,
-                  ),
-                  child: _Avatar(name: p.author, size: 36),
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      p.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(
-                        13,
-                        weight: FontWeight.w700,
-                        color: context.onBrightness(
-                          light: AppColors.forest900,
-                          dark: AppColors.darkText,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _openAuthorProfile(context),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.gold500, AppColors.forest600],
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.cream,
+                          ),
+                          child: _Avatar(name: p.author, size: 36),
                         ),
                       ),
-                    ),
-                    // Instagram-style: show a location line only when the
-                    // author attached one — no role label, no native place.
-                    if (p.location.isNotEmpty)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 11,
-                            color: context.onBrightness(
-                              light: AppColors.hint,
-                              dark: AppColors.darkTextMuted,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Flexible(
-                            child: Text(
-                              p.location,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.author,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: body(
-                                11,
+                                13,
+                                weight: FontWeight.w700,
                                 color: context.onBrightness(
-                                  light: AppColors.hint,
-                                  dark: AppColors.darkTextMuted,
+                                  light: AppColors.forest900,
+                                  dark: AppColors.darkText,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            // Instagram-style: show a location line only when
+                            // the author attached one — no role label, no
+                            // native place.
+                            if (p.location.isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_rounded,
+                                    size: 11,
+                                    color: context.onBrightness(
+                                      light: AppColors.hint,
+                                      dark: AppColors.darkTextMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(
+                                      p.location,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: body(
+                                        11,
+                                        color: context.onBrightness(
+                                          light: AppColors.hint,
+                                          dark: AppColors.darkTextMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (!p.isMine && p.authorId.isNotEmpty) ...[

@@ -3953,15 +3953,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get storyPleaseTryAgain => 'कृपया पुनः प्रयास करें';
 
   @override
-  String storyComingSoon(String label) {
-    return '$label - जल्द आ रहा है';
-  }
-
-  @override
   String get storyShareTitle => 'स्टोरी साझा करें';
-
-  @override
-  String get storyHelp => 'सहायता';
 
   @override
   String get storyReviewRecording => 'अपनी रिकॉर्डिंग की समीक्षा करें';
@@ -3997,16 +3989,10 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get storyAdvancedSettings => 'उन्नत सेटिंग्स';
-
-  @override
   String get storyVisibleTo => 'इन्हें दिखाई देगा';
 
   @override
   String get storyPostToCommunity => 'समुदाय में पोस्ट करें';
-
-  @override
-  String get storyDrafts => 'ड्राफ्ट';
 
   @override
   String get storyLocationHint => 'उदा. कुमटा, महालसा मंदिर…';

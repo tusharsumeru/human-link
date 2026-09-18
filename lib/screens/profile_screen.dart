@@ -1188,12 +1188,12 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
     }
   }
 
-  void _openList(_FollowListMode mode) {
+  void _openList(FollowListMode mode) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _FollowListSheet(userId: widget.userId, mode: mode),
+      builder: (_) => FollowListSheet(userId: widget.userId, mode: mode),
     );
   }
 
@@ -1274,7 +1274,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
             _followers,
             onTap: widget.userId.isEmpty
                 ? null
-                : () => _openList(_FollowListMode.followers),
+                : () => _openList(FollowListMode.followers),
           ),
           _divider(),
           _stat(
@@ -1282,7 +1282,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
             _following,
             onTap: widget.userId.isEmpty
                 ? null
-                : () => _openList(_FollowListMode.following),
+                : () => _openList(FollowListMode.following),
           ),
           if (widget.showPosts) ...[
             _divider(),
@@ -1294,24 +1294,24 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
   }
 }
 
-enum _FollowListMode { followers, following }
+enum FollowListMode { followers, following }
 
 /// Bottom sheet listing either side of [_FollowStatsRow]. Each relation
 /// document comes back with the other user either populated as a map
 /// (`{_id, userName, profileUrl}`) or as a bare id string, matching the same
 /// `userId` shape `_Post.fromBackend` already handles for feed posts — a bare
 /// id falls back to [Repository.userById].
-class _FollowListSheet extends StatefulWidget {
-  const _FollowListSheet({required this.userId, required this.mode});
+class FollowListSheet extends StatefulWidget {
+  const FollowListSheet({super.key, required this.userId, required this.mode});
 
   final String userId;
-  final _FollowListMode mode;
+  final FollowListMode mode;
 
   @override
-  State<_FollowListSheet> createState() => _FollowListSheetState();
+  State<FollowListSheet> createState() => FollowListSheetState();
 }
 
-class _FollowListSheetState extends State<_FollowListSheet> {
+class FollowListSheetState extends State<FollowListSheet> {
   bool _loading = true;
   List<Map<String, dynamic>> _people = const [];
 
@@ -1323,10 +1323,10 @@ class _FollowListSheetState extends State<_FollowListSheet> {
 
   Future<void> _load() async {
     try {
-      final rels = widget.mode == _FollowListMode.followers
+      final rels = widget.mode == FollowListMode.followers
           ? await Repository.instance.followers(widget.userId)
           : await Repository.instance.following(widget.userId);
-      final key = widget.mode == _FollowListMode.followers
+      final key = widget.mode == FollowListMode.followers
           ? 'followerId'
           : 'followingId';
       final people = <Map<String, dynamic>>[];
@@ -1357,7 +1357,7 @@ class _FollowListSheetState extends State<_FollowListSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.mode == _FollowListMode.followers
+    final title = widget.mode == FollowListMode.followers
         ? 'Followers'
         : 'Following';
     return DraggableScrollableSheet(
@@ -1408,7 +1408,7 @@ class _FollowListSheetState extends State<_FollowListSheet> {
                     : _people.isEmpty
                     ? Center(
                         child: Text(
-                          widget.mode == _FollowListMode.followers
+                          widget.mode == FollowListMode.followers
                               ? 'No followers yet'
                               : 'Not following anyone yet',
                           style: body(
@@ -1453,7 +1453,12 @@ class _FollowListSheetState extends State<_FollowListSheet> {
                                 ? null
                                 : () {
                                     Navigator.pop(context);
-                                    context.push('/profile/$id');
+                                    // A follow relationship is always between
+                                    // two real accounts, never a family-tree
+                                    // member — '/profile/:id' would read this
+                                    // id as one and 404, falling back to
+                                    // showing my own profile instead.
+                                    context.push('/user/$id');
                                   },
                           );
                         },

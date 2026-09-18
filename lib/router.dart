@@ -23,6 +23,7 @@ import 'screens/welfare_detail_screen.dart';
 import 'screens/welfare_impact_screen.dart';
 import 'screens/welfare_new_campaign_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/user_profile_screen.dart';
 import 'screens/profile_verify_screen.dart';
 import 'screens/onboarding_identity_screen.dart';
 import 'screens/onboarding_lineage_screen.dart';
@@ -88,9 +89,7 @@ GoRouter buildRouter(AuthService auth) {
         return user!.isElder ? '/elder' : '/dashboard';
       }
       // Elder-only area: send members back to their dashboard.
-      if (loggedIn &&
-          path.startsWith('/elder') &&
-          !(user?.isElder ?? false)) {
+      if (loggedIn && path.startsWith('/elder') && !(user?.isElder ?? false)) {
         return '/dashboard';
       }
       return null;
@@ -108,16 +107,28 @@ GoRouter buildRouter(AuthService auth) {
 
       // Member area
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
-      GoRoute(path: '/family-tree', builder: (_, __) => const FamilyTreeScreen()),
+      GoRoute(
+        path: '/family-tree',
+        builder: (_, __) => const FamilyTreeScreen(),
+      ),
       GoRoute(path: '/directory', builder: (_, __) => const DirectoryScreen()),
-      GoRoute(path: '/invitations', builder: (_, __) => const InvitationsScreen()),
+      GoRoute(
+        path: '/invitations',
+        builder: (_, __) => const InvitationsScreen(),
+      ),
       GoRoute(path: '/purohit', builder: (_, __) => const PurohitScreen()),
       // The gate, not the hub directly: it checks the age window, profile
       // completeness and elder approval, and only then renders the list.
-      GoRoute(path: '/matrimonial', builder: (_, __) => const MatrimonialGateScreen()),
+      GoRoute(
+        path: '/matrimonial',
+        builder: (_, __) => const MatrimonialGateScreen(),
+      ),
       // Declared before '/matrimonial/:id' so "edit" is never read as a
       // profile id.
-      GoRoute(path: '/matrimonial/edit', builder: (_, __) => const MatrimonialEditScreen()),
+      GoRoute(
+        path: '/matrimonial/edit',
+        builder: (_, __) => const MatrimonialEditScreen(),
+      ),
       GoRoute(
         path: '/matrimonial/birth-details',
         builder: (_, __) => const BirthDetailsScreen(),
@@ -137,8 +148,14 @@ GoRouter buildRouter(AuthService auth) {
         builder: (_, s) => MatrimonialDetailScreen(id: s.pathParameters['id']!),
       ),
       GoRoute(path: '/welfare', builder: (_, __) => const WelfareListScreen()),
-      GoRoute(path: '/welfare/impact', builder: (_, __) => const WelfareImpactScreen()),
-      GoRoute(path: '/welfare/new', builder: (_, __) => const NewCampaignScreen()),
+      GoRoute(
+        path: '/welfare/impact',
+        builder: (_, __) => const WelfareImpactScreen(),
+      ),
+      GoRoute(
+        path: '/welfare/new',
+        builder: (_, __) => const NewCampaignScreen(),
+      ),
       GoRoute(
         path: '/welfare/donate/:id',
         builder: (_, s) => WelfareDonateScreen(id: s.pathParameters['id']!),
@@ -156,30 +173,57 @@ GoRouter buildRouter(AuthService auth) {
         path: '/profile/:id',
         builder: (_, s) => ProfileScreen(id: s.pathParameters['id']!),
       ),
+      // Another registered member's public account profile (posts grid +
+      // followers/following) — distinct from '/profile/:id' above, which
+      // reads its id as a family-tree member instead.
+      GoRoute(
+        path: '/user/:id',
+        builder: (_, s) => UserProfileScreen(userId: s.pathParameters['id']!),
+      ),
 
       // Onboarding
-      GoRoute(path: '/onboarding/identity', builder: (_, __) => const OnboardingIdentityScreen()),
-      GoRoute(path: '/onboarding/lineage', builder: (_, __) => const OnboardingLineageScreen()),
-      GoRoute(path: '/onboarding/heritage', builder: (_, __) => const OnboardingHeritageScreen()),
+      GoRoute(
+        path: '/onboarding/identity',
+        builder: (_, __) => const OnboardingIdentityScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/lineage',
+        builder: (_, __) => const OnboardingLineageScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/heritage',
+        builder: (_, __) => const OnboardingHeritageScreen(),
+      ),
 
       // Elder area
       GoRoute(path: '/elder', builder: (_, __) => const ElderHomeScreen()),
-      GoRoute(path: '/elder/verifications', builder: (_, __) => const ElderVerificationsScreen()),
+      GoRoute(
+        path: '/elder/verifications',
+        builder: (_, __) => const ElderVerificationsScreen(),
+      ),
       GoRoute(
         path: '/elder/verifications/:id',
         builder: (_, s) =>
             ElderVerificationDetailScreen(id: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/elder/members', builder: (_, __) => const ElderMembersScreen()),
+      GoRoute(
+        path: '/elder/members',
+        builder: (_, __) => const ElderMembersScreen(),
+      ),
       GoRoute(
         path: '/elder/conflict/:id',
         builder: (_, s) => ElderConflictScreen(id: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/elder/archive', builder: (_, __) => const ElderArchiveScreen()),
-      GoRoute(path: '/elder/events', builder: (_, __) => const ElderEventsScreen()),
+      GoRoute(
+        path: '/elder/archive',
+        builder: (_, __) => const ElderArchiveScreen(),
+      ),
+      GoRoute(
+        path: '/elder/events',
+        builder: (_, __) => const ElderEventsScreen(),
+      ),
     ],
-    errorBuilder: (_, state) => Scaffold(
-      body: Center(child: Text('Route not found: ${state.uri}')),
-    ),
+    errorBuilder: (_, state) =>
+        Scaffold(body: Center(child: Text('Route not found: ${state.uri}'))),
   );
 }

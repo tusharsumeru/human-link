@@ -218,22 +218,6 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
     }
   }
 
-  void _soon(String label) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).storyComingSoon(label),
-            style: body(13, color: Colors.white),
-          ),
-          backgroundColor: AppColors.forest800,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -263,23 +247,6 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => _soon(t.storyDrafts),
-            child: Text(
-              t.storyHelp,
-              style: body(
-                12,
-                weight: FontWeight.w700,
-                color: context.onBrightness(
-                  light: AppColors.forest700,
-                  dark: AppColors.forest300,
-                ),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -416,36 +383,6 @@ class _StoryComposeScreenState extends State<StoryComposeScreen> {
                         setState(() => _treeNode = null);
                       }
                     },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () => _soon(t.storyAdvancedSettings),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.settings_outlined,
-                        size: 15,
-                        color: context.onBrightness(
-                          light: AppColors.forest700,
-                          dark: AppColors.forest300,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        t.storyAdvancedSettings,
-                        style: body(
-                          12,
-                          weight: FontWeight.w700,
-                          color: context.onBrightness(
-                            light: AppColors.forest700,
-                            dark: AppColors.forest300,
-                          ),
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

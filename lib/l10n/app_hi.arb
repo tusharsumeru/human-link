@@ -1291,14 +1291,7 @@
     }
   },
   "storyPleaseTryAgain": "कृपया पुनः प्रयास करें",
-  "storyComingSoon": "{label} - जल्द आ रहा है",
-  "@storyComingSoon": {
-    "placeholders": {
-      "label": {"type": "String"}
-    }
-  },
   "storyShareTitle": "स्टोरी साझा करें",
-  "storyHelp": "सहायता",
   "storyReviewRecording": "अपनी रिकॉर्डिंग की समीक्षा करें",
   "storyReviewPhoto": "अपनी फोटो की समीक्षा करें",
   "storyCaption": "कैप्शन",
@@ -1314,10 +1307,8 @@
       "name": {"type": "String"}
     }
   },
-  "storyAdvancedSettings": "उन्नत सेटिंग्स",
   "storyVisibleTo": "इन्हें दिखाई देगा",
   "storyPostToCommunity": "समुदाय में पोस्ट करें",
-  "storyDrafts": "ड्राफ्ट",
   "storyLocationHint": "उदा. कुमटा, महालसा मंदिर…",
   "storyKindVillage": "गाँव",
   "storyKindTemple": "मंदिर",
