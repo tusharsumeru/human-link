@@ -139,7 +139,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() => _followBusy = false);
     } catch (e) {
       if (!mounted) return;
-<<<<<<< HEAD
       // A 409 means the follow relationship already existed server-side —
       // the desired end state (following) is already true, so keep the
       // optimistic flip instead of reverting it back to "Follow" under a
@@ -150,8 +149,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         setState(() => _followBusy = false);
         return;
       }
-=======
->>>>>>> f6e58d4d686fc000833e45d8e67b3c0f9ef3570f
       setState(() {
         _isFollowing = was;
         _followers += was ? 1 : -1;
