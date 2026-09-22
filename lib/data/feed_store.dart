@@ -27,7 +27,7 @@ class UserPost {
   // Local file path(s) — a single video when isReel, else one or more images
   // (more than one → an Instagram-style carousel).
   final List<String> mediaPaths;
-  final String caption;
+  String caption; // mutable: see FeedStore.updateCaption
   final bool isReel; // true → a video reel; false → a photo post
 
   String? remoteId; // Mongo _id once the upload succeeds
@@ -132,5 +132,19 @@ class FeedStore extends ChangeNotifier {
   void remove(UserPost post) {
     _posts.remove(post);
     notifyListeners();
+  }
+
+  /// Reflects a successful caption edit for a post still tracked here (this
+  /// session's own upload) — the counterpart callers should check before
+  /// falling back to updating a backend-sourced feed list, same as [remove]
+  /// already does for deletes. No-op if [feedId] isn't one of ours.
+  void updateCaption(String feedId, String newCaption) {
+    for (final p in _posts) {
+      if (p.feedId == feedId) {
+        p.caption = newCaption;
+        notifyListeners();
+        return;
+      }
+    }
   }
 }

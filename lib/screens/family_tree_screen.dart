@@ -4499,16 +4499,23 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   /// required (and cannot succeed) for it.
   bool get _isBypassPhone => _phone.text.trim() == _bypassPhone;
 
+  // Set only for a phone-number query, so the "Number is available" /
+  // "Number not found" message below the search field reflects whether that
+  // specific search found a match — null hides it (no phone search yet, or
+  // the query changed since the last search ran).
+  bool? _phoneFound;
+
   Future<void> _runSearch() async {
     final q = _search.text.trim();
     if (q.isEmpty) return;
+    // A 10-digit query is treated as a phone; otherwise a name.
+    final byPhone = RegExp(r'^\d{10}$').hasMatch(q);
     setState(() {
       _searching = true;
       _err = '';
+      _phoneFound = null;
     });
     try {
-      // A 10-digit query is treated as a phone; otherwise a name.
-      final byPhone = RegExp(r'^\d{10}$').hasMatch(q);
       final samajId = q.toUpperCase().startsWith('DS-');
       final results = await Repository.instance.familyUserSearch(
         samajId: samajId ? q : null,
@@ -4519,6 +4526,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       setState(() {
         _results = results;
         _searching = false;
+        _phoneFound = byPhone ? results.isNotEmpty : null;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -4949,6 +4957,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             Expanded(
               child: TextField(
                 controller: _search,
+                onChanged: (_) {
+                  if (_phoneFound != null) setState(() => _phoneFound = null);
+                },
                 onSubmitted: (_) => _runSearch(),
                 style: body(
                   14,
@@ -4964,6 +4975,22 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             OutlineButtonX(label: t.ftSearch, onPressed: _runSearch),
           ],
         ),
+        if (_phoneFound != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _phoneFound! ? t.ftNumberAvailable : t.ftNumberNotFound,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: _phoneFound!
+                  ? context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    )
+                  : Colors.red.shade700,
+            ),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           t.ftAccountRequestNote,
@@ -5123,10 +5150,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           style: body(
             13,
             weight: FontWeight.w600,
-            color: selected ? Colors.white : context.onBrightness(
-                light: AppColors.ink,
-                dark: AppColors.darkText,
-              ),
+            color: selected
+                ? Colors.white
+                : context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
           ),
         ),
       ),

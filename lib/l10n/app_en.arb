@@ -266,6 +266,7 @@
   "profileViaDigilockerMasked": "via DigiLocker · {masked}",
   "@profileViaDigilockerMasked": { "placeholders": { "masked": { "type": "String" } } },
   "profileAboutOccupation": "About & Occupation",
+  "profileAboutOccupationSubtitle": "Basic details about your profile",
   "profileOccupation": "Occupation",
   "profileBirthYear": "Birth Year",
   "profileStatus": "Status",
@@ -283,6 +284,7 @@
   "profileNotJoinedYet": "not joined yet",
   "profileLifeArchive": "Life Archive",
   "profileQuickStats": "Quick Stats",
+  "profileQuickStatsSubtitle": "Your profile at a glance",
   "profileGotra": "Gotra",
   "profileNative": "Native",
   "profileStanding": "Standing",
@@ -471,6 +473,8 @@
   "ftFindByNamePhone": "Find them by name, phone or Samaj ID",
   "ftSearchHint": "e.g. 9876543210 or Ramesh",
   "ftSearch": "Search",
+  "ftNumberAvailable": "Number is available",
+  "ftNumberNotFound": "Number not found",
   "ftAccountRequestNote": "A living member with an account must accept your request before the relationship shows in both trees.",
   "ftFullName": "Full Name *",
   "ftFullNameHint": "e.g. Ramesh Haldankar",
@@ -1496,6 +1500,8 @@
   "convDocumentLabel": "📄 Document",
   "convPhotoLabel": "📷 Photo",
   "convTapToChat": "Tap to chat",
+  "convSearchHint": "Search people",
+  "convNoResults": "No matches found",
 
   "commentCouldNotPost": "Could not post comment: {reason}",
   "@commentCouldNotPost": {

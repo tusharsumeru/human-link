@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,7 @@ import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
+import 'full_screen_image.dart';
 import 'full_screen_reel.dart';
 
 /// Member profile — mirrors `src/app/profile/[id]/page.tsx`.
@@ -52,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// This member's own immediate family (`distance == 1` in their tree).
   List<Map<String, dynamic>> _immediate = const [];
+
+  bool _uploadingPhoto = false;
 
   @override
   void initState() {
@@ -288,6 +292,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isLate: false,
             verified: user.verified,
             t: t,
+            bio: archive,
+            onEditTap: () => context.push('/profile/edit'),
+            onCameraTap: _pickPhoto,
+            uploadingPhoto: _uploadingPhoto,
           ),
           _FollowStatsRow(userId: user.id, showPosts: true),
           Padding(
@@ -305,10 +313,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Active',
                   samajId: user.samajId,
                 ),
-                if (archive.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _archiveCard(archive),
-                ],
                 const SizedBox(height: 16),
                 _statsCard(_dash(user.gotra), _dash(user.native), 'Active'),
                 const SizedBox(height: 16),
@@ -356,6 +360,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  /// The camera badge on the self-view avatar — same pick-then-upload flow
+  /// as the one on Edit Profile (see profile_edit_screen.dart's _pickPhoto),
+  /// duplicated rather than shared since that screen's version is entangled
+  /// with its own form state.
+  Future<void> _pickPhoto() async {
+    String? path;
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
+      path = result?.files.single.path;
+    } catch (_) {
+      return;
+    }
+    if (path == null) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final updated = await Repository.instance.uploadProfilePhoto(path);
+      if (!mounted) return;
+      final url = (updated['profileUrl'] ?? '').toString();
+      final auth = context.read<AuthService>();
+      final u = auth.user;
+      if (u != null) await auth.updateUser(u.copyWith(photoUrl: url));
+    } catch (e) {
+      if (!mounted) return;
+      final t = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : t.editCouldNotUploadPhoto,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
   }
 
   Widget _aadhaarVerifiedCard(String maskedAadhaar) {
@@ -423,28 +464,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.work_outline,
-                size: 18,
-                color: context.onBrightness(
-                  light: AppColors.gold700,
-                  dark: AppColors.goldSoft,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                t.profileAboutOccupation,
-                style: display(
-                  18,
-                  color: context.onBrightness(
-                    light: AppColors.forest900,
-                    dark: AppColors.darkText,
-                  ),
-                ),
-              ),
-            ],
+          _sectionHeader(
+            Icons.work_outline,
+            t.profileAboutOccupation,
+            t.profileAboutOccupationSubtitle,
           ),
           const SizedBox(height: 14),
           if (samajId.isNotEmpty) ...[
@@ -473,7 +496,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               dark: AppColors.darkBorder,
             ),
           ),
-          _detailRow(
+          _statusRow(
             status == 'Late'
                 ? Icons.local_florist_outlined
                 : Icons.verified_user_outlined,
@@ -482,6 +505,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Icon-badge + title + subtitle, the header every card on this screen
+  /// after the first uses (see _aboutCard / _statsCard).
+  Widget _sectionHeader(IconData icon, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: context.onBrightness(
+              light: AppColors.gold700.withValues(alpha: 0.12),
+              dark: AppColors.goldSoft.withValues(alpha: 0.16),
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: context.onBrightness(
+              light: AppColors.gold700,
+              dark: AppColors.goldSoft,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: display(
+                  16,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: body(
+                  11,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Same layout as [_detailRow], but the value renders as a status pill
+  /// instead of plain text.
+  Widget _statusRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: context.onBrightness(
+            light: AppColors.gold700,
+            dark: AppColors.goldSoft,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: body(
+              11,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+          ),
+        ),
+        Pill(
+          value,
+          bg: context.onBrightness(
+            light: AppColors.forest700.withValues(alpha: 0.12),
+            dark: AppColors.forest300.withValues(alpha: 0.16),
+          ),
+          fg: context.onBrightness(
+            light: AppColors.forest700,
+            dark: AppColors.forest300,
+          ),
+          fontSize: 12,
+        ),
+      ],
     );
   }
 
@@ -725,22 +850,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          _sectionHeader(
+            Icons.bar_chart_rounded,
             t.profileQuickStats,
-            style: display(
-              16,
-              color: context.onBrightness(
-                light: AppColors.forest900,
-                dark: AppColors.darkText,
-              ),
-            ),
+            t.profileQuickStatsSubtitle,
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _stat(t.profileGotra, gotra),
-              _stat(t.profileNative, native.split(',').first.trim()),
+              _stat(Icons.groups_outlined, t.profileGotra, gotra),
               _stat(
+                Icons.location_on_outlined,
+                t.profileNative,
+                native.split(',').first.trim(),
+              ),
+              _stat(
+                Icons.workspace_premium_outlined,
                 t.profileStanding,
                 status == 'Late' ? t.profileAncestor : t.profileMember,
               ),
@@ -751,7 +876,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _stat(String label, String value) {
+  Widget _stat(IconData icon, String label, String value) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.only(right: 8),
@@ -771,6 +896,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Column(
           children: [
+            Icon(
+              icon,
+              size: 18,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.forest300,
+              ),
+            ),
+            const SizedBox(height: 6),
             Text(
               label,
               style: body(
@@ -934,6 +1068,10 @@ class _Header extends StatelessWidget {
     required this.isLate,
     required this.verified,
     required this.t,
+    this.bio = '',
+    this.onEditTap,
+    this.onCameraTap,
+    this.uploadingPhoto = false,
   });
 
   final String name;
@@ -946,6 +1084,19 @@ class _Header extends StatelessWidget {
   final bool isLate;
   final bool verified;
   final AppLocalizations t;
+
+  /// Shown as a short italic line under the pills — only ever passed on the
+  /// self-view, where it's the member's own bio.
+  final String bio;
+
+  /// Non-null → an "Edit Profile" pill shows top-right, self-view only.
+  final VoidCallback? onEditTap;
+
+  /// Non-null → a camera badge replaces the verified badge, bottom-right of
+  /// the avatar, self-view only (a family member's or another account's
+  /// photo isn't something the viewer can change).
+  final VoidCallback? onCameraTap;
+  final bool uploadingPhoto;
 
   Widget _avatar() {
     // Prefer the uploaded (remote) photo, then a local selfie file, then
@@ -975,21 +1126,50 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(20, top + 8, 20, 28),
       child: Column(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/dashboard');
-                }
-              },
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.12),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/dashboard');
+                  }
+                },
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                ),
               ),
-            ),
+              const Spacer(),
+              if (onEditTap != null)
+                TextButton.icon(
+                  onPressed: onEditTap,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    t.profileEditProfile,
+                    style: body(
+                      13,
+                      weight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
           Stack(
@@ -997,7 +1177,10 @@ class _Header extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.gold500, width: 4),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 3,
+                  ),
                 ),
                 child: isLate
                     ? ColorFiltered(
@@ -1027,7 +1210,37 @@ class _Header extends StatelessWidget {
                       )
                     : _avatar(),
               ),
-              if (verified)
+              if (onCameraTap != null)
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: GestureDetector(
+                    onTap: uploadingPhoto ? null : onCameraTap,
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AppColors.forest600,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: uploadingPhoto
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                    ),
+                  ),
+                )
+              else if (verified)
                 Positioned(
                   right: 2,
                   bottom: 2,
@@ -1099,6 +1312,22 @@ class _Header extends StatelessWidget {
                 ),
             ],
           ),
+          if (bio.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              '"$bio"',
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: body(
+                13,
+                color: AppColors.forest300,
+                height: 1.4,
+              ).copyWith(fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 10),
+            Container(width: 32, height: 2, color: AppColors.forest500),
+          ],
         ],
       ),
     );
@@ -1214,7 +1443,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
     );
   }
 
-  Widget _stat(String label, int count, {VoidCallback? onTap}) {
+  Widget _stat(IconData icon, String label, int count, {VoidCallback? onTap}) {
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -1222,6 +1451,15 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Column(
             children: [
+              Icon(
+                icon,
+                size: 16,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.forest300,
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 _loading ? '—' : '$count',
                 style: display(
@@ -1270,6 +1508,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
       child: Row(
         children: [
           _stat(
+            Icons.groups_outlined,
             'Followers',
             _followers,
             onTap: widget.userId.isEmpty
@@ -1278,6 +1517,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
           ),
           _divider(),
           _stat(
+            Icons.person_outline,
             'Following',
             _following,
             onTap: widget.userId.isEmpty
@@ -1286,7 +1526,7 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
           ),
           if (widget.showPosts) ...[
             _divider(),
-            _stat('Posts', _posts, onTap: _openMyPosts),
+            _stat(Icons.article_outlined, 'Posts', _posts, onTap: _openMyPosts),
           ],
         ],
       ),
@@ -1969,17 +2209,26 @@ class _AppearanceCard extends StatelessWidget {
             segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text(t.themeSystem),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(t.themeSystem, maxLines: 1),
+                ),
                 icon: const Icon(Icons.brightness_auto_outlined, size: 16),
               ),
               ButtonSegment(
                 value: ThemeMode.light,
-                label: Text(t.themeLight),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(t.themeLight, maxLines: 1),
+                ),
                 icon: const Icon(Icons.light_mode_outlined, size: 16),
               ),
               ButtonSegment(
                 value: ThemeMode.dark,
-                label: Text(t.themeDark),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(t.themeDark, maxLines: 1),
+                ),
                 icon: const Icon(Icons.dark_mode_outlined, size: 16),
               ),
             ],
@@ -1990,6 +2239,7 @@ class _AppearanceCard extends StatelessWidget {
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppColors.forest300,
               selectedForegroundColor: AppColors.forest900,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
           ),
         ],
@@ -2090,23 +2340,27 @@ class _SavedTile extends StatelessWidget {
   final SavedItem item;
 
   void _open(BuildContext context) {
-    // Only reels re-open into the immersive player; image posts just sit in
-    // the shelf. Tapping either does nothing destructive.
-    if (!item.isReel || (item.mediaPath == null && item.mediaUrl == null)) {
-      return;
-    }
+    if (item.mediaPath == null && item.mediaUrl == null) return;
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, __, ___) => FullScreenReelPage(
-          path: item.mediaPath,
-          url: item.mediaUrl,
-          author: item.author,
-          caption: item.caption,
-          saved: item,
-        ),
+        pageBuilder: (_, __, ___) => item.isReel
+            ? FullScreenReelPage(
+                path: item.mediaPath,
+                url: item.mediaUrl,
+                author: item.author,
+                caption: item.caption,
+                saved: item,
+              )
+            : FullScreenImagePage(
+                path: item.mediaPath,
+                url: item.mediaUrl,
+                author: item.author,
+                caption: item.caption,
+                saved: item,
+              ),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
       ),

@@ -724,6 +724,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAboutOccupation => 'About & Occupation';
 
   @override
+  String get profileAboutOccupationSubtitle =>
+      'Basic details about your profile';
+
+  @override
   String get profileOccupation => 'Occupation';
 
   @override
@@ -771,6 +775,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileQuickStats => 'Quick Stats';
+
+  @override
+  String get profileQuickStatsSubtitle => 'Your profile at a glance';
 
   @override
   String get profileGotra => 'Gotra';
@@ -1327,6 +1334,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ftSearch => 'Search';
+
+  @override
+  String get ftNumberAvailable => 'Number is available';
+
+  @override
+  String get ftNumberNotFound => 'Number not found';
 
   @override
   String get ftAccountRequestNote =>
@@ -4098,6 +4111,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get convTapToChat => 'Tap to chat';
+
+  @override
+  String get convSearchHint => 'Search people';
+
+  @override
+  String get convNoResults => 'No matches found';
 
   @override
   String commentCouldNotPost(String reason) {

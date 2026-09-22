@@ -731,6 +731,9 @@ class AppLocalizationsKn extends AppLocalizations {
   String get profileAboutOccupation => 'ಬಗ್ಗೆ ಮತ್ತು ಉದ್ಯೋಗ';
 
   @override
+  String get profileAboutOccupationSubtitle => 'ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನ ಮೂಲ ವಿವರಗಳು';
+
+  @override
   String get profileOccupation => 'ಉದ್ಯೋಗ';
 
   @override
@@ -779,6 +782,9 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get profileQuickStats => 'ತ್ವರಿತ ಅಂಕಿಅಂಶಗಳು';
+
+  @override
+  String get profileQuickStatsSubtitle => 'ಒಂದು ನೋಟದಲ್ಲಿ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್';
 
   @override
   String get profileGotra => 'ಗೋತ್ರ';
@@ -1338,6 +1344,12 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get ftSearch => 'ಹುಡುಕಿ';
+
+  @override
+  String get ftNumberAvailable => 'ಸಂಖ್ಯೆ ಲಭ್ಯವಿದೆ';
+
+  @override
+  String get ftNumberNotFound => 'ಸಂಖ್ಯೆ ಕಂಡುಬಂದಿಲ್ಲ';
 
   @override
   String get ftAccountRequestNote =>
@@ -4127,6 +4139,12 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get convTapToChat => 'ಚಾಟ್ ಮಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ';
+
+  @override
+  String get convSearchHint => 'ಜನರನ್ನು ಹುಡುಕಿ';
+
+  @override
+  String get convNoResults => 'ಯಾವುದೇ ಹೊಂದಾಣಿಕೆ ಕಂಡುಬಂದಿಲ್ಲ';
 
   @override
   String commentCouldNotPost(String reason) {

@@ -227,6 +227,7 @@
   "profileVerifiedViaDigilocker": "DigiLocker ಮೂಲಕ ಪರಿಶೀಲಿಸಲಾಗಿದೆ",
   "profileViaDigilockerMasked": "DigiLocker ಮೂಲಕ · {masked}",
   "profileAboutOccupation": "ಬಗ್ಗೆ ಮತ್ತು ಉದ್ಯೋಗ",
+  "profileAboutOccupationSubtitle": "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನ ಮೂಲ ವಿವರಗಳು",
   "profileOccupation": "ಉದ್ಯೋಗ",
   "profileBirthYear": "ಜನ್ಮ ವರ್ಷ",
   "profileStatus": "ಸ್ಥಿತಿ",
@@ -242,6 +243,7 @@
   "profileNotJoinedYet": "ಇನ್ನೂ ಸೇರಿಲ್ಲ",
   "profileLifeArchive": "ಜೀವನ ಆರ್ಕೈವ್",
   "profileQuickStats": "ತ್ವರಿತ ಅಂಕಿಅಂಶಗಳು",
+  "profileQuickStatsSubtitle": "ಒಂದು ನೋಟದಲ್ಲಿ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್",
   "profileGotra": "ಗೋತ್ರ",
   "profileNative": "ಸ್ವಂತ ಊರು",
   "profileStanding": "ಸ್ಥಾನಮಾನ",
@@ -416,6 +418,8 @@
   "ftFindByNamePhone": "ಹೆಸರು, ಫೋನ್ ಅಥವಾ ಸಮಾಜ ID ಮೂಲಕ ಅವರನ್ನು ಹುಡುಕಿ",
   "ftSearchHint": "ಉದಾ. 9876543210 ಅಥವಾ ರಮೇಶ್",
   "ftSearch": "ಹುಡುಕಿ",
+  "ftNumberAvailable": "ಸಂಖ್ಯೆ ಲಭ್ಯವಿದೆ",
+  "ftNumberNotFound": "ಸಂಖ್ಯೆ ಕಂಡುಬಂದಿಲ್ಲ",
   "ftAccountRequestNote": "ಖಾತೆಯುಳ್ಳ ಜೀವಂತ ಸದಸ್ಯರು ಸಂಬಂಧ ಎರಡೂ ವೃಕ್ಷಗಳಲ್ಲಿ ತೋರಿಸುವ ಮೊದಲು ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಒಪ್ಪಬೇಕು.",
   "ftFullName": "ಪೂರ್ಣ ಹೆಸರು *",
   "ftFullNameHint": "ಉದಾ. ರಮೇಶ್ ಹಳದಂಕರ್",
@@ -1371,6 +1375,8 @@
   "convDocumentLabel": "📄 ದಾಖಲೆ",
   "convPhotoLabel": "📷 ಫೋಟೋ",
   "convTapToChat": "ಚಾಟ್ ಮಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+  "convSearchHint": "ಜನರನ್ನು ಹುಡುಕಿ",
+  "convNoResults": "ಯಾವುದೇ ಹೊಂದಾಣಿಕೆ ಕಂಡುಬಂದಿಲ್ಲ",
 
   "commentCouldNotPost": "ಕಾಮೆಂಟ್ ಪೋಸ್ಟ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: {reason}",
   "@commentCouldNotPost": {
