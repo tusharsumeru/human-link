@@ -32,26 +32,27 @@ class Repository {
   /// the app itself only ever assigns this once, at startup.
   static Repository instance = Repository();
 
-  /// POST /api/user/login — returns `{user, token}`: the authenticated user map
-  /// from MongoDB plus the JWT bearer token for subsequent protected requests.
-  /// Throws [ApiException] with the server's message ("Phone number not
-  /// registered", "Invalid OTP") — the backend validates the OTP.
-  /// POST /api/user/login/send-otp — triggers a real SMS OTP (via 2Factor)
-  /// to [phone] and returns the session id that must be echoed back to
-  /// [login]. Response shape is 2Factor's own: `{Status, Details, OTP}` —
-  /// `Details` is the session id; `OTP` is only ever present against a
-  /// trial/sandbox key and must not be relied on in the UI.
+  /// POST /api/user/login/send-otp — dispatches the login OTP via 2Factor and
+  /// returns the session id (2Factor's `Details` field) that
+  /// `/api/user/login` needs alongside the code the member enters. Throws
+  /// [ApiException] with the server's message (e.g. an invalid phone shape) —
+  /// note this endpoint does NOT check whether the phone is registered; that
+  /// happens on verify, same as before this existed.
   Future<String> sendLoginOtp(String phone) async {
     final data = await _api.postJson('/api/user/login/send-otp', {
       'phone': phone,
     });
-    final sessionId = data is Map ? (data['Details'] ?? '').toString() : '';
-    if (data is Map && data['Status'] == 'Success' && sessionId.isNotEmpty) {
-      return sessionId;
+    if (data is Map && data['Status'] == 'Success') {
+      return (data['Details'] ?? '').toString();
     }
-    throw ApiException('Could not send OTP');
+    throw ApiException('Could not send OTP. Please try again.');
   }
 
+  /// POST /api/user/login — verifies the OTP against the session [sendLoginOtp]
+  /// started, returning `{user, token}`: the authenticated user map from
+  /// MongoDB plus the JWT bearer token for subsequent protected requests.
+  /// Throws [ApiException] with the server's message ("Phone number not
+  /// registered", "Invalid OTP").
   Future<Map<String, dynamic>> login(
     String phone,
     String otp,
@@ -69,6 +70,37 @@ class Repository {
       };
     }
     throw ApiException('Login failed');
+  }
+
+  /// POST /api/user/send-otp — sends a verification OTP for a family member
+  /// whose phone must be validated before direct addition without a smartphone.
+  /// The backend may return either a direct `sessionId` or the 2Factor `Details`
+  /// field; both are treated as the same thing for the follow-up verify call.
+  Future<String> sendPhoneOtp(String phone) async {
+    final data = await _api.postJson('/api/user/send-otp', {'phone': phone});
+    if (data is Map) {
+      final sessionId = (data['sessionId'] ?? data['Details'] ?? '').toString();
+      if (data['success'] == true || data['Status'] == 'Success') {
+        if (sessionId.isNotEmpty) return sessionId;
+      }
+      if (data['message'] != null) {
+        throw ApiException(data['message'].toString());
+      }
+    }
+    throw ApiException('Could not send OTP. Please try again.');
+  }
+
+  /// POST /api/user/verify-otp — verifies the OTP for a family member phone.
+  Future<bool> verifyPhoneOtp(String otp, String sessionId) async {
+    final data = await _api.postJson('/api/user/verify-otp', {
+      'otp': otp,
+      'sessionId': sessionId,
+    });
+    if (data is Map && data['success'] == true) return true;
+    if (data is Map && data['message'] != null) {
+      throw ApiException(data['message'].toString());
+    }
+    throw ApiException('Invalid OTP');
   }
 
   /// GET /api/user/username/check — Instagram-style availability. Returns
@@ -467,6 +499,37 @@ class Repository {
     final data = await _api.getJson('/api/user/$id');
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Member not found');
+  }
+
+  // ── Payments (registration donation gate) ─────────────────────────────────
+  // See DonationGateScreen. This is the one-time, non-renewing donation every
+  // new member pays before the app unlocks — a Razorpay Order, not a
+  // Subscription, and separate from the (currently demo-only) Welfare giving
+  // flow below.
+
+  /// POST /api/payments/donations/order — creates a Razorpay order for the
+  /// fixed donation price the backend has on file (nothing sent from here
+  /// decides the amount). Returns `{ key, orderId, amount, currency, plan }`;
+  /// `amount` is in paise, as Razorpay Checkout expects.
+  Future<Map<String, dynamic>> createDonationOrder() async {
+    final data = await _api.postJson('/api/payments/donations/order', const {});
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not start the donation payment');
+  }
+
+  /// POST /api/payments/donations/verify — confirms the payment Razorpay
+  /// Checkout returned. On success the backend also flips the caller's own
+  /// `hasDonated` to true, which is what the router acts on next.
+  Future<void> verifyDonation({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    await _api.postJson('/api/payments/donations/verify', {
+      'razorpay_order_id': orderId,
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature,
+    });
   }
 
   /// GET /api/family/search — member records whose name contains [q] (powers
@@ -1138,6 +1201,8 @@ class Repository {
     String? placeOfDeath,
     String? biography,
     String? profileUrl,
+    bool? smartphone,
+    bool? phoneVerified,
   }) async {
     final body = <String, dynamic>{'relation': relation};
 
@@ -1151,6 +1216,10 @@ class Repository {
       }
 
       body['status'] = status;
+      body['smartphone'] = smartphone ?? true;
+      if (phoneVerified != null) {
+        body['phoneVerified'] = phoneVerified;
+      }
 
       if (phone != null && phone.isNotEmpty) {
         body['phone'] = phone;

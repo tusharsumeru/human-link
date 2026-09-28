@@ -227,6 +227,7 @@
   "profileVerifiedViaDigilocker": "DigiLocker के माध्यम से सत्यापित",
   "profileViaDigilockerMasked": "DigiLocker के माध्यम से · {masked}",
   "profileAboutOccupation": "बारे में और व्यवसाय",
+  "profileAboutOccupationSubtitle": "आपकी प्रोफ़ाइल का बुनियादी विवरण",
   "profileOccupation": "व्यवसाय",
   "profileBirthYear": "जन्म वर्ष",
   "profileStatus": "स्थिति",
@@ -242,6 +243,7 @@
   "profileNotJoinedYet": "अभी तक शामिल नहीं हुए",
   "profileLifeArchive": "जीवन अभिलेख",
   "profileQuickStats": "त्वरित आँकड़े",
+  "profileQuickStatsSubtitle": "एक नज़र में आपकी प्रोफ़ाइल",
   "profileGotra": "गोत्र",
   "profileNative": "मूल स्थान",
   "profileStanding": "स्थिति",
@@ -416,6 +418,8 @@
   "ftFindByNamePhone": "उन्हें नाम, फ़ोन या समाज आईडी से खोजें",
   "ftSearchHint": "उदा. 9876543210 या रमेश",
   "ftSearch": "खोजें",
+  "ftNumberAvailable": "नंबर उपलब्ध है",
+  "ftNumberNotFound": "नंबर नहीं मिला",
   "ftAccountRequestNote": "खाते वाले जीवित सदस्य को संबंध दोनों वृक्षों में दिखने से पहले आपका अनुरोध स्वीकार करना होगा।",
   "ftFullName": "पूरा नाम *",
   "ftFullNameHint": "उदा. रमेश हलदणकर",
@@ -1371,6 +1375,8 @@
   "convDocumentLabel": "📄 दस्तावेज़",
   "convPhotoLabel": "📷 फोटो",
   "convTapToChat": "चैट करने के लिए टैप करें",
+  "convSearchHint": "लोगों को खोजें",
+  "convNoResults": "कोई मेल नहीं मिला",
 
   "commentCouldNotPost": "टिप्पणी पोस्ट नहीं हो सकी: {reason}",
   "@commentCouldNotPost": {

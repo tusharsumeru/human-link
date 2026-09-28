@@ -18,10 +18,32 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   List<Map<String, dynamic>> _conversations = const [];
   bool _loading = true;
 
+  final _searchController = TextEditingController();
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> _filtered(AppLocalizations t) {
+    if (_query.trim().isEmpty) return _conversations;
+    final q = _query.trim().toLowerCase();
+    return _conversations
+        .where(
+          (c) => _name(
+            c['otherUser'] as Map<String, dynamic>?,
+            t,
+          ).toLowerCase().contains(q),
+        )
+        .toList();
   }
 
   Future<void> _load() async {
@@ -51,13 +73,15 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     final other = convo['otherUser'] as Map<String, dynamic>?;
     final id = (other?['_id'] ?? '').toString();
     if (id.isEmpty) return;
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ChatScreen(
-        otherUserId: id,
-        otherName: _name(other, t),
-        otherAvatarUrl: (other?['profileUrl'] ?? '').toString(),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          otherUserId: id,
+          otherName: _name(other, t),
+          otherAvatarUrl: (other?['profileUrl'] ?? '').toString(),
+        ),
       ),
-    ));
+    );
     _load(); // refresh unread badges / last message on return
   }
 
@@ -99,21 +123,108 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _conversations.isEmpty
-              ? _empty(t)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    itemCount: _conversations.length,
-                    separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        indent: 76,
-                        color: context.onBrightness(
-                          light: AppColors.border,
-                          dark: AppColors.darkBorder,
-                        )),
-                    itemBuilder: (_, i) => _row(_conversations[i], t),
-                  ),
+          ? _empty(t)
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: _searchField(t),
                 ),
+                Expanded(child: _list(t)),
+              ],
+            ),
+    );
+  }
+
+  Widget _searchField(AppLocalizations t) {
+    return TextField(
+      controller: _searchController,
+      onChanged: (v) => setState(() => _query = v),
+      style: body(
+        14,
+        color: context.onBrightness(
+          light: AppColors.ink,
+          dark: AppColors.darkText,
+        ),
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: t.convSearchHint,
+        hintStyle: body(14, color: AppColors.hint),
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          size: 18,
+          color: AppColors.hint,
+        ),
+        suffixIcon: _query.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.hint,
+                ),
+                onPressed: () => setState(() {
+                  _searchController.clear();
+                  _query = '';
+                }),
+              ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        filled: true,
+        fillColor: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: context.onBrightness(
+              light: AppColors.border,
+              dark: AppColors.darkBorder,
+            ),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _list(AppLocalizations t) {
+    final results = _filtered(t);
+    if (results.isEmpty) {
+      return Center(
+        child: Text(
+          t.convNoResults,
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.hint,
+              dark: AppColors.darkTextMuted,
+            ),
+          ),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.separated(
+        itemCount: results.length,
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          indent: 76,
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
+        itemBuilder: (_, i) => _row(results[i], t),
+      ),
     );
   }
 
@@ -213,9 +324,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           ? Container(
               padding: const EdgeInsets.all(7),
               decoration: const BoxDecoration(
-                  color: AppColors.forest800, shape: BoxShape.circle),
-              child: Text('$unread',
-                  style: body(11, weight: FontWeight.w700, color: Colors.white)),
+                color: AppColors.forest800,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$unread',
+                style: body(11, weight: FontWeight.w700, color: Colors.white),
+              ),
             )
           : null,
       onTap: () => _openChat(convo),
@@ -233,11 +348,11 @@ class _InitialsAvatar extends StatelessWidget {
     final initials = name.trim().isEmpty
         ? '?'
         : name
-            .trim()
-            .split(RegExp(r'\s+'))
-            .take(2)
-            .map((w) => w[0].toUpperCase())
-            .join();
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join();
     return Container(
       width: size,
       height: size,
@@ -246,8 +361,10 @@ class _InitialsAvatar extends StatelessWidget {
         color: AppColors.forest700,
         shape: BoxShape.circle,
       ),
-      child: Text(initials,
-          style: body(15, weight: FontWeight.w700, color: Colors.white)),
+      child: Text(
+        initials,
+        style: body(15, weight: FontWeight.w700, color: Colors.white),
+      ),
     );
   }
 }

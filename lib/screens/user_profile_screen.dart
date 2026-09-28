@@ -139,6 +139,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() => _followBusy = false);
     } catch (e) {
       if (!mounted) return;
+      // A 409 means the follow relationship already existed server-side —
+      // the desired end state (following) is already true, so keep the
+      // optimistic flip instead of reverting it back to "Follow" under a
+      // toast that says "Already following this user". See the matching fix
+      // in dashboard_screen.dart's post-card follow toggle.
+      final alreadyFollowing = !was && e is ApiException && e.statusCode == 409;
+      if (alreadyFollowing) {
+        setState(() => _followBusy = false);
+        return;
+      }
       setState(() {
         _isFollowing = was;
         _followers += was ? 1 : -1;

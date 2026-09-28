@@ -4461,6 +4461,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   String _dob = '';
   String _dod = '';
 
+  // QA / app-review number for the no-smartphone flow. The backend skips the
+  // OTP requirement for this exact phone (relationship.service.ts, Mode D), so
+  // the sheet skips the OTP step for it too — otherwise the form blocks locally
+  // on a code that never arrives. Keep the two in sync.
+  static const String _bypassPhone = '1234567896';
+
   // No-smartphone flow: unchecked by default. Checking it means this person
   // has no smartphone of their own, so their phone number must be captured
   // and OTP-verified here instead.
@@ -4468,6 +4474,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   bool _otpSent = false;
   bool _phoneVerified = false;
   bool _verifying = false;
+  String? _phoneOtpSessionId;
 
   List<Map<String, dynamic>> _results = const [];
   Map<String, dynamic>? _selected;
@@ -4488,16 +4495,27 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   bool get _isDeceased => _status == 'deceased';
 
+  /// True while the bypass number is in the phone field — the OTP step is not
+  /// required (and cannot succeed) for it.
+  bool get _isBypassPhone => _phone.text.trim() == _bypassPhone;
+
+  // Set only for a phone-number query, so the "Number is available" /
+  // "Number not found" message below the search field reflects whether that
+  // specific search found a match — null hides it (no phone search yet, or
+  // the query changed since the last search ran).
+  bool? _phoneFound;
+
   Future<void> _runSearch() async {
     final q = _search.text.trim();
     if (q.isEmpty) return;
+    // A 10-digit query is treated as a phone; otherwise a name.
+    final byPhone = RegExp(r'^\d{10}$').hasMatch(q);
     setState(() {
       _searching = true;
       _err = '';
+      _phoneFound = null;
     });
     try {
-      // A 10-digit query is treated as a phone; otherwise a name.
-      final byPhone = RegExp(r'^\d{10}$').hasMatch(q);
       final samajId = q.toUpperCase().startsWith('DS-');
       final results = await Repository.instance.familyUserSearch(
         samajId: samajId ? q : null,
@@ -4508,6 +4526,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
       setState(() {
         _results = results;
         _searching = false;
+        _phoneFound = byPhone ? results.isNotEmpty : null;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -4537,37 +4556,86 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     }
   }
 
-  // Mock OTP send — no backend endpoint exists yet for verifying an arbitrary
-  // family member's phone, so this just moves the UI to the code-entry step.
   Future<void> _sendOtp() async {
     final phone = _phone.text.trim();
     if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
       setState(() => _err = 'Enter a valid 10-digit phone number');
       return;
     }
+    if (phone == _bypassPhone) {
+      // No SMS goes out for the bypass number — the backend accepts it without
+      // a verified session, so mark it verified here instead of waiting on a
+      // code that never arrives.
+      setState(() {
+        _err = '';
+        _otpSent = false;
+        _phoneVerified = true;
+        _phoneOtpSessionId = null;
+        _otp.clear();
+      });
+      return;
+    }
     setState(() {
       _err = '';
-      _otpSent = true;
-      _phoneVerified = false;
-      _otp.clear();
+      _verifying = true;
     });
+    try {
+      final sessionId = await Repository.instance.sendPhoneOtp(phone);
+      if (!mounted) return;
+      setState(() {
+        _otpSent = true;
+        _phoneVerified = false;
+        _phoneOtpSessionId = sessionId;
+        _otp.clear();
+        _verifying = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _err = e.message;
+        _verifying = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _err = 'Could not send OTP. Please try again.';
+        _verifying = false;
+      });
+    }
   }
 
-  // Mock OTP verify — accepts the same test code used elsewhere in the app
-  // (see register_screen.dart) until a real backend endpoint is wired up.
   Future<void> _verifyOtp() async {
+    final otp = _otp.text.trim();
+    if (otp.isEmpty) {
+      setState(() => _err = 'Enter the 6-digit OTP');
+      return;
+    }
+    final sessionId = _phoneOtpSessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      setState(() => _err = 'Please request the OTP again.');
+      return;
+    }
     setState(() {
       _verifying = true;
       _err = '';
     });
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    if (_otp.text.trim() == '121212') {
+    try {
+      final ok = await Repository.instance.verifyPhoneOtp(otp, sessionId);
+      if (!mounted) return;
+      if (ok) {
+        setState(() {
+          _phoneVerified = true;
+          _verifying = false;
+        });
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() {
-        _phoneVerified = true;
+        _err = e.message;
         _verifying = false;
       });
-    } else {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         _err = 'Invalid OTP. Please check and try again.';
         _verifying = false;
@@ -4604,7 +4672,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         setState(() => _err = 'Phone number is required');
         return;
       }
-      if (_noSmartphone && !_phoneVerified) {
+      if (_noSmartphone && !_phoneVerified && !_isBypassPhone) {
         setState(() => _err = 'Please verify the phone number with OTP');
         return;
       }
@@ -4630,6 +4698,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         dod: _dod,
         placeOfDeath: _placeOfDeath.text.trim(),
         biography: _biography.text.trim(),
+        smartphone: !_noSmartphone,
+        phoneVerified: _noSmartphone
+            ? (_phoneVerified || _isBypassPhone)
+            : null,
       );
       if (!mounted) return;
       final mode = (res['mode'] ?? '').toString();
@@ -4885,6 +4957,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             Expanded(
               child: TextField(
                 controller: _search,
+                onChanged: (_) {
+                  if (_phoneFound != null) setState(() => _phoneFound = null);
+                },
                 onSubmitted: (_) => _runSearch(),
                 style: body(
                   14,
@@ -4900,6 +4975,22 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             OutlineButtonX(label: t.ftSearch, onPressed: _runSearch),
           ],
         ),
+        if (_phoneFound != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _phoneFound! ? t.ftNumberAvailable : t.ftNumberNotFound,
+            style: body(
+              12,
+              weight: FontWeight.w600,
+              color: _phoneFound!
+                  ? context.onBrightness(
+                      light: AppColors.forest700,
+                      dark: AppColors.forest300,
+                    )
+                  : Colors.red.shade700,
+            ),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           t.ftAccountRequestNote,
@@ -5026,6 +5117,51 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     );
   }
 
+  Widget _smartphoneChoice({
+    required bool selected,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.forest800
+              : context.onBrightness(
+                  light: Colors.white,
+                  dark: AppColors.darkSurface,
+                ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? AppColors.forest800
+                : context.onBrightness(
+                    light: AppColors.border,
+                    dark: AppColors.darkBorder,
+                  ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: body(
+            13,
+            weight: FontWeight.w600,
+            color: selected
+                ? Colors.white
+                : context.onBrightness(
+                    light: AppColors.ink,
+                    dark: AppColors.darkText,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _profileSection(AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5063,49 +5199,52 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         ),
         const SizedBox(height: 14),
         if (!_isDeceased) ...[
-          InkWell(
-            onTap: () => setState(() {
-              _noSmartphone = !_noSmartphone;
-              if (!_noSmartphone) {
-                _otpSent = false;
-                _phoneVerified = false;
-                _otp.clear();
-              }
-            }),
-            borderRadius: BorderRadius.circular(8),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: _noSmartphone,
-                  activeColor: AppColors.forest700,
-                  onChanged: (v) => setState(() {
-                    _noSmartphone = v ?? false;
-                    if (!_noSmartphone) {
-                      _otpSent = false;
-                      _phoneVerified = false;
-                      _otp.clear();
-                    }
-                  }),
-                ),
-                Expanded(
-                  child: Text(
-                    'Do you have a smart phone?',
-                    style: body(
-                      13,
-                      weight: FontWeight.w600,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            'Do you have a smartphone?',
+            style: body(
+              13,
+              weight: FontWeight.w600,
+              color: context.onBrightness(
+                light: AppColors.ink,
+                dark: AppColors.darkText,
+              ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _smartphoneChoice(
+                  selected: !_noSmartphone,
+                  label: 'Yes',
+                  onTap: () => setState(() {
+                    _noSmartphone = false;
+                    _otpSent = false;
+                    _phoneVerified = false;
+                    _otp.clear();
+                    _phoneOtpSessionId = null;
+                  }),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _smartphoneChoice(
+                  selected: _noSmartphone,
+                  label: 'No',
+                  onTap: () => setState(() {
+                    _noSmartphone = true;
+                    _otpSent = false;
+                    _phoneVerified = false;
+                    _otp.clear();
+                    _phoneOtpSessionId = null;
+                  }),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           _field(
-            '${t.ftPhoneOptional} *',
+            'Phone Number *',
             _phone,
             hint: '9876543210',
             keyboard: TextInputType.phone,

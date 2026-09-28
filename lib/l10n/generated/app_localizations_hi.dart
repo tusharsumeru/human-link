@@ -731,6 +731,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profileAboutOccupation => 'बारे में और व्यवसाय';
 
   @override
+  String get profileAboutOccupationSubtitle =>
+      'आपकी प्रोफ़ाइल का बुनियादी विवरण';
+
+  @override
   String get profileOccupation => 'व्यवसाय';
 
   @override
@@ -778,6 +782,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get profileQuickStats => 'त्वरित आँकड़े';
+
+  @override
+  String get profileQuickStatsSubtitle => 'एक नज़र में आपकी प्रोफ़ाइल';
 
   @override
   String get profileGotra => 'गोत्र';
@@ -1334,6 +1341,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get ftSearch => 'खोजें';
+
+  @override
+  String get ftNumberAvailable => 'नंबर उपलब्ध है';
+
+  @override
+  String get ftNumberNotFound => 'नंबर नहीं मिला';
 
   @override
   String get ftAccountRequestNote =>
@@ -4106,6 +4119,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get convTapToChat => 'चैट करने के लिए टैप करें';
+
+  @override
+  String get convSearchHint => 'लोगों को खोजें';
+
+  @override
+  String get convNoResults => 'कोई मेल नहीं मिला';
 
   @override
   String commentCouldNotPost(String reason) {

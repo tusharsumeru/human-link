@@ -163,7 +163,20 @@ class _FeedState extends State<_Feed> {
   }
 
   /// Reflects a successful caption edit in the feed without a full re-fetch.
+  /// A post still held by [FeedStore] (this session's own upload) is updated
+  /// there instead of via [setState] here — same "check FeedStore first"
+  /// split as [_removePost]. Doing an unconditional dashboard-level
+  /// [setState] for a post that isn't actually in [_backendPosts] was a
+  /// no-op for the data but still tore down and rebuilt this post's own
+  /// still-executing widget subtree, which is what was crashing the edit
+  /// dialog right after a fresh upload.
   void _updatePostCaption(_Post post, String newCaption) {
+    for (final u in FeedStore.instance.posts) {
+      if (u.feedId == post.id) {
+        FeedStore.instance.updateCaption(post.id, newCaption);
+        return;
+      }
+    }
     if (!mounted) return;
     setState(() {
       _backendPosts = [
@@ -1170,10 +1183,23 @@ class _PostCardState extends State<_PostCard> {
       setState(() => _followBusy = false);
     } catch (e) {
       if (!mounted) return;
+      // A 409 here means the follow relationship already existed server-side
+      // even though this card's local state (built from a possibly-stale/
+      // failed [_FeedState._loadFollowing] fetch) thought otherwise. The
+      // desired end state — following — is already true, so keep the
+      // optimistic flip instead of reverting it back to "Follow": reverting
+      // used to leave the button showing "Follow" right under a toast that
+      // says "Already following this user".
+      final alreadyFollowing =
+          !wasFollowing && e is ApiException && e.statusCode == 409;
       setState(() {
-        _following = wasFollowing;
+        _following = alreadyFollowing ? true : wasFollowing;
         _followBusy = false;
       });
+      if (alreadyFollowing) {
+        widget.onFollowChanged?.call(true);
+        return;
+      }
       _showSnack(
         context,
         e is ApiException
@@ -1398,56 +1424,49 @@ class _PostCardState extends State<_PostCard> {
       _showSnack(context, t.cantEditCaptionYet);
       return;
     }
-    final controller = TextEditingController(text: widget.post.caption);
     final newCaption = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cream,
-        title: Text(
-          t.postMenuEditCaption,
-          style: display(18, color: AppColors.forest900),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 4,
-          maxLength: 2000,
-          decoration: InputDecoration(hintText: t.writeACaption),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              t.commonCancel,
-              style: body(14, color: AppColors.textMuted),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(
-              t.commonSave,
-              style: body(
-                14,
-                weight: FontWeight.w700,
-                color: AppColors.forest700,
-              ),
-            ),
-          ),
-        ],
-      ),
+      builder: (ctx) => _EditCaptionDialog(initialCaption: widget.post.caption),
     );
-    controller.dispose();
     if (newCaption == null || newCaption == widget.post.caption) return;
+    if (!context.mounted) return;
+    // Captured once, up front — [widget.onCaptionUpdated] below can trigger a
+    // rebuild of this very card (it flows through FeedStore/setState), so
+    // nothing after that point may go back to `context` for a fresh
+    // ScaffoldMessenger.of(context) lookup. That reuse-after-rebuild is what
+    // was crashing the app with a "_dependents.isEmpty" assertion right
+    // after a successful save.
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await Repository.instance.editPostCaption(widget.post.id, newCaption);
       widget.onCaptionUpdated?.call(newCaption);
-      if (context.mounted) _showSnack(context, t.captionUpdated);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              t.captionUpdated,
+              style: body(13, color: Colors.white),
+            ),
+            backgroundColor: AppColors.forest800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
     } catch (e) {
-      if (!context.mounted) return;
-      _showSnack(
-        context,
-        e is ApiException ? e.message : t.couldNotUpdateCaption,
-      );
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              e is ApiException ? e.message : t.couldNotUpdateCaption,
+              style: body(13, color: Colors.white),
+            ),
+            backgroundColor: AppColors.forest800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
     }
   }
 
@@ -1790,6 +1809,90 @@ class _PostCardState extends State<_PostCard> {
           color: context.onBrightness(
             light: AppColors.creamDark,
             dark: AppColors.darkBorder,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "Edit caption" dialog's content, as its own [StatefulWidget] so the
+/// [TextEditingController] is disposed by the framework's own lifecycle —
+/// i.e. only once this widget is actually unmounted — rather than by the
+/// caller right after [showDialog] returns. Disposing it that early crashed
+/// the app: the dialog's exit (fade) transition keeps this [TextField] alive
+/// and rebuilding for a few more frames after the route pops, so an
+/// already-disposed controller got touched mid-animation.
+class _EditCaptionDialog extends StatefulWidget {
+  const _EditCaptionDialog({required this.initialCaption});
+
+  final String initialCaption;
+
+  @override
+  State<_EditCaptionDialog> createState() => _EditCaptionDialogState();
+}
+
+class _EditCaptionDialogState extends State<_EditCaptionDialog> {
+  late final _controller = TextEditingController(text: widget.initialCaption);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final textColor = context.onBrightness(
+      light: AppColors.forest900,
+      dark: AppColors.darkText,
+    );
+    final mutedColor = context.onBrightness(
+      light: AppColors.textMuted,
+      dark: AppColors.darkTextMuted,
+    );
+    return AlertDialog(
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkSurface,
+      ),
+      title: Text(t.postMenuEditCaption, style: display(18, color: textColor)),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 4,
+        maxLength: 2000,
+        style: body(14, color: textColor),
+        cursorColor: AppColors.forest600,
+        decoration: InputDecoration(
+          hintText: t.writeACaption,
+          hintStyle: body(14, color: mutedColor),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
+          ),
+          counterStyle: body(12, color: mutedColor),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.commonCancel, style: body(14, color: mutedColor)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(
+            t.commonSave,
+            style: body(
+              14,
+              weight: FontWeight.w700,
+              color: AppColors.forest700,
+            ),
           ),
         ),
       ],

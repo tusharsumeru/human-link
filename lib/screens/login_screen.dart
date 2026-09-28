@@ -16,9 +16,12 @@ import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
 /// Login screen — mirrors web `src/app/login/page.tsx`.
-/// Phone → OTP login: `POST /api/user/login/send-otp` triggers a real SMS
-/// OTP (via 2Factor) and returns a session id, which is echoed back along
-/// with the entered OTP to `POST /api/user/login` to verify and sign in.
+/// Phone → OTP login: `POST /api/user/login/send-otp` dispatches a real OTP
+/// via 2Factor and hands back a session id; `POST /api/user/login` then
+/// verifies the entered code against that session and signs in. (A fixed
+/// test number bypasses 2Factor server-side for reviewers — see
+/// AuthService.sendOtpLogin on the backend — but the client-side flow is
+/// identical either way.)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -33,9 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = '';
   bool _loading = false;
 
-  /// 2Factor session id from the last `send-otp` call — required alongside
-  /// the OTP itself to verify against `/api/user/login`.
-  String _sessionId = '';
+  // Set by _handlePhoneNext from /api/user/login/send-otp's response; sent
+  // back on verify so the backend knows which 2Factor session the entered
+  // code belongs to. Without this, /api/user/login 400s with "sessionId must
+  // be a string" — send-otp must run before verify can ever succeed.
+  String? _sessionId;
 
   @override
   void dispose() {
@@ -44,8 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Validates the number, sends the OTP via `POST /api/user/login/send-otp`
-  /// (capturing the session id it returns), then advances to OTP entry.
+  /// Validates the number, sends the OTP, and (on success) advances to entry.
+  /// Also what the "Resend OTP" button on the next step calls.
   Future<void> _handlePhoneNext() async {
     final t = AppLocalizations.of(context);
     if (_phoneCtrl.text.length < 10) {
@@ -58,33 +63,24 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       final sessionId = await Repository.instance.sendLoginOtp(
-        _phoneCtrl.text.trim(),
+        _phoneCtrl.text,
       );
       if (!mounted) return;
       setState(() {
         _sessionId = sessionId;
-        _loading = false;
         _phoneStep = 'otp';
+        _loading = false;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error =
-            (e.statusCode == 404 || e.message == 'Phone number not registered')
-            ? t.loginErrorNotRegistered
-            : e.message;
+        _error = e.message;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error =
-            (e is SocketException ||
-                e is TimeoutException ||
-                e is HttpException ||
-                e is ClientException)
-            ? t.loginErrorServerUnreachable(ApiConfig.baseUrl)
-            : t.loginErrorNetwork;
+        _error = t.loginErrorNetwork;
         _loading = false;
       });
     }
@@ -99,6 +95,16 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = t.loginErrorInvalidOtp);
       return;
     }
+    final sessionId = _sessionId;
+    if (sessionId == null) {
+      // Shouldn't happen — the OTP step only shows after send-otp succeeded —
+      // but recover cleanly rather than sending a request that will 400.
+      setState(() {
+        _phoneStep = 'phone';
+        _error = 'Session expired — please request the OTP again.';
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = '';
@@ -106,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthService>();
     final existing = auth.user;
     try {
-      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text, _sessionId);
+      var user = await auth.login(_phoneCtrl.text, _otpCtrl.text, sessionId);
       if (existing != null && existing.phone == user.phone) {
         user = user.copyWith(
           photoPath: existing.photoPath.isNotEmpty ? existing.photoPath : null,
