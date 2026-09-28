@@ -21,7 +21,6 @@ import 'screens/profile_edit_screen.dart';
 import 'screens/welfare_list_screen.dart';
 import 'screens/welfare_detail_screen.dart';
 import 'screens/welfare_impact_screen.dart';
-import 'screens/welfare_new_campaign_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/profile_verify_screen.dart';
 import 'screens/onboarding_identity_screen.dart';
@@ -138,7 +137,6 @@ GoRouter buildRouter(AuthService auth) {
       ),
       GoRoute(path: '/welfare', builder: (_, __) => const WelfareListScreen()),
       GoRoute(path: '/welfare/impact', builder: (_, __) => const WelfareImpactScreen()),
-      GoRoute(path: '/welfare/new', builder: (_, __) => const NewCampaignScreen()),
       GoRoute(
         path: '/welfare/donate/:id',
         builder: (_, s) => WelfareDonateScreen(id: s.pathParameters['id']!),

@@ -406,6 +406,24 @@ abstract class AppLocalizations {
   /// **'e.g. Aditi Shanbhag Rao'**
   String get registerFullNameHint;
 
+  /// No description provided for @registerNameKannada.
+  ///
+  /// In en, this message translates to:
+  /// **'Name in Kannada'**
+  String get registerNameKannada;
+
+  /// No description provided for @registerNameHindi.
+  ///
+  /// In en, this message translates to:
+  /// **'Name in Hindi'**
+  String get registerNameHindi;
+
+  /// No description provided for @registerNameScriptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'auto-filled, correct if needed'**
+  String get registerNameScriptHint;
+
   /// No description provided for @registerMobileNumber.
   ///
   /// In en, this message translates to:
@@ -2331,6 +2349,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite link copied'**
   String get ftInviteLinkCopied;
+
+  /// No description provided for @ftShareWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get ftShareWhatsapp;
+
+  /// No description provided for @ftShareMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More apps'**
+  String get ftShareMore;
+
+  /// No description provided for @ftInviteShareText.
+  ///
+  /// In en, this message translates to:
+  /// **'Join me on Samaj. Here is your invite: {link}'**
+  String ftInviteShareText(String link);
+
+  /// No description provided for @ftInviteShareSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Samaj invite'**
+  String get ftInviteShareSubject;
+
+  /// No description provided for @ftShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the share sheet'**
+  String get ftShareFailed;
 
   /// No description provided for @ftYourRelative.
   ///
@@ -4557,6 +4605,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Donate ₹{amount}'**
   String welfareDonateAmount(String amount);
+
+  /// No description provided for @welfareLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load campaigns.'**
+  String get welfareLoadFailed;
+
+  /// No description provided for @welfareEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'EMAIL (FOR RECEIPT)'**
+  String get welfareEmailLabel;
+
+  /// No description provided for @welfareEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'you@example.com'**
+  String get welfareEmailHint;
+
+  /// No description provided for @welfareRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get welfareRetry;
+
+  /// No description provided for @welfareNoCampaigns.
+  ///
+  /// In en, this message translates to:
+  /// **'No campaigns are running right now.'**
+  String get welfareNoCampaigns;
+
+  /// No description provided for @welfareOpenEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-ended'**
+  String get welfareOpenEnded;
+
+  /// No description provided for @welfareCampaignClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'This campaign is no longer accepting donations.'**
+  String get welfareCampaignClosed;
+
+  /// No description provided for @welfarePaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment failed. Please try again.'**
+  String get welfarePaymentFailed;
+
+  /// No description provided for @welfarePaymentVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received but could not be confirmed. Please contact the Samaj office; do not pay again.'**
+  String get welfarePaymentVerifyFailed;
+
+  /// No description provided for @welfareMessageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'MESSAGE (OPTIONAL)'**
+  String get welfareMessageOptional;
+
+  /// No description provided for @welfareMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A few words with your contribution'**
+  String get welfareMessageHint;
+
+  /// No description provided for @welfareSecurePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure payment via Razorpay — UPI, cards, net banking and wallets.'**
+  String get welfareSecurePayment;
+
+  /// No description provided for @welfareDonationFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Donation for {title}'**
+  String welfareDonationFor(String title);
 
   /// No description provided for @welfareImpactReport.
   ///

@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
+import '../data/api_client.dart';
+import '../data/models/welfare_campaign.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
+import 'welfare_list_screen.dart' show CampaignCover;
 
-/// Make-a-contribution flow — ported from
-/// `src/app/welfare/donate/[id]/page.tsx`.
+/// Make-a-contribution flow — ported from `src/app/welfare/donate/[id]/page.tsx`.
+///
+/// Real money: the chosen amount becomes a Razorpay Order created by the server
+/// (`POST /api/payments/campaigns/order`), which stamps the campaign id and
+/// title into the order's notes and receipt so the Razorpay dashboard shows
+/// which campaign every payment was for. After Checkout the payment is
+/// confirmed with `POST /api/payments/campaigns/verify`, which records the
+/// donation and moves the campaign's raised total.
 class WelfareDonateScreen extends StatefulWidget {
   const WelfareDonateScreen({super.key, required this.id});
 
@@ -20,16 +32,38 @@ class WelfareDonateScreen extends StatefulWidget {
 class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
   static const _presets = [501, 1100, 2500, 5100, 11000];
 
+  late Future<WelfareCampaign> _future;
+  late final Razorpay _razorpay;
+
   int _amount = 2500;
   final _customCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _messageCtrl = TextEditingController();
   bool _anonymous = false;
-  String _payMethod = 'upi';
+
+  bool _paying = false;
+  String? _error;
+  String? _pendingOrderId;
+  WelfareCampaign? _pendingCampaign;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = Repository.instance.fetchCampaign(widget.id);
+    _razorpay = Razorpay()
+      ..on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSuccess)
+      ..on(Razorpay.EVENT_PAYMENT_ERROR, _onError)
+      ..on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+  }
 
   @override
   void dispose() {
+    _razorpay.clear();
     _customCtrl.dispose();
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _messageCtrl.dispose();
     super.dispose();
   }
 
@@ -47,9 +81,114 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     }
   }
 
-  void _submit(Map<String, dynamic> campaign) {
+  // ── Payment ───────────────────────────────────────────────────────────────
+
+  Future<void> _pay(WelfareCampaign campaign) async {
     final t = AppLocalizations.of(context);
-    final title = campaign['title'] as String;
+    // Read before the first await — using `context` after one without a
+    // `mounted` guard is unsafe if the screen was disposed in between.
+    final user = context.read<AuthService>().user;
+    final donorName = _anonymous ? '' : _nameCtrl.text.trim();
+    final prefillName = donorName.isNotEmpty ? donorName : (user?.name ?? '');
+    final email = _emailCtrl.text.trim();
+
+    setState(() {
+      _paying = true;
+      _error = null;
+    });
+    try {
+      final order = await Repository.instance.createCampaignOrder(
+        campaignId: campaign.id,
+        amount: _finalAmount,
+        donorName: donorName.isNotEmpty ? donorName : user?.name,
+        anonymous: _anonymous,
+        message: _messageCtrl.text.trim(),
+        contactName: prefillName,
+        contactPhone: user?.phone,
+        contactEmail: email,
+      );
+      _pendingOrderId = (order['orderId'] ?? '').toString();
+      _pendingCampaign = campaign;
+      if (!mounted) return;
+      _razorpay.open({
+        'key': order['key'],
+        'amount': order['amount'], // paise — Checkout's unit, not rupees
+        'currency': order['currency'] ?? 'INR',
+        'order_id': _pendingOrderId,
+        'name': 'Daivajna Samaja',
+        // Shown on the Checkout sheet and on the payment in Razorpay.
+        'description': t.welfareDonationFor(campaign.title),
+        'notes': {
+          'campaignId': campaign.id,
+          'campaignTitle': campaign.title,
+          'donorName': _anonymous ? 'Anonymous' : prefillName,
+        },
+        'prefill': {
+          'contact': user?.phone ?? '',
+          'name': prefillName,
+          'email': email,
+        },
+        'theme': {'color': '#1B5E20'},
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _paying = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _paying = false;
+        _error = t.welfarePaymentFailed;
+      });
+    }
+  }
+
+  Future<void> _onSuccess(PaymentSuccessResponse response) async {
+    final t = AppLocalizations.of(context);
+    try {
+      await Repository.instance.verifyCampaignPayment(
+        orderId: response.orderId ?? _pendingOrderId ?? '',
+        paymentId: response.paymentId ?? '',
+        signature: response.signature ?? '',
+      );
+      if (!mounted) return;
+      final campaign = _pendingCampaign;
+      setState(() {
+        _paying = false;
+        // Refresh so the raised total reflects this gift.
+        _future = Repository.instance.fetchCampaign(widget.id);
+      });
+      if (campaign != null) _showThanks(campaign.title);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _paying = false;
+        _error = t.welfarePaymentVerifyFailed;
+      });
+    }
+  }
+
+  void _onError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() {
+      _paying = false;
+      // Code 2 is Razorpay's own "payment cancelled by user" — not a real
+      // error, so no need to alarm anyone over a closed Checkout sheet.
+      _error = response.code == 2
+          ? null
+          : (response.message ??
+                AppLocalizations.of(context).welfarePaymentFailed);
+    });
+  }
+
+  void _onExternalWallet(ExternalWalletResponse response) {
+    // Informational only — Checkout is already handling the wallet redirect.
+  }
+
+  void _showThanks(String title) {
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -96,10 +235,10 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     );
   }
 
+  // ── UI ────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final campaign = Repository.instance.welfareById(widget.id);
-
     return Scaffold(
       backgroundColor: context.onBrightness(
         light: AppColors.cream,
@@ -119,7 +258,16 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
           style: display(18, color: Colors.white),
         ),
       ),
-      body: campaign == null ? _notFound() : _form(campaign),
+      body: FutureBuilder<WelfareCampaign>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snap.hasError || !snap.hasData) return _notFound();
+          return _form(snap.data!);
+        },
+      ),
     );
   }
 
@@ -159,16 +307,14 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     );
   }
 
-  Widget _form(Map<String, dynamic> c) {
+  Widget _form(WelfareCampaign c) {
     final t = AppLocalizations.of(context);
-    final raised = c['raised'] as int;
-    final goal = c['goal'] as int;
-    final pct = goal == 0 ? 0 : ((raised / goal) * 100).round();
+    final closed = !c.isActive;
 
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 130),
           children: [
             // Campaign header card.
             AppCard(
@@ -176,38 +322,16 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 140,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(c['colorA'] as int),
-                          Color(c['colorB'] as int),
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(18),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        c['image'] as String,
-                        style: const TextStyle(fontSize: 56),
-                      ),
-                    ),
-                  ),
+                  CampaignCover(campaign: c, height: 140, emojiSize: 56),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Pill(c['category'] as String),
+                        Pill(c.categoryLabel),
                         const SizedBox(height: 10),
                         Text(
-                          c['title'] as String,
+                          c.title,
                           style: display(
                             18,
                             color: context.onBrightness(
@@ -218,7 +342,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          c['description'] as String,
+                          c.description,
                           style: body(
                             13,
                             color: context.onBrightness(
@@ -229,15 +353,12 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        ProgressBar(
-                          value: goal == 0 ? 0 : raised / goal,
-                          height: 8,
-                        ),
+                        ProgressBar(value: c.progress, height: 8),
                         const SizedBox(height: 8),
                         Row(
                           children: [
                             Text(
-                              t.welfareRaised(formatLakh(raised)),
+                              t.welfareRaised(formatLakh(c.raised)),
                               style: body(
                                 13,
                                 weight: FontWeight.w700,
@@ -249,7 +370,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                             ),
                             const Spacer(),
                             Text(
-                              t.welfarePctLabel(pct),
+                              t.welfarePctLabel(c.percent),
                               style: body(
                                 12,
                                 color: context.onBrightness(
@@ -262,10 +383,12 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          t.welfareDaysLeftContributors(
-                            c['daysLeft'] as int,
-                            c['backers'] as int,
-                          ),
+                          c.daysLeft == null
+                              ? '${t.welfareOpenEnded} · ${t.welfareBackers(c.backers)}'
+                              : t.welfareDaysLeftContributors(
+                                  c.daysLeft!,
+                                  c.backers,
+                                ),
                           style: body(
                             12,
                             color: context.onBrightness(
@@ -282,51 +405,21 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             ),
             const SizedBox(height: 14),
 
+            if (closed) ...[
+              _Notice(
+                icon: Icons.lock_clock_rounded,
+                text: t.welfareCampaignClosed,
+                tone: AppColors.gold700,
+              ),
+              const SizedBox(height: 14),
+            ],
+
             // Transparency pledge.
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.forest500.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.forest500.withValues(alpha: 0.35),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.verified_user_rounded,
-                    size: 20,
-                    color: AppColors.forest700,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.welfareTransparencyPledge,
-                          style: body(
-                            13,
-                            weight: FontWeight.w700,
-                            color: AppColors.forest800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          t.welfareTransparencyPledgeBody,
-                          style: body(
-                            12,
-                            color: AppColors.textMuted,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _Notice(
+              icon: Icons.verified_user_rounded,
+              title: t.welfareTransparencyPledge,
+              text: t.welfareTransparencyPledgeBody,
+              tone: AppColors.forest700,
             ),
             const SizedBox(height: 18),
 
@@ -341,16 +434,19 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
                   _AmountChip(
                     label: '₹${formatIndian(a)}',
                     selected: _amount == a && _customCtrl.text.trim().isEmpty,
-                    onTap: () => setState(() {
-                      _amount = a;
-                      _customCtrl.clear();
-                    }),
+                    onTap: closed
+                        ? null
+                        : () => setState(() {
+                            _amount = a;
+                            _customCtrl.clear();
+                          }),
                   ),
               ],
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _customCtrl,
+              enabled: !closed,
               keyboardType: TextInputType.number,
               onChanged: (_) => setState(() {}),
               decoration: _inputDecoration(t.welfareEnterCustomAmount),
@@ -362,7 +458,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             const SizedBox(height: 10),
             TextField(
               controller: _nameCtrl,
-              enabled: !_anonymous,
+              enabled: !_anonymous && !closed,
               decoration: _inputDecoration(
                 _anonymous ? t.welfareAnonymous : t.welfareYourName,
               ),
@@ -372,7 +468,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
               contentPadding: EdgeInsets.zero,
               activeThumbColor: AppColors.forest700,
               value: _anonymous,
-              onChanged: (v) => setState(() => _anonymous = v),
+              onChanged: closed ? null : (v) => setState(() => _anonymous = v),
               title: Text(
                 t.welfareDonateAnonymously,
                 style: body(13, weight: FontWeight.w600),
@@ -380,32 +476,54 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Payment method.
-            _label(t.welfarePaymentMethod),
+            // Email, for the Razorpay receipt.
+            _label(t.welfareEmailLabel),
             const SizedBox(height: 10),
-            _PayOption(
-              id: 'upi',
-              icon: Icons.qr_code_rounded,
-              label: t.welfareUpiQr,
-              selected: _payMethod == 'upi',
-              onTap: () => setState(() => _payMethod = 'upi'),
+            TextField(
+              controller: _emailCtrl,
+              enabled: !closed,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              decoration: _inputDecoration(t.welfareEmailHint),
+            ),
+            const SizedBox(height: 18),
+
+            // Optional message.
+            _label(t.welfareMessageOptional),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _messageCtrl,
+              enabled: !closed,
+              maxLength: 500,
+              maxLines: 2,
+              decoration: _inputDecoration(t.welfareMessageHint),
             ),
             const SizedBox(height: 8),
-            _PayOption(
-              id: 'card',
-              icon: Icons.credit_card_rounded,
-              label: t.welfareCreditDebitCard,
-              selected: _payMethod == 'card',
-              onTap: () => setState(() => _payMethod = 'card'),
+
+            // Payment method note: Razorpay Checkout offers UPI, cards, net
+            // banking and wallets itself, so there is nothing to pick here.
+            Row(
+              children: [
+                const Icon(Icons.lock_rounded, size: 14, color: AppColors.hint),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    t.welfareSecurePayment,
+                    style: body(
+                      12,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _PayOption(
-              id: 'netbanking',
-              icon: Icons.account_balance_rounded,
-              label: t.welfareNetBanking,
-              selected: _payMethod == 'netbanking',
-              onTap: () => setState(() => _payMethod = 'netbanking'),
-            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: body(13, color: Colors.red)),
+            ],
           ],
         ),
 
@@ -416,19 +534,26 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
           bottom: 0,
           child: Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: const BoxDecoration(
-              color: AppColors.cream,
-              border: Border(top: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              color: context.onBrightness(
+                light: AppColors.cream,
+                dark: AppColors.darkSurface,
+              ),
+              border: const Border(top: BorderSide(color: AppColors.border)),
             ),
             child: SafeArea(
               top: false,
               child: SizedBox(
                 width: double.infinity,
                 child: ForestButton(
-                  label: t.welfareDonateAmount(formatIndian(_finalAmount)),
+                  label: _paying
+                      ? '…'
+                      : t.welfareDonateAmount(formatIndian(_finalAmount)),
                   icon: Icons.favorite_rounded,
                   expand: true,
-                  onPressed: _finalAmount <= 0 ? null : () => _submit(c),
+                  onPressed: closed || _paying || _finalAmount <= 0
+                      ? null
+                      : () => _pay(c),
                 ),
               ),
             ),
@@ -456,6 +581,7 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
     hintStyle: body(14, color: AppColors.hint),
     filled: true,
     fillColor: Colors.white,
+    counterText: '',
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -472,6 +598,56 @@ class _WelfareDonateScreenState extends State<WelfareDonateScreen> {
   );
 }
 
+class _Notice extends StatelessWidget {
+  const _Notice({
+    required this.icon,
+    required this.text,
+    required this.tone,
+    this.title,
+  });
+  final IconData icon;
+  final String? title;
+  final String text;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tone.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: tone),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title != null) ...[
+                  Text(
+                    title!,
+                    style: body(13, weight: FontWeight.w700, color: tone),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                Text(
+                  text,
+                  style: body(12, color: AppColors.textMuted, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AmountChip extends StatelessWidget {
   const _AmountChip({
     required this.label,
@@ -480,7 +656,7 @@ class _AmountChip extends StatelessWidget {
   });
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -521,100 +697,6 @@ class _AmountChip extends StatelessWidget {
                       dark: AppColors.darkText,
                     ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PayOption extends StatelessWidget {
-  const _PayOption({
-    required this.id,
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String id;
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.forest500.withValues(alpha: 0.10)
-                : context.onBrightness(
-                    light: Colors.white,
-                    dark: AppColors.darkSurface,
-                  ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected
-                  ? AppColors.forest800
-                  : context.onBrightness(
-                      light: AppColors.border,
-                      dark: AppColors.darkBorder,
-                    ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.forest800
-                        : const Color(0xFFD1D5DB),
-                    width: 2,
-                  ),
-                ),
-                child: selected
-                    ? const Center(
-                        child: CircleAvatar(
-                          radius: 5,
-                          backgroundColor: AppColors.forest800,
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? AppColors.forest800
-                    : context.onBrightness(
-                        light: AppColors.textMuted,
-                        dark: AppColors.darkTextMuted,
-                      ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: body(
-                  14,
-                  weight: FontWeight.w500,
-                  color: context.onBrightness(
-                    light: AppColors.label,
-                    dark: AppColors.darkText,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),

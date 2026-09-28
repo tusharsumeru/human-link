@@ -203,6 +203,10 @@ class AppUser {
   final String id; // backend users._id (needed to key chats/messages)
   final String samajId; // permanent membership number, e.g. "DS-0013467"
   final String name;
+  // The same name in Devanagari and Kannada (transliterated at registration,
+  // editable by the member). "" when unknown — use [displayName].
+  final String nameHi;
+  final String nameKn;
   final String userName; // backend handle (unique, e.g. "priya_test")
   final String phone;
   final String role; // "member" | "elder"
@@ -248,6 +252,8 @@ class AppUser {
     this.id = '',
     this.samajId = '',
     required this.name,
+    this.nameHi = '',
+    this.nameKn = '',
     this.userName = '',
     required this.phone,
     required this.role,
@@ -274,10 +280,25 @@ class AppUser {
 
   bool get isElder => role == 'elder';
 
+  /// The name in the script of [languageCode] ('hi' / 'kn'), falling back to
+  /// the Latin [name] when that script was never filled in.
+  String displayName(String languageCode) {
+    switch (languageCode) {
+      case 'hi':
+        return nameHi.isNotEmpty ? nameHi : name;
+      case 'kn':
+        return nameKn.isNotEmpty ? nameKn : name;
+      default:
+        return name;
+    }
+  }
+
   factory AppUser.fromMap(Map<String, dynamic> m) => AppUser(
     id: (m['_id'] ?? m['id'] ?? '').toString(),
     samajId: (m['samajId'] ?? '') as String,
     name: (m['name'] ?? '') as String,
+    nameHi: _localizedName(m, 'hi'),
+    nameKn: _localizedName(m, 'kn'),
     userName: (m['userName'] ?? '') as String,
     phone: (m['phone'] ?? '') as String,
     role: (m['role'] ?? 'member') as String,
@@ -310,6 +331,7 @@ class AppUser {
     'id': id,
     'samajId': samajId,
     'name': name,
+    'nameLocalized': {'hi': nameHi, 'kn': nameKn},
     'userName': userName,
     'phone': phone,
     'role': role,
@@ -338,6 +360,8 @@ class AppUser {
     String? id,
     String? samajId,
     String? name,
+    String? nameHi,
+    String? nameKn,
     String? userName,
     String? phone,
     String? role,
@@ -364,6 +388,8 @@ class AppUser {
     id: id ?? this.id,
     samajId: samajId ?? this.samajId,
     name: name ?? this.name,
+    nameHi: nameHi ?? this.nameHi,
+    nameKn: nameKn ?? this.nameKn,
     userName: userName ?? this.userName,
     phone: phone ?? this.phone,
     role: role ?? this.role,
@@ -387,6 +413,13 @@ class AppUser {
     verified: verified ?? this.verified,
     hasDonated: hasDonated ?? this.hasDonated,
   );
+}
+
+/// `nameLocalized.<script>` from a server or cached user map, "" if absent.
+String _localizedName(Map<String, dynamic> m, String script) {
+  final n = m['nameLocalized'];
+  if (n is Map) return (n[script] ?? '').toString();
+  return '';
 }
 
 /// Decodes a JWT's payload claims ({sub, userName, role, …}), or null if it

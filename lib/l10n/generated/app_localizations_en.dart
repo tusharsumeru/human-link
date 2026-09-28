@@ -171,6 +171,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get registerFullNameHint => 'e.g. Aditi Shanbhag Rao';
 
   @override
+  String get registerNameKannada => 'Name in Kannada';
+
+  @override
+  String get registerNameHindi => 'Name in Hindi';
+
+  @override
+  String get registerNameScriptHint => 'auto-filled, correct if needed';
+
+  @override
   String get registerMobileNumber => 'Mobile Number';
 
   @override
@@ -1230,6 +1239,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ftInviteLinkCopied => 'Invite link copied';
+
+  @override
+  String get ftShareWhatsapp => 'WhatsApp';
+
+  @override
+  String get ftShareMore => 'More apps';
+
+  @override
+  String ftInviteShareText(String link) {
+    return 'Join me on Samaj. Here is your invite: $link';
+  }
+
+  @override
+  String get ftInviteShareSubject => 'Your Samaj invite';
+
+  @override
+  String get ftShareFailed => 'Could not open the share sheet';
 
   @override
   String get ftYourRelative => 'Your relative';
@@ -2449,6 +2475,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String welfareDonateAmount(String amount) {
     return 'Donate ₹$amount';
+  }
+
+  @override
+  String get welfareLoadFailed => 'Could not load campaigns.';
+
+  @override
+  String get welfareEmailLabel => 'EMAIL (FOR RECEIPT)';
+
+  @override
+  String get welfareEmailHint => 'you@example.com';
+
+  @override
+  String get welfareRetry => 'Retry';
+
+  @override
+  String get welfareNoCampaigns => 'No campaigns are running right now.';
+
+  @override
+  String get welfareOpenEnded => 'Open-ended';
+
+  @override
+  String get welfareCampaignClosed =>
+      'This campaign is no longer accepting donations.';
+
+  @override
+  String get welfarePaymentFailed => 'Payment failed. Please try again.';
+
+  @override
+  String get welfarePaymentVerifyFailed =>
+      'Payment received but could not be confirmed. Please contact the Samaj office; do not pay again.';
+
+  @override
+  String get welfareMessageOptional => 'MESSAGE (OPTIONAL)';
+
+  @override
+  String get welfareMessageHint => 'A few words with your contribution';
+
+  @override
+  String get welfareSecurePayment =>
+      'Secure payment via Razorpay — UPI, cards, net banking and wallets.';
+
+  @override
+  String welfareDonationFor(String title) {
+    return 'Donation for $title';
   }
 
   @override
