@@ -740,6 +740,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profileAboutOccupation => 'बारे में और व्यवसाय';
 
   @override
+  String get profileAboutOccupationSubtitle =>
+      'आपकी प्रोफ़ाइल का बुनियादी विवरण';
+
+  @override
   String get profileOccupation => 'व्यवसाय';
 
   @override
@@ -787,6 +791,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get profileQuickStats => 'त्वरित आँकड़े';
+
+  @override
+  String get profileQuickStatsSubtitle => 'एक नज़र में आपकी प्रोफ़ाइल';
 
   @override
   String get profileGotra => 'गोत्र';
@@ -1360,6 +1367,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get ftSearch => 'खोजें';
+
+  @override
+  String get ftNumberAvailable => 'नंबर उपलब्ध है';
+
+  @override
+  String get ftNumberNotFound => 'नंबर नहीं मिला';
 
   @override
   String get ftAccountRequestNote =>
@@ -4023,15 +4036,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get storyPleaseTryAgain => 'कृपया पुनः प्रयास करें';
 
   @override
-  String storyComingSoon(String label) {
-    return '$label - जल्द आ रहा है';
-  }
-
-  @override
   String get storyShareTitle => 'स्टोरी साझा करें';
-
-  @override
-  String get storyHelp => 'सहायता';
 
   @override
   String get storyReviewRecording => 'अपनी रिकॉर्डिंग की समीक्षा करें';
@@ -4067,16 +4072,10 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get storyAdvancedSettings => 'उन्नत सेटिंग्स';
-
-  @override
   String get storyVisibleTo => 'इन्हें दिखाई देगा';
 
   @override
   String get storyPostToCommunity => 'समुदाय में पोस्ट करें';
-
-  @override
-  String get storyDrafts => 'ड्राफ्ट';
 
   @override
   String get storyLocationHint => 'उदा. कुमटा, महालसा मंदिर…';
@@ -4190,6 +4189,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get convTapToChat => 'चैट करने के लिए टैप करें';
+
+  @override
+  String get convSearchHint => 'लोगों को खोजें';
+
+  @override
+  String get convNoResults => 'कोई मेल नहीं मिला';
 
   @override
   String commentCouldNotPost(String reason) {

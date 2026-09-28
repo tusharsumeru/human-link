@@ -64,6 +64,12 @@ const _textColors = <Color>[
 ];
 
 class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
+  // The story canvas is a fixed frame (matches the app's own story-viewer
+  // fallback ratio — see story_viewer_screen.dart), not the source photo's
+  // own shape — a landscape or square pick still needs to fill a phone-shaped
+  // story, which is exactly what the pinch-to-zoom/pan below is for.
+  static const _frameAspectRatio = 9 / 16;
+
   final _boundaryKey = GlobalKey();
   final List<_TextItem> _items = [];
   int _seq = 0;
@@ -89,13 +95,14 @@ class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
         );
   }
 
-  /// Bakes every text layer into the photo and returns a new file to upload.
-  /// No layers → the original file, untouched (no needless recompression).
-  /// Capped at 1600px on the long edge — plenty sharp for a phone-screen
-  /// story and keeps the capture from ballooning in memory on a big source
-  /// photo.
+  /// Bakes the current crop/zoom/pan — and every text layer — into the photo
+  /// and returns a new file to upload. Always re-renders, even with no text
+  /// and no zoom: the frame is a fixed 9:16 story shape now, not the photo's
+  /// own, so *some* crop is applied unless the source happened to already be
+  /// exactly 9:16. Capped at 1600px on the long edge — plenty sharp for a
+  /// phone-screen story and keeps the capture from ballooning in memory on a
+  /// big source photo.
   Future<String> export() async {
-    if (_items.isEmpty) return widget.imagePath;
     final boundary =
         _boundaryKey.currentContext!.findRenderObject()
             as RenderRepaintBoundary;
@@ -168,7 +175,7 @@ class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
   Widget build(BuildContext context) {
     if (_naturalSize == null) {
       return const AspectRatio(
-        aspectRatio: 3 / 4,
+        aspectRatio: _frameAspectRatio,
         child: ColoredBox(
           color: AppColors.forest900,
           child: Center(
@@ -178,10 +185,11 @@ class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
       );
     }
     return AspectRatio(
-      aspectRatio: _naturalSize!.width / _naturalSize!.height,
+      aspectRatio: _frameAspectRatio,
       child: LayoutBuilder(
         builder: (context, constraints) {
           _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+          final coverSize = _coverSize(_naturalSize!, _layoutSize);
           return Stack(
             children: [
               Positioned.fill(
@@ -192,7 +200,21 @@ class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(File(widget.imagePath), fit: BoxFit.cover),
+                        // minScale 1.0 == exactly filling the frame (no
+                        // smaller), so pinch/pan can crop in tighter but can
+                        // never open up an empty gap at the edges.
+                        InteractiveViewer(
+                          minScale: 1.0,
+                          maxScale: 4.0,
+                          child: SizedBox(
+                            width: coverSize.width,
+                            height: coverSize.height,
+                            child: Image.file(
+                              File(widget.imagePath),
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                        ),
                         for (final item in _items) _textLayer(item),
                       ],
                     ),
@@ -200,33 +222,46 @@ class StoryTextOverlayEditorState extends State<StoryTextOverlayEditor> {
                 ),
               ),
               Positioned(top: 10, right: 10, child: _AaButton(onTap: _addText)),
-              if (_items.isNotEmpty)
-                Positioned(
-                  bottom: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        'Drag to move · pinch to resize · tap to edit',
-                        style: body(11, color: Colors.white),
-                      ),
+              Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      _items.isEmpty
+                          ? 'Pinch to zoom · drag to reposition'
+                          : 'Pinch photo to zoom · drag text to move · tap to edit',
+                      style: body(11, color: Colors.white),
                     ),
                   ),
                 ),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  /// The smallest size (preserving the photo's own aspect ratio) that still
+  /// fully covers [frame] — i.e. `BoxFit.cover`'s target size, computed up
+  /// front so it can be handed to [InteractiveViewer] as its un-zoomed child
+  /// size instead of relying on a fit that InteractiveViewer doesn't have.
+  Size _coverSize(Size natural, Size frame) {
+    final scale = math.max(
+      frame.width / natural.width,
+      frame.height / natural.height,
+    );
+    return Size(natural.width * scale, natural.height * scale);
   }
 
   Widget _textLayer(_TextItem item) {

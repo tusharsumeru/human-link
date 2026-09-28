@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' show ClientException;
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -162,7 +163,20 @@ class _FeedState extends State<_Feed> {
   }
 
   /// Reflects a successful caption edit in the feed without a full re-fetch.
+  /// A post still held by [FeedStore] (this session's own upload) is updated
+  /// there instead of via [setState] here — same "check FeedStore first"
+  /// split as [_removePost]. Doing an unconditional dashboard-level
+  /// [setState] for a post that isn't actually in [_backendPosts] was a
+  /// no-op for the data but still tore down and rebuilt this post's own
+  /// still-executing widget subtree, which is what was crashing the edit
+  /// dialog right after a fresh upload.
   void _updatePostCaption(_Post post, String newCaption) {
+    for (final u in FeedStore.instance.posts) {
+      if (u.feedId == post.id) {
+        FeedStore.instance.updateCaption(post.id, newCaption);
+        return;
+      }
+    }
     if (!mounted) return;
     setState(() {
       _backendPosts = [
@@ -1127,6 +1141,20 @@ class _PostCardState extends State<_PostCard> {
     super.dispose();
   }
 
+  /// Instagram-style: tapping the avatar or name on a post opens that
+  /// member's profile — my own profile for my own post, their public account
+  /// profile (posts grid + followers/following, not the family-tree-scoped
+  /// '/profile/:id') otherwise. No-ops if the author reference is missing
+  /// (see the same guard on the Follow button, just above this in build()).
+  void _openAuthorProfile(BuildContext context) {
+    final p = widget.post;
+    if (p.isMine) {
+      context.push('/profile/me');
+    } else if (p.authorId.isNotEmpty) {
+      context.push('/user/${p.authorId}');
+    }
+  }
+
   /// POST /follow-users/followRequest and PATCH /follow-users/unfollowRequest
   /// — flips immediately and reverts if the request fails, same pattern as
   /// [_toggleLike]. Busy-guarded rather than request-id-guarded: unlike
@@ -1159,10 +1187,23 @@ class _PostCardState extends State<_PostCard> {
       setState(() => _followBusy = false);
     } catch (e) {
       if (!mounted) return;
+      // A 409 here means the follow relationship already existed server-side
+      // even though this card's local state (built from a possibly-stale/
+      // failed [_FeedState._loadFollowing] fetch) thought otherwise. The
+      // desired end state — following — is already true, so keep the
+      // optimistic flip instead of reverting it back to "Follow": reverting
+      // used to leave the button showing "Follow" right under a toast that
+      // says "Already following this user".
+      final alreadyFollowing =
+          !wasFollowing && e is ApiException && e.statusCode == 409;
       setState(() {
-        _following = wasFollowing;
+        _following = alreadyFollowing ? true : wasFollowing;
         _followBusy = false;
       });
+      if (alreadyFollowing) {
+        widget.onFollowChanged?.call(true);
+        return;
+      }
       _showSnack(
         context,
         e is ApiException
@@ -1387,56 +1428,49 @@ class _PostCardState extends State<_PostCard> {
       _showSnack(context, t.cantEditCaptionYet);
       return;
     }
-    final controller = TextEditingController(text: widget.post.caption);
     final newCaption = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cream,
-        title: Text(
-          t.postMenuEditCaption,
-          style: display(18, color: AppColors.forest900),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 4,
-          maxLength: 2000,
-          decoration: InputDecoration(hintText: t.writeACaption),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              t.commonCancel,
-              style: body(14, color: AppColors.textMuted),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(
-              t.commonSave,
-              style: body(
-                14,
-                weight: FontWeight.w700,
-                color: AppColors.forest700,
-              ),
-            ),
-          ),
-        ],
-      ),
+      builder: (ctx) => _EditCaptionDialog(initialCaption: widget.post.caption),
     );
-    controller.dispose();
     if (newCaption == null || newCaption == widget.post.caption) return;
+    if (!context.mounted) return;
+    // Captured once, up front — [widget.onCaptionUpdated] below can trigger a
+    // rebuild of this very card (it flows through FeedStore/setState), so
+    // nothing after that point may go back to `context` for a fresh
+    // ScaffoldMessenger.of(context) lookup. That reuse-after-rebuild is what
+    // was crashing the app with a "_dependents.isEmpty" assertion right
+    // after a successful save.
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await Repository.instance.editPostCaption(widget.post.id, newCaption);
       widget.onCaptionUpdated?.call(newCaption);
-      if (context.mounted) _showSnack(context, t.captionUpdated);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              t.captionUpdated,
+              style: body(13, color: Colors.white),
+            ),
+            backgroundColor: AppColors.forest800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
     } catch (e) {
-      if (!context.mounted) return;
-      _showSnack(
-        context,
-        e is ApiException ? e.message : t.couldNotUpdateCaption,
-      );
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              e is ApiException ? e.message : t.couldNotUpdateCaption,
+              style: body(13, color: Colors.white),
+            ),
+            backgroundColor: AppColors.forest800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
     }
   }
 
@@ -1452,74 +1486,85 @@ class _PostCardState extends State<_PostCard> {
           padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.gold500, AppColors.forest600],
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.cream,
-                  ),
-                  child: _Avatar(name: p.author, size: 36),
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      p.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: body(
-                        13,
-                        weight: FontWeight.w700,
-                        color: context.onBrightness(
-                          light: AppColors.forest900,
-                          dark: AppColors.darkText,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _openAuthorProfile(context),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.gold500, AppColors.forest600],
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.cream,
+                          ),
+                          child: _Avatar(name: p.author, size: 36),
                         ),
                       ),
-                    ),
-                    // Instagram-style: show a location line only when the
-                    // author attached one — no role label, no native place.
-                    if (p.location.isNotEmpty)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 11,
-                            color: context.onBrightness(
-                              light: AppColors.hint,
-                              dark: AppColors.darkTextMuted,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Flexible(
-                            child: Text(
-                              p.location,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.author,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: body(
-                                11,
+                                13,
+                                weight: FontWeight.w700,
                                 color: context.onBrightness(
-                                  light: AppColors.hint,
-                                  dark: AppColors.darkTextMuted,
+                                  light: AppColors.forest900,
+                                  dark: AppColors.darkText,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            // Instagram-style: show a location line only when
+                            // the author attached one — no role label, no
+                            // native place.
+                            if (p.location.isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_rounded,
+                                    size: 11,
+                                    color: context.onBrightness(
+                                      light: AppColors.hint,
+                                      dark: AppColors.darkTextMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(
+                                      p.location,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: body(
+                                        11,
+                                        color: context.onBrightness(
+                                          light: AppColors.hint,
+                                          dark: AppColors.darkTextMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (!p.isMine && p.authorId.isNotEmpty) ...[
@@ -1768,6 +1813,90 @@ class _PostCardState extends State<_PostCard> {
           color: context.onBrightness(
             light: AppColors.creamDark,
             dark: AppColors.darkBorder,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "Edit caption" dialog's content, as its own [StatefulWidget] so the
+/// [TextEditingController] is disposed by the framework's own lifecycle —
+/// i.e. only once this widget is actually unmounted — rather than by the
+/// caller right after [showDialog] returns. Disposing it that early crashed
+/// the app: the dialog's exit (fade) transition keeps this [TextField] alive
+/// and rebuilding for a few more frames after the route pops, so an
+/// already-disposed controller got touched mid-animation.
+class _EditCaptionDialog extends StatefulWidget {
+  const _EditCaptionDialog({required this.initialCaption});
+
+  final String initialCaption;
+
+  @override
+  State<_EditCaptionDialog> createState() => _EditCaptionDialogState();
+}
+
+class _EditCaptionDialogState extends State<_EditCaptionDialog> {
+  late final _controller = TextEditingController(text: widget.initialCaption);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final textColor = context.onBrightness(
+      light: AppColors.forest900,
+      dark: AppColors.darkText,
+    );
+    final mutedColor = context.onBrightness(
+      light: AppColors.textMuted,
+      dark: AppColors.darkTextMuted,
+    );
+    return AlertDialog(
+      backgroundColor: context.onBrightness(
+        light: AppColors.cream,
+        dark: AppColors.darkSurface,
+      ),
+      title: Text(t.postMenuEditCaption, style: display(18, color: textColor)),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 4,
+        maxLength: 2000,
+        style: body(14, color: textColor),
+        cursorColor: AppColors.forest600,
+        decoration: InputDecoration(
+          hintText: t.writeACaption,
+          hintStyle: body(14, color: mutedColor),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
+              ),
+            ),
+          ),
+          counterStyle: body(12, color: mutedColor),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.commonCancel, style: body(14, color: mutedColor)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(
+            t.commonSave,
+            style: body(
+              14,
+              weight: FontWeight.w700,
+              color: AppColors.forest700,
+            ),
           ),
         ),
       ],
