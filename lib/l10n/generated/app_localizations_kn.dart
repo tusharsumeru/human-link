@@ -172,6 +172,15 @@ class AppLocalizationsKn extends AppLocalizations {
   String get registerFullNameHint => 'ಉದಾ. ಅದಿತಿ ಶಾನುಭಾಗ್ ರಾವ್';
 
   @override
+  String get registerNameKannada => 'ಕನ್ನಡದಲ್ಲಿ ಹೆಸರು';
+
+  @override
+  String get registerNameHindi => 'ಹಿಂದಿಯಲ್ಲಿ ಹೆಸರು';
+
+  @override
+  String get registerNameScriptHint => 'ಸ್ವಯಂ ತುಂಬಿದೆ, ಬೇಕಿದ್ದರೆ ಸರಿಪಡಿಸಿ';
+
+  @override
   String get registerMobileNumber => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ';
 
   @override
@@ -1247,6 +1256,23 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get ftInviteLinkCopied => 'ಆಹ್ವಾನ ಲಿಂಕ್ ನಕಲಿಸಲಾಗಿದೆ';
+
+  @override
+  String get ftShareWhatsapp => 'ವಾಟ್ಸ್‌ಆ್ಯಪ್';
+
+  @override
+  String get ftShareMore => 'ಇತರ ಆ್ಯಪ್‌ಗಳು';
+
+  @override
+  String ftInviteShareText(String link) {
+    return 'ಸಮಾಜದಲ್ಲಿ ನನ್ನೊಂದಿಗೆ ಸೇರಿ. ನಿಮ್ಮ ಆಹ್ವಾನ ಲಿಂಕ್: $link';
+  }
+
+  @override
+  String get ftInviteShareSubject => 'ನಿಮ್ಮ ಸಮಾಜ ಆಹ್ವಾನ';
+
+  @override
+  String get ftShareFailed => 'ಶೇರ್ ಶೀಟ್ ತೆರೆಯಲು ಆಗಲಿಲ್ಲ';
 
   @override
   String get ftYourRelative => 'ನಿಮ್ಮ ಸಂಬಂಧಿ';
@@ -2479,6 +2505,50 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String welfareDonateAmount(String amount) {
     return '₹$amount ದಾನ ಮಾಡಿ';
+  }
+
+  @override
+  String get welfareLoadFailed => 'ಅಭಿಯಾನಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ.';
+
+  @override
+  String get welfareEmailLabel => 'ಇಮೇಲ್ (ರಸೀದಿಗಾಗಿ)';
+
+  @override
+  String get welfareEmailHint => 'you@example.com';
+
+  @override
+  String get welfareRetry => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
+
+  @override
+  String get welfareNoCampaigns => 'ಈಗ ಯಾವುದೇ ಅಭಿಯಾನ ನಡೆಯುತ್ತಿಲ್ಲ.';
+
+  @override
+  String get welfareOpenEnded => 'ಅಂತಿಮ ದಿನಾಂಕವಿಲ್ಲ';
+
+  @override
+  String get welfareCampaignClosed => 'ಈ ಅಭಿಯಾನ ಇನ್ನು ದೇಣಿಗೆ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ.';
+
+  @override
+  String get welfarePaymentFailed =>
+      'ಪಾವತಿ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get welfarePaymentVerifyFailed =>
+      'ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಆದರೆ ದೃಢೀಕರಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಸಮಾಜ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ; ಮತ್ತೆ ಪಾವತಿಸಬೇಡಿ.';
+
+  @override
+  String get welfareMessageOptional => 'ಸಂದೇಶ (ಐಚ್ಛಿಕ)';
+
+  @override
+  String get welfareMessageHint => 'ನಿಮ್ಮ ಕೊಡುಗೆಯೊಂದಿಗೆ ಕೆಲವು ಪದಗಳು';
+
+  @override
+  String get welfareSecurePayment =>
+      'Razorpay ಮೂಲಕ ಸುರಕ್ಷಿತ ಪಾವತಿ — UPI, ಕಾರ್ಡ್, ನೆಟ್ ಬ್ಯಾಂಕಿಂಗ್ ಮತ್ತು ವಾಲೆಟ್.';
+
+  @override
+  String welfareDonationFor(String title) {
+    return '$title ಗಾಗಿ ದೇಣಿಗೆ';
   }
 
   @override

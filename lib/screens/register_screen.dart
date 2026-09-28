@@ -33,6 +33,15 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
+  // The name in Kannada and Hindi. Auto-filled from [_nameCtrl] by the
+  // server's transliteration while the member types; once they edit one of
+  // these by hand it stops being overwritten.
+  final _nameKnCtrl = TextEditingController();
+  final _nameHiCtrl = TextEditingController();
+  bool _nameKnEdited = false;
+  bool _nameHiEdited = false;
+  Timer? _transliterateDebounce;
+  int _transliterateSeq = 0;
   final _phoneCtrl = TextEditingController();
   final _nativeCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
@@ -56,11 +65,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _transliterateDebounce?.cancel();
+    _nameKnCtrl.dispose();
+    _nameHiCtrl.dispose();
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _nativeCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
+  }
+
+  /// Ask the server for the name in Kannada and Hindi, a moment after the
+  /// member stops typing. Only fields the member has not edited are filled.
+  void _scheduleTransliteration() {
+    _transliterateDebounce?.cancel();
+    final name = _nameCtrl.text.trim();
+    if (name.length < 2) return;
+    _transliterateDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final seq = ++_transliterateSeq;
+      try {
+        final r = await Repository.instance.transliterateName(name);
+        if (!mounted || seq != _transliterateSeq)
+          return; // a newer keystroke won
+        setState(() {
+          if (!_nameKnEdited && (r['kn'] ?? '').isNotEmpty) {
+            _nameKnCtrl.text = r['kn']!;
+          }
+          if (!_nameHiEdited && (r['hi'] ?? '').isNotEmpty) {
+            _nameHiCtrl.text = r['hi']!;
+          }
+        });
+      } catch (_) {
+        // Suggestions are a convenience; the member can type them, and the
+        // server fills any blank script itself at registration.
+      }
+    });
   }
 
   /// Validate the details and advance to OTP entry. No SMS is sent — the
@@ -128,6 +167,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         gender: _gender,
         maritalStatus: _maritalStatus,
         isPurohit: _isPurohit,
+        nameKn: _nameKnCtrl.text.trim(),
+        nameHi: _nameHiCtrl.text.trim(),
       );
       final map = res['user'] as Map<String, dynamic>;
       final token = (res['token'] ?? '') as String;
@@ -309,7 +350,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 18),
         _label(t.registerFullName, hint: t.registerAsPerAadhar),
-        _field(_nameCtrl, t.registerFullNameHint),
+        _field(
+          _nameCtrl,
+          t.registerFullNameHint,
+          onChanged: (_) => _scheduleTransliteration(),
+        ),
+        const SizedBox(height: 14),
+        _label(t.registerNameKannada, hint: t.registerNameScriptHint),
+        _field(
+          _nameKnCtrl,
+          'ರಮೇಶ್ಕುಮಾರ್',
+          onChanged: (v) => _nameKnEdited = v.trim().isNotEmpty,
+        ),
+        const SizedBox(height: 14),
+        _label(t.registerNameHindi, hint: t.registerNameScriptHint),
+        _field(
+          _nameHiCtrl,
+          'रमेशकुमार',
+          onChanged: (v) => _nameHiEdited = v.trim().isNotEmpty,
+        ),
         const SizedBox(height: 14),
         _label(t.registerMobileNumber, hint: t.registerAsPerAadhar),
         _field(
@@ -993,6 +1052,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     TextInputType? keyboardType,
     int? maxLength,
     bool digitsOnly = false,
+    ValueChanged<String>? onChanged,
   }) {
     return TextField(
       controller: controller,
@@ -1001,8 +1061,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       inputFormatters: digitsOnly
           ? [FilteringTextInputFormatter.digitsOnly]
           : null,
-      onChanged: (_) {
+      onChanged: (v) {
         if (_error.isNotEmpty) setState(() => _error = '');
+        onChanged?.call(v);
       },
       style: body(
         14,

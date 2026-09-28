@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/models/welfare_campaign.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/app_theme.dart';
@@ -11,8 +12,16 @@ import '../widgets/ui_kit.dart';
 
 /// Annual transparency / impact report — ported from
 /// `src/app/welfare/impact/page.tsx`.
-class WelfareImpactScreen extends StatelessWidget {
+class WelfareImpactScreen extends StatefulWidget {
   const WelfareImpactScreen({super.key});
+
+  @override
+  State<WelfareImpactScreen> createState() => _WelfareImpactScreenState();
+}
+
+class _WelfareImpactScreenState extends State<WelfareImpactScreen> {
+  late final Future<List<WelfareCampaign>> _future = Repository.instance
+      .fetchCampaigns();
 
   static List<_Alloc> _allocationOf(AppLocalizations t) => [
     _Alloc(t.welfareAllocTempleHeritage, 40, AppColors.forest800),
@@ -44,11 +53,6 @@ class WelfareImpactScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final campaigns = Repository.instance.welfare();
-    final totalRaised = campaigns.fold<int>(
-      0,
-      (s, c) => s + (c['raised'] as int),
-    );
 
     return Scaffold(
       backgroundColor: context.onBrightness(
@@ -69,247 +73,268 @@ class WelfareImpactScreen extends StatelessWidget {
           style: display(18, color: Colors.white),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          Text(
-            t.welfareAnnualReportKicker,
-            style: body(
-              11,
-              weight: FontWeight.w700,
-              color: context.onBrightness(
-                light: AppColors.gold700,
-                dark: AppColors.goldSoft,
-              ),
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            t.welfareImpactTitle,
-            style: display(
-              26,
-              color: context.onBrightness(
-                light: AppColors.forest900,
-                dark: AppColors.darkText,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            t.welfareRecordOfContributions,
-            style: body(
-              13,
-              color: context.onBrightness(
-                light: AppColors.textMuted,
-                dark: AppColors.darkTextMuted,
-              ),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 18),
+      body: FutureBuilder<List<WelfareCampaign>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          // Live campaign totals; an unreachable server shows the report with
+          // zeroed campaign figures rather than nothing at all.
+          final campaigns = snap.data ?? const <WelfareCampaign>[];
+          final totalRaised = campaigns.fold<int>(0, (s, c) => s + c.raised);
+          return _report(context, t, campaigns, totalRaised);
+        },
+      ),
+    );
+  }
 
-          // Top stat cards.
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.trending_up_rounded,
-                  value: formatLakh(totalRaised),
-                  label: t.welfareTotalRaised,
-                  color: AppColors.forest800,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.people_alt_rounded,
-                  value: '1,240',
-                  label: t.welfareFamiliesHelped,
-                  color: AppColors.forest700,
-                ),
-              ),
-            ],
+  Widget _report(
+    BuildContext context,
+    AppLocalizations t,
+    List<WelfareCampaign> campaigns,
+    int totalRaised,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      children: [
+        Text(
+          t.welfareAnnualReportKicker,
+          style: body(
+            11,
+            weight: FontWeight.w700,
+            color: context.onBrightness(
+              light: AppColors.gold700,
+              dark: AppColors.goldSoft,
+            ),
+            letterSpacing: 1.2,
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.campaign_rounded,
-                  value: '${campaigns.length}',
-                  label: t.welfareCampaignsFunded,
-                  color: AppColors.gold700,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.school_rounded,
-                  value: '30',
-                  label: t.welfareScholarships,
-                  color: AppColors.gold500,
-                ),
-              ),
-            ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          t.welfareImpactTitle,
+          style: display(
+            26,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.darkText,
+            ),
           ),
-          const SizedBox(height: 18),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          t.welfareRecordOfContributions,
+          style: body(
+            13,
+            color: context.onBrightness(
+              light: AppColors.textMuted,
+              dark: AppColors.darkTextMuted,
+            ),
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 18),
 
-          // Category breakdown pie (from kWelfareCampaigns raised amounts).
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t.welfareCategoryBreakdown,
-                  style: display(
-                    17,
-                    color: context.onBrightness(
-                      light: AppColors.forest900,
-                      dark: AppColors.darkText,
-                    ),
+        // Top stat cards.
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.trending_up_rounded,
+                value: formatLakh(totalRaised),
+                label: t.welfareTotalRaised,
+                color: AppColors.forest800,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.people_alt_rounded,
+                value: '1,240',
+                label: t.welfareFamiliesHelped,
+                color: AppColors.forest700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.campaign_rounded,
+                value: '${campaigns.length}',
+                label: t.welfareCampaignsFunded,
+                color: AppColors.gold700,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.school_rounded,
+                value: '30',
+                label: t.welfareScholarships,
+                color: AppColors.gold500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+
+        // Category breakdown pie (from live campaign raised amounts).
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.welfareCategoryBreakdown,
+                style: display(
+                  17,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  t.welfareCategoryBreakdownSubtitle,
-                  style: body(
-                    12,
-                    color: context.onBrightness(
-                      light: AppColors.textMuted,
-                      dark: AppColors.darkTextMuted,
-                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                t.welfareCategoryBreakdownSubtitle,
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
                   ),
                 ),
-                const SizedBox(height: 16),
-                _CategoryPie(campaigns: campaigns, total: totalRaised),
+              ),
+              const SizedBox(height: 16),
+              _CategoryPie(campaigns: campaigns, total: totalRaised),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Fund allocation.
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.welfareFundAllocation,
+                style: display(
+                  17,
+                  color: context.onBrightness(
+                    light: AppColors.forest900,
+                    dark: AppColors.darkText,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              for (final a in _allocationOf(t)) ...[
+                _AllocRow(alloc: a),
+                const SizedBox(height: 12),
               ],
-            ),
+              Divider(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+                height: 1,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                t.welfareAuditQuote,
+                style: body(
+                  12,
+                  color: context.onBrightness(
+                    light: AppColors.hint,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                  height: 1.5,
+                  weight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+        ),
+        const SizedBox(height: 14),
 
-          // Fund allocation.
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t.welfareFundAllocation,
-                  style: display(
-                    17,
+        // Testimonials / guardian donors.
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.favorite_rounded,
+                    size: 16,
                     color: context.onBrightness(
-                      light: AppColors.forest900,
-                      dark: AppColors.darkText,
+                      light: AppColors.gold700,
+                      dark: AppColors.goldSoft,
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                for (final a in _allocationOf(t)) ...[
-                  _AllocRow(alloc: a),
+                  const SizedBox(width: 8),
+                  Text(
+                    t.welfareGuardianDonors,
+                    style: display(
+                      17,
+                      color: context.onBrightness(
+                        light: AppColors.forest900,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              for (
+                var i = 0, donors = _donorsOf(t);
+                i < donors.length;
+                i++
+              ) ...[
+                _DonorRow(donor: donors[i]),
+                if (i != donors.length - 1) ...[
+                  const SizedBox(height: 12),
+                  Divider(
+                    color: context.onBrightness(
+                      light: AppColors.border,
+                      dark: AppColors.darkBorder,
+                    ),
+                    height: 1,
+                  ),
                   const SizedBox(height: 12),
                 ],
-                Divider(
-                  color: context.onBrightness(
-                    light: AppColors.border,
-                    dark: AppColors.darkBorder,
-                  ),
-                  height: 1,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  t.welfareAuditQuote,
-                  style: body(
-                    12,
-                    color: context.onBrightness(
-                      light: AppColors.hint,
-                      dark: AppColors.darkTextMuted,
-                    ),
-                    height: 1.5,
-                    weight: FontWeight.w500,
-                  ),
-                ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 14),
+        ),
+        const SizedBox(height: 14),
 
-          // Testimonials / guardian donors.
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.favorite_rounded,
-                      size: 16,
-                      color: context.onBrightness(
-                        light: AppColors.gold700,
-                        dark: AppColors.goldSoft,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      t.welfareGuardianDonors,
-                      style: display(
-                        17,
-                        color: context.onBrightness(
-                          light: AppColors.forest900,
-                          dark: AppColors.darkText,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                for (
-                  var i = 0, donors = _donorsOf(t);
-                  i < donors.length;
-                  i++
-                ) ...[
-                  _DonorRow(donor: donors[i]),
-                  if (i != donors.length - 1) ...[
-                    const SizedBox(height: 12),
-                    Divider(
-                      color: context.onBrightness(
-                        light: AppColors.border,
-                        dark: AppColors.darkBorder,
-                      ),
-                      height: 1,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
+        // Testimonial cards.
+        _Testimonial(
+          photoId: 7485047,
+          quote: t.welfareTestimonial1,
+          author: t.welfareTestimonial1Author,
+        ),
+        const SizedBox(height: 12),
+        _Testimonial(
+          photoId: 17184880,
+          quote: t.welfareTestimonial2,
+          author: t.welfareTestimonial2Author,
+        ),
+        const SizedBox(height: 18),
 
-          // Testimonial cards.
-          _Testimonial(
-            photoId: 7485047,
-            quote: t.welfareTestimonial1,
-            author: t.welfareTestimonial1Author,
+        SizedBox(
+          width: double.infinity,
+          child: ForestButton(
+            label: t.welfareSupportCampaign,
+            icon: Icons.arrow_forward_rounded,
+            expand: true,
+            onPressed: () => context.go('/welfare'),
           ),
-          const SizedBox(height: 12),
-          _Testimonial(
-            photoId: 17184880,
-            quote: t.welfareTestimonial2,
-            author: t.welfareTestimonial2Author,
-          ),
-          const SizedBox(height: 18),
-
-          SizedBox(
-            width: double.infinity,
-            child: ForestButton(
-              label: t.welfareSupportCampaign,
-              icon: Icons.arrow_forward_rounded,
-              expand: true,
-              onPressed: () => context.go('/welfare'),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -383,7 +408,7 @@ class _StatCard extends StatelessWidget {
 
 class _CategoryPie extends StatelessWidget {
   const _CategoryPie({required this.campaigns, required this.total});
-  final List<Map<String, dynamic>> campaigns;
+  final List<WelfareCampaign> campaigns;
   final int total;
 
   @override
@@ -400,12 +425,12 @@ class _CategoryPie extends StatelessWidget {
               sections: [
                 for (final c in campaigns)
                   PieChartSectionData(
-                    value: (c['raised'] as int).toDouble(),
-                    color: Color(c['colorB'] as int),
+                    value: c.raised.toDouble(),
+                    color: c.accent,
                     radius: 28,
                     title: total == 0
                         ? ''
-                        : '${((c['raised'] as int) / total * 100).round()}%',
+                        : '${(c.raised / total * 100).round()}%',
                     titleStyle: body(
                       11,
                       weight: FontWeight.w700,
@@ -428,19 +453,19 @@ class _CategoryPie extends StatelessWidget {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: Color(c['colorB'] as int),
+                        color: c.accent,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        c['category'] as String,
+                        c.categoryLabel,
                         style: body(12, color: AppColors.textMuted),
                       ),
                     ),
                     Text(
-                      formatLakh(c['raised'] as int),
+                      formatLakh(c.raised),
                       style: body(
                         12,
                         weight: FontWeight.w700,

@@ -125,30 +125,6 @@ final List<Map<String, dynamic>> kMatrimonialCandidates = [
   },
 ];
 
-const List<Map<String, dynamic>> kWelfareCampaigns = [
-  {
-    'id': 'samaj-bhavan', 'title': 'Samaj Bhavan Renovation', 'category': 'Infrastructure',
-    'description':
-        'Renovation and expansion of the Daivajna Samaja Bhavan in Basavanagudi, Bengaluru - adding a 500-seat auditorium, digital library, and modern kitchen for community feasts.',
-    'goal': 5000000, 'raised': 4250000, 'daysLeft': 12, 'backers': 328,
-    'image': '🏛️', 'colorA': 0xFF166534, 'colorB': 0xFF16A34A,
-  },
-  {
-    'id': 'annual-samaja-function', 'title': 'Annual Samaja Utsava 2025', 'category': 'Cultural Heritage',
-    'description':
-        'Funding for the flagship annual Samaj cultural event: classical Carnatic & Tulu performances, elder felicitation, Samaj talent showcase, and merit scholarships for 50 students.',
-    'goal': 2500000, 'raised': 2000000, 'daysLeft': 28, 'backers': 214,
-    'image': '🪔', 'colorA': 0xFF92400E, 'colorB': 0xFFD97706,
-  },
-  {
-    'id': 'student-scholarship', 'title': 'Daivajna Vidya Nidhi - Scholarships', 'category': 'Education',
-    'description':
-        'Merit-cum-need scholarships for Samaj students pursuing engineering, medicine, and law. 30 scholarships of ₹50,000 each for the academic year 2025-26.',
-    'goal': 1500000, 'raised': 875000, 'daysLeft': 45, 'backers': 167,
-    'image': '🎓', 'colorA': 0xFF1E3A8A, 'colorB': 0xFF1D4ED8,
-  },
-];
-
 final List<Map<String, dynamic>> kDashboardActivity = [
   {
     'id': 1, 'user': 'Venkatesh Haldankar', 'action': 'shared a memory',
