@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 
 import '../data/api_client.dart';
 import '../data/feed_store.dart';
+import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../services/ad_checkout.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -112,8 +114,9 @@ Future<void> _composeAndUpload(
   // with an "Uploading…" overlay, and settles once POST /api/posts returns.
   router.go('/dashboard');
 
+  String? postId;
   try {
-    await FeedStore.instance.upload(
+    postId = await FeedStore.instance.upload(
       mediaPaths: paths,
       caption: result.caption,
       isReel: isReel,
@@ -126,17 +129,20 @@ Future<void> _composeAndUpload(
           .map((m) => (m['id'] ?? '').toString())
           .toList(),
     );
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isReel ? t.postReelShared : t.postShared,
-          style: body(13, color: Colors.white),
+    // A sponsored post reports its own outcome once the payment settles.
+    if (result.adPlan == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            isReel ? t.postReelShared : t.postShared,
+            style: body(13, color: Colors.white),
+          ),
+          backgroundColor: AppColors.forest800,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
         ),
-        backgroundColor: AppColors.forest800,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      );
+    }
   } catch (e) {
     // The card stays in the feed marked "Upload failed — Retry", so the user
     // never loses the pick just because the network dropped.
@@ -153,6 +159,47 @@ Future<void> _composeAndUpload(
         duration: const Duration(seconds: 4),
       ),
     );
+    return;
+  }
+
+  final plan = result.adPlan;
+  if (plan == null) return; // a normal post — done
+
+  // Sponsored post: the post itself is already shared like any other. Paying
+  // for the chosen plan is what starts its campaign; if the payment is
+  // cancelled or fails, it simply stays a normal post.
+  void notify(String text, {bool ok = true}) => messenger.showSnackBar(
+    SnackBar(
+      content: Text(text, style: body(13, color: Colors.white)),
+      backgroundColor: ok ? AppColors.forest800 : Colors.red.shade700,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+    ),
+  );
+
+  if (postId == null || postId.isEmpty) {
+    notify(
+      'Post shared as a normal post — the sponsored payment could not start.',
+      ok: false,
+    );
+    return;
+  }
+  final outcome = await AdCheckout.instance.promote(
+    postId: postId,
+    planId: (plan['id'] ?? '').toString(),
+    name: user?.name ?? '',
+    phone: user?.phone ?? '',
+  );
+  switch (outcome.status) {
+    case AdCheckoutStatus.paid:
+      notify('Post shared and sponsored for ${plan['durationDays']} days.');
+    case AdCheckoutStatus.cancelled:
+      notify('Post shared as a normal post — payment was not completed.');
+    case AdCheckoutStatus.failed:
+      notify(
+        'Post shared as a normal post. ${outcome.message ?? ''}'.trim(),
+        ok: false,
+      );
   }
 }
 
@@ -165,10 +212,20 @@ List<String> _hashtagsIn(String caption) => RegExp(
 /// What the composer returns: the caption, the (optional) place the author
 /// attached (`location` is '' when none was picked), and whoever was tagged.
 class _ComposeResult {
-  const _ComposeResult(this.caption, this.location, this.tagged);
+  const _ComposeResult(this.caption, this.location, this.tagged, this.adPlan);
   final String caption;
   final String location;
   final List<Map<String, dynamic>> tagged;
+
+  /// The plan picked for a sponsored post (`{ id, name, durationDays, price,
+  /// currency }` from GET /api/ad-plans), or null for a normal post.
+  final Map<String, dynamic>? adPlan;
+}
+
+String _planPrice(Map<String, dynamic> plan) {
+  final price = (plan['price'] as num?)?.toInt() ?? 0;
+  final currency = (plan['currency'] ?? 'INR').toString();
+  return currency == 'INR' ? '₹$price' : '$price $currency';
 }
 
 /// Full-screen composer: preview + caption + current location + tag people +
@@ -184,6 +241,13 @@ Future<_ComposeResult?> _composeCaption(
   String location = ''; // the place the author picks, if any
   bool locating = false; // fetching the current GPS location
   List<Map<String, dynamic>> tagged = const []; // people tagged in this post
+  // Post type: a normal post (the default) or a sponsored one, which is the
+  // same post plus a paid campaign for the plan picked below.
+  bool sponsored = false;
+  List<Map<String, dynamic>>? plans; // null until first loaded
+  bool loadingPlans = false;
+  String? plansError;
+  Map<String, dynamic>? plan; // the chosen plan
   return showModalBottomSheet<_ComposeResult>(
     context: context,
     isScrollControlled: true,
@@ -195,10 +259,34 @@ Future<_ComposeResult?> _composeCaption(
       return StatefulBuilder(
         builder: (ctx, setSheetState) {
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+
+          Future<void> loadPlans() async {
+            setSheetState(() {
+              loadingPlans = true;
+              plansError = null;
+            });
+            try {
+              final loaded = await Repository.instance.adPlans();
+              if (!ctx.mounted) return;
+              setSheetState(() {
+                plans = loaded;
+                loadingPlans = false;
+              });
+            } catch (e) {
+              if (!ctx.mounted) return;
+              setSheetState(() {
+                loadingPlans = false;
+                plansError = e is ApiException
+                    ? e.message
+                    : 'Could not load the sponsored plans.';
+              });
+            }
+          }
+
           return Padding(
             padding: EdgeInsets.only(bottom: bottomInset),
             child: SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -389,22 +477,50 @@ Future<_ComposeResult?> _composeCaption(
                             .toList(),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    // Normal post (default) or sponsored post.
+                    _PostTypeRow(
+                      sponsored: sponsored,
+                      onChanged: (value) {
+                        setSheetState(() => sponsored = value);
+                        if (value && plans == null && !loadingPlans) {
+                          loadPlans();
+                        }
+                      },
+                    ),
+                    if (sponsored) ...[
+                      const SizedBox(height: 10),
+                      _AdPlanPicker(
+                        plans: plans,
+                        loading: loadingPlans,
+                        error: plansError,
+                        selected: plan,
+                        onSelect: (p) => setSheetState(() => plan = p),
+                        onRetry: loadPlans,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     ForestButton(
-                      label: t.postShareButton,
+                      label: sponsored && plan != null
+                          ? 'Share & pay ${_planPrice(plan!)}'
+                          : t.postShareButton,
                       icon: Icons.send_rounded,
                       expand: true,
-                      onPressed: () => Navigator.of(ctx).pop(
-                        _ComposeResult(
-                          controller.text.trim().isEmpty
-                              ? (isReel
-                                    ? t.postDefaultReelCaption
-                                    : t.postDefaultPostCaption)
-                              : controller.text.trim(),
-                          location,
-                          tagged,
-                        ),
-                      ),
+                      // A sponsored post needs a plan before it can be shared.
+                      onPressed: sponsored && plan == null
+                          ? null
+                          : () => Navigator.of(ctx).pop(
+                              _ComposeResult(
+                                controller.text.trim().isEmpty
+                                    ? (isReel
+                                          ? t.postDefaultReelCaption
+                                          : t.postDefaultPostCaption)
+                                    : controller.text.trim(),
+                                location,
+                                tagged,
+                                sponsored ? plan : null,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -415,6 +531,206 @@ Future<_ComposeResult?> _composeCaption(
       );
     },
   );
+}
+
+/// The two post types, side by side: a normal post (selected by default) and
+/// a sponsored post.
+class _PostTypeRow extends StatelessWidget {
+  const _PostTypeRow({required this.sponsored, required this.onChanged});
+  final bool sponsored;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _PostTypeOption(
+            icon: Icons.photo_library_outlined,
+            title: 'Normal post',
+            subtitle: 'Free',
+            selected: !sponsored,
+            onTap: () => onChanged(false),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _PostTypeOption(
+            icon: Icons.campaign_outlined,
+            title: 'Sponsored post',
+            subtitle: 'Paid promotion',
+            selected: sponsored,
+            onTap: () => onChanged(true),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PostTypeOption extends StatelessWidget {
+  const _PostTypeOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.forest700 : AppColors.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? AppColors.forest700 : AppColors.hint,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      13,
+                      weight: FontWeight.w700,
+                      color: AppColors.forest900,
+                    ),
+                  ),
+                  Text(subtitle, style: body(11, color: AppColors.hint)),
+                ],
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              size: 18,
+              color: selected ? AppColors.forest700 : AppColors.hint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Plan choice for a sponsored post — the durations and prices an admin has
+/// set on the server (7 / 15 / 30 days …).
+class _AdPlanPicker extends StatelessWidget {
+  const _AdPlanPicker({
+    required this.plans,
+    required this.loading,
+    required this.error,
+    required this.selected,
+    required this.onSelect,
+    required this.onRetry,
+  });
+  final List<Map<String, dynamic>>? plans;
+  final bool loading;
+  final String? error;
+  final Map<String, dynamic>? selected;
+  final ValueChanged<Map<String, dynamic>> onSelect;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.forest700,
+          ),
+        ),
+      );
+    }
+    if (error != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(error!, style: body(12, color: Colors.red.shade700)),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      );
+    }
+    final available = plans ?? const <Map<String, dynamic>>[];
+    if (available.isEmpty) {
+      return Text(
+        'Sponsored posts are not available right now.',
+        style: body(12, color: AppColors.hint),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Promote in the feed for',
+          style: body(12, weight: FontWeight.w600, color: AppColors.hint),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final p in available)
+              ChoiceChip(
+                label: Text(
+                  '${p['name']} · ${_planPrice(p)}',
+                  style: body(
+                    12,
+                    weight: FontWeight.w600,
+                    color: AppColors.forest800,
+                  ),
+                ),
+                selected: selected != null && selected!['id'] == p['id'],
+                onSelected: (_) => onSelect(p),
+                showCheckmark: false,
+                backgroundColor: Colors.white,
+                selectedColor: AppColors.forest700.withValues(alpha: 0.14),
+                side: BorderSide(
+                  color: selected != null && selected!['id'] == p['id']
+                      ? AppColors.forest700
+                      : AppColors.border,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Your post is shared first, then you pay. If the payment is not '
+          'completed it stays a normal post.',
+          style: body(11, color: AppColors.hint),
+        ),
+      ],
+    );
+  }
 }
 
 /// The "tag people" affordance in the composer — when empty, a single action

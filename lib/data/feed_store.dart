@@ -67,7 +67,8 @@ class FeedStore extends ChangeNotifier {
   /// The card appears straight away and flips out of its "Uploading…" state
   /// when the server responds. Throws on failure so the caller can show the
   /// reason; the card stays put, marked failed, so nothing is silently lost.
-  Future<void> upload({
+  /// Returns the new post's server id (null if the server sent none).
+  Future<String?> upload({
     required List<String> mediaPaths,
     required String caption,
     required bool isReel,
@@ -99,6 +100,7 @@ class FeedStore extends ChangeNotifier {
       post.uploading = false;
       post.failed = false;
       notifyListeners();
+      return post.remoteId;
     } catch (e) {
       post.uploading = false;
       post.failed = true;

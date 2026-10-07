@@ -4586,4 +4586,48 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get permSkip => 'ಈಗ ಬಿಟ್ಟುಬಿಡಿ';
+
+  @override
+  String get welfareLoadFailed => 'ಅಭಿಯಾನಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ.';
+
+  @override
+  String get welfareEmailLabel => 'ಇಮೇಲ್ (ರಸೀದಿಗಾಗಿ)';
+
+  @override
+  String get welfareEmailHint => 'you@example.com';
+
+  @override
+  String get welfareRetry => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
+
+  @override
+  String get welfareNoCampaigns => 'ಈಗ ಯಾವುದೇ ಅಭಿಯಾನ ನಡೆಯುತ್ತಿಲ್ಲ.';
+
+  @override
+  String get welfareOpenEnded => 'ಅಂತಿಮ ದಿನಾಂಕವಿಲ್ಲ';
+
+  @override
+  String get welfareCampaignClosed => 'ಈ ಅಭಿಯಾನ ಇನ್ನು ದೇಣಿಗೆ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ.';
+
+  @override
+  String get welfarePaymentFailed =>
+      'ಪಾವತಿ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get welfarePaymentVerifyFailed =>
+      'ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಆದರೆ ದೃಢೀಕರಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಸಮಾಜ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ; ಮತ್ತೆ ಪಾವತಿಸಬೇಡಿ.';
+
+  @override
+  String get welfareMessageOptional => 'ಸಂದೇಶ (ಐಚ್ಛಿಕ)';
+
+  @override
+  String get welfareMessageHint => 'ನಿಮ್ಮ ಕೊಡುಗೆಯೊಂದಿಗೆ ಕೆಲವು ಪದಗಳು';
+
+  @override
+  String get welfareSecurePayment =>
+      'Razorpay ಮೂಲಕ ಸುರಕ್ಷಿತ ಪಾವತಿ — UPI, ಕಾರ್ಡ್, ನೆಟ್ ಬ್ಯಾಂಕಿಂಗ್ ಮತ್ತು ವಾಲೆಟ್.';
+
+  @override
+  String welfareDonationFor(String title) {
+    return '$title ಗಾಗಿ ದೇಣಿಗೆ';
+  }
 }

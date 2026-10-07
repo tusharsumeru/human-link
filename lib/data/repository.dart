@@ -11,6 +11,7 @@ import 'models/compatibility_astrology_modules.dart';
 import 'models/compatibility_models.dart';
 import 'models/compatibility_prerequisites.dart';
 import 'models/compatibility_summary.dart';
+import 'models/welfare_campaign.dart';
 import 'models/kundli_chart.dart';
 import 'models/parampara.dart';
 import 'models/south_indian_jataka.dart';
@@ -501,9 +502,56 @@ class Repository {
     throw ApiException('Member not found');
   }
 
+  // ── Sponsored posts (ad campaigns) ────────────────────────────────────────
+  // A sponsored post is an ordinary post plus a paid campaign that promotes
+  // it in the feed for the plan's number of days. Prices live on the server
+  // (`ad_plans`, set by an admin) — nothing here decides an amount.
+
+  /// GET /api/ad-plans — the active plans:
+  /// `[{ id, name, durationDays, price, currency, isActive }]`, price in
+  /// whole rupees.
+  Future<List<Map<String, dynamic>>> adPlans() async {
+    final data = await _api.getJson('/api/ad-plans');
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((m) => Map<String, dynamic>.from(m))
+        .toList();
+  }
+
+  /// POST /api/ad-campaigns — starts a campaign for one of the caller's own
+  /// posts. Returns `{ campaign, payment: { key, orderId, amount, currency } }`
+  /// (`amount` in paise, for Razorpay Checkout). The campaign stays
+  /// `pending_payment` until [verifyAdCampaign] succeeds.
+  Future<Map<String, dynamic>> createAdCampaign({
+    required String postId,
+    required String planId,
+  }) async {
+    final data = await _api.postJson('/api/ad-campaigns', {
+      'postId': postId,
+      'planId': planId,
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not start the sponsored post payment');
+  }
+
+  /// POST /api/ad-campaigns/verify — confirms the payment Razorpay Checkout
+  /// returned; the server activates the campaign.
+  Future<void> verifyAdCampaign({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    await _api.postJson('/api/ad-campaigns/verify', {
+      'razorpay_order_id': orderId,
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature,
+    });
+  }
+
   // ── Payments (registration donation gate) ─────────────────────────────────
-  // See DonationGateScreen. This is the one-time, non-renewing donation every
-  // new member pays before the app unlocks — a Razorpay Order, not a
+  // See DonationGateScreen. This is the one-time, non-renewing donation a
+  // member is invited (not required) to make after login — a Razorpay Order, not a
   // Subscription, and separate from the (currently demo-only) Welfare giving
   // flow below.
 
@@ -526,6 +574,80 @@ class Repository {
     required String signature,
   }) async {
     await _api.postJson('/api/payments/donations/verify', {
+      'razorpay_order_id': orderId,
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature,
+    });
+  }
+
+  // ───────────────────────── Welfare campaigns ──────────────────────────
+
+  /// GET /api/welfare/campaigns — every campaign the admin has opened, with
+  /// live raised totals and backer counts. Campaigns are created only in the
+  /// web admin panel; the app reads them.
+  Future<List<WelfareCampaign>> fetchCampaigns() async {
+    final data = await _api.getJson('/api/welfare/campaigns');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((m) => WelfareCampaign.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+    }
+    throw ApiException('Could not load campaigns');
+  }
+
+  /// GET /api/welfare/campaigns/:id — one campaign by slug.
+  Future<WelfareCampaign> fetchCampaign(String id) async {
+    final data = await _api.getJson('/api/welfare/campaigns/$id');
+    if (data is Map) {
+      return WelfareCampaign.fromJson(Map<String, dynamic>.from(data));
+    }
+    throw ApiException('Campaign not found', statusCode: 404);
+  }
+
+  /// POST /api/payments/campaigns/order — a Razorpay order for a donation of
+  /// [amount] rupees to campaign [campaignId]. The server writes the campaign
+  /// id and title into the order's notes and receipt, so every payment in the
+  /// Razorpay dashboard says which campaign it was for. Returns
+  /// `{ key, orderId, amount (paise), currency, campaign: { id, title } }`.
+  Future<Map<String, dynamic>> createCampaignOrder({
+    required String campaignId,
+    required int amount,
+    String? donorName,
+    bool anonymous = false,
+    String? message,
+    String? contactName,
+    String? contactPhone,
+    String? contactEmail,
+  }) async {
+    final data = await _api.postJson('/api/payments/campaigns/order', {
+      'campaignId': campaignId,
+      'amount': amount,
+      if (donorName != null && donorName.isNotEmpty) 'donorName': donorName,
+      'anonymous': anonymous,
+      if (message != null && message.isNotEmpty) 'message': message,
+      if ((contactName ?? '').isNotEmpty ||
+          (contactPhone ?? '').isNotEmpty ||
+          (contactEmail ?? '').isNotEmpty)
+        'contact': {
+          if ((contactName ?? '').isNotEmpty) 'name': contactName,
+          if ((contactPhone ?? '').isNotEmpty) 'phone': contactPhone,
+          if ((contactEmail ?? '').isNotEmpty) 'email': contactEmail,
+        },
+    });
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw ApiException('Could not start the donation payment');
+  }
+
+  /// POST /api/payments/campaigns/verify — confirms the payment Checkout
+  /// returned. The server records the donation and moves the campaign's
+  /// raised total.
+  Future<void> verifyCampaignPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    await _api.postJson('/api/payments/campaigns/verify', {
       'razorpay_order_id': orderId,
       'razorpay_payment_id': paymentId,
       'razorpay_signature': signature,
@@ -1054,17 +1176,15 @@ class Repository {
   }
 
   Map<String, dynamic> _demoStats() {
-    final donations = kWelfareCampaigns.fold<int>(
-      0,
-      (sum, c) => sum + (c['raised'] as int),
-    );
+    // Donation figures are zero here: campaigns live only on the server now,
+    // so there is no local list to derive them from.
     return {
       'totalMembers': 1428,
       'pendingVerifications': kVerificationRequests.length,
       'familyMembers': kFamilyMembers.length,
       'matrimonialProfiles': kMatrimonialCandidates.length,
-      'totalDonations': kWelfareCampaigns.length,
-      'totalDonationAmount': donations,
+      'totalDonations': 0,
+      'totalDonationAmount': 0,
       'activeTrees': 86,
     };
   }
@@ -1923,7 +2043,6 @@ class Repository {
   // ── Embedded content (same dataset the web pages use) ───────────────────────
   List<Map<String, dynamic>> familyMembers() => kFamilyMembers;
   List<Map<String, dynamic>> matrimonial() => kMatrimonialCandidates;
-  List<Map<String, dynamic>> welfare() => kWelfareCampaigns;
   List<Map<String, dynamic>> communityMembers() => kCommunityMembers;
   List<Map<String, dynamic>> verifications() => kVerificationRequests;
   List<Map<String, dynamic>> conflicts() => kConflictCases;
@@ -1933,7 +2052,6 @@ class Repository {
 
   Map<String, dynamic>? matrimonialById(String id) =>
       _byId(kMatrimonialCandidates, id);
-  Map<String, dynamic>? welfareById(String id) => _byId(kWelfareCampaigns, id);
   Map<String, dynamic>? verificationById(String id) =>
       _byId(kVerificationRequests, id);
   Map<String, dynamic>? conflictById(String id) => _byId(kConflictCases, id);

@@ -428,6 +428,27 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _user != null && (_token?.isNotEmpty ?? false);
   bool get loaded => _loaded;
 
+  // The registration donation is optional: a member who has not donated is
+  // asked once after each login (or registration) and may skip. Set on login,
+  // cleared by skipping, logging out or donating — and deliberately not
+  // persisted, so a session restored on app start is not asked again until
+  // the next real login.
+  bool _donationPromptPending = false;
+
+  /// True while the router should show the donation screen: just logged in,
+  /// never donated, and not skipped yet. Once `hasDonated` is true on the
+  /// account this is false for good.
+  bool get shouldPromptDonation =>
+      isLoggedIn && _donationPromptPending && !(_user?.hasDonated ?? true);
+
+  /// "Skip for now" on the donation screen — lets the member into the app.
+  /// They are asked again at their next login until they donate once.
+  void skipDonationPrompt() {
+    if (!_donationPromptPending) return;
+    _donationPromptPending = false;
+    notifyListeners();
+  }
+
   Future<void> load() async {
     // Clear the session on any 401 so an expired/missing token routes to login.
     ApiAuth.onUnauthorized = _clearSession;
@@ -495,14 +516,17 @@ class AuthService extends ChangeNotifier {
     final res = await _repo.login(phone, otp, sessionId);
     final user = AppUser.fromMap(res['user'] as Map<String, dynamic>);
     final token = (res['token'] ?? '') as String;
+    _donationPromptPending = true;
     await _persist(user, token: token.isEmpty ? null : token);
     return user;
   }
 
   /// Logs in directly with a known profile (e.g. right after registration),
   /// optionally storing the JWT so protected calls work without a re-login.
-  Future<void> loginWithUser(AppUser user, {String? token}) =>
-      _persist(user, token: token);
+  Future<void> loginWithUser(AppUser user, {String? token}) {
+    _donationPromptPending = true;
+    return _persist(user, token: token);
+  }
 
   /// Persists an updated profile (after edits in onboarding / verify).
   Future<void> updateUser(AppUser user) => _persist(user);
@@ -526,6 +550,7 @@ class AuthService extends ChangeNotifier {
     if (_user == null && _token == null) return;
     _user = null;
     _token = null;
+    _donationPromptPending = false;
     ApiAuth.token = null;
     ChatService.instance.disconnect();
     SharedPreferences.getInstance().then((prefs) {
@@ -538,6 +563,7 @@ class AuthService extends ChangeNotifier {
   Future<void> logout() async {
     _user = null;
     _token = null;
+    _donationPromptPending = false;
     ApiAuth.token = null;
     ChatService.instance.disconnect();
     try {

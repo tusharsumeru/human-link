@@ -8,19 +8,18 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui_kit.dart';
 
-/// One-time registration donation gate.
+/// Optional registration donation.
 ///
-/// The router (`buildRouter`) sends every logged-in member here whenever
-/// `AppUser.hasDonated` is false — right after registration, and again on any
-/// later login if they closed the app before finishing payment. There is
-/// nothing else this screen can do but pay or log out: it is not in
-/// `_publicPaths` and the redirect re-applies on every navigation attempt
-/// while unpaid.
+/// The router (`buildRouter`) sends a logged-in member here once after each
+/// login (and right after registration) while `AppUser.hasDonated` is false —
+/// see `AuthService.shouldPromptDonation`. The member can pay, tap "Skip for
+/// now" to carry on into the app, or log out. Skipping only lasts until the
+/// next login: they are asked again each time until they donate once.
 ///
 /// This donation does not renew — it is a Razorpay Order (see
 /// `PaymentsService.createDonationOrder`), not a Subscription. Completing it
-/// once flips `hasDonated` on the account forever; the router then routes
-/// past this screen for good (see the "Paid" branch in router.dart).
+/// once flips `hasDonated` on the account forever, and this screen is never
+/// shown to that member again.
 class DonationGateScreen extends StatefulWidget {
   const DonationGateScreen({super.key});
 
@@ -169,10 +168,7 @@ class _DonationGateScreenState extends State<DonationGateScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Log out?'),
-        content: const Text(
-          "You'll need to log back in and complete this donation before you "
-          'can use the app.',
-        ),
+        content: const Text("You'll need to log back in to use the app."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -204,9 +200,8 @@ class _DonationGateScreenState extends State<DonationGateScreen> {
     );
 
     return PopScope(
-      // A donation-gated session must not be able to back out of this screen
-      // into the rest of the app — go_router's redirect would just bounce it
-      // straight back here anyway, but blocking the pop keeps that invisible.
+      // There is nothing behind this screen to pop back to — leaving it is
+      // "Skip for now" (or paying), which the router then acts on.
       canPop: false,
       child: Scaffold(
         backgroundColor: bg,
@@ -241,10 +236,11 @@ class _DonationGateScreenState extends State<DonationGateScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'A one-time registration donation keeps this community '
-                      'running — welfare campaigns, verification, and the '
-                      'directory you just joined. It is a single payment, not '
-                      'a subscription, and unlocks the app for good.',
+                      'A one-time donation keeps this community running — '
+                      'welfare campaigns, verification, and the directory you '
+                      'just joined. It is a single payment, not a '
+                      'subscription. It is optional: you can skip for now and '
+                      'donate at a later login.',
                       textAlign: TextAlign.center,
                       style: body(
                         14,
@@ -305,12 +301,40 @@ class _DonationGateScreenState extends State<DonationGateScreen> {
                     ],
                     const SizedBox(height: 24),
                     ForestButton(
-                      label: _loadingPlan ? 'Pay to continue' : 'Pay $_amountLabel',
+                      label: _loadingPlan ? 'Donate' : 'Donate $_amountLabel',
                       expand: true,
                       loading: _paying,
                       onPressed: _loadingPlan ? null : _pay,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    // Optional: carry on without paying. Asked again at the
+                    // next login until a donation is made.
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _paying
+                            ? null
+                            : () => context
+                                  .read<AuthService>()
+                                  .skipDonationPrompt(),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'Skip for now',
+                          style: body(
+                            14,
+                            weight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextButton(
                       onPressed: _paying ? null : _logout,
                       child: Text(

@@ -21,7 +21,6 @@ import 'screens/profile_edit_screen.dart';
 import 'screens/welfare_list_screen.dart';
 import 'screens/welfare_detail_screen.dart';
 import 'screens/welfare_impact_screen.dart';
-import 'screens/welfare_new_campaign_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/user_profile_screen.dart';
 import 'screens/profile_verify_screen.dart';
@@ -53,12 +52,12 @@ GoRouter buildRouter(AuthService auth) {
       final inOnboarding = path.startsWith('/onboarding');
       final isPublic = _publicPaths.contains(path) || inOnboarding;
       final needsOnboarding = loggedIn && !(user?.onboardingComplete ?? true);
-      // A one-time gate, not per-session: it stays true forever once a
-      // donation is verified (see AppUser.hasDonated), so a member who paid
-      // once is never asked again — including after closing the app and
-      // logging back in, since this is read straight from the account, not a
-      // local "did I see this screen" flag.
-      final needsDonation = loggedIn && !(user?.hasDonated ?? true);
+      // The donation is optional. A member who has never donated is shown the
+      // donation screen once after each login and can skip it (see
+      // AuthService.shouldPromptDonation); while it is showing, it still comes
+      // before everything else. Once a donation is verified
+      // (AppUser.hasDonated, read from the account) they are never asked again.
+      final needsDonation = auth.shouldPromptDonation;
 
       if (!loggedIn && !isPublic) return '/login';
 
@@ -83,7 +82,7 @@ GoRouter buildRouter(AuthService auth) {
         if (needsOnboarding) return '/onboarding/identity';
         return user!.isElder ? '/elder' : '/dashboard';
       }
-      // Paid — no reason to sit on the donation screen once it's done.
+      // Paid or skipped — no reason to sit on the donation screen any longer.
       if (loggedIn && path == '/donation' && !needsDonation) {
         if (needsOnboarding) return '/onboarding/identity';
         return user!.isElder ? '/elder' : '/dashboard';
@@ -99,10 +98,10 @@ GoRouter buildRouter(AuthService auth) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
 
-      // One-time registration donation gate. Not in _publicPaths — it needs a
-      // logged-in session (the bearer token) to create the Razorpay order —
-      // but the redirect above sends every unpaid session here regardless of
-      // where else they were headed.
+      // Optional registration donation. Not in _publicPaths — it needs a
+      // logged-in session (the bearer token) to create the Razorpay order.
+      // The redirect above sends a member who has not donated here once after
+      // each login; they can pay or skip.
       GoRoute(path: '/donation', builder: (_, __) => const DonationGateScreen()),
 
       // Member area
@@ -151,10 +150,6 @@ GoRouter buildRouter(AuthService auth) {
       GoRoute(
         path: '/welfare/impact',
         builder: (_, __) => const WelfareImpactScreen(),
-      ),
-      GoRoute(
-        path: '/welfare/new',
-        builder: (_, __) => const NewCampaignScreen(),
       ),
       GoRoute(
         path: '/welfare/donate/:id',

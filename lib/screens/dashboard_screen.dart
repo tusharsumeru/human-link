@@ -332,7 +332,9 @@ class _FeedState extends State<_Feed> {
               ),
             for (final post in all)
               _PostCard(
-                key: ValueKey(post.id),
+                // A sponsored copy gets its own key so it can never clash
+                // with the same post in its ordinary place in the feed.
+                key: ValueKey(post.isSponsored ? 'ad-${post.id}' : post.id),
                 post: post,
                 isFollowing: _followingIds.contains(post.authorId),
                 onDeleted: () => _removePost(post),
@@ -953,6 +955,8 @@ class _Post {
     this.isReel = false,
     this.isMine = false,
     this.likedByMe = false,
+    this.isSponsored = false,
+    this.campaignId = '',
     this.pending,
   });
 
@@ -975,6 +979,11 @@ class _Post {
   final bool isReel; // true → the media is a video
   final bool isMine; // true → the logged-in member authored this post
   final bool likedByMe; // the viewer's own like, as the server sees it
+  // True when the feed delivered this post in a paid slot (an active ad
+  // campaign) — the card then carries a "Sponsored" label. The same post in
+  // its ordinary place in the feed has this false.
+  final bool isSponsored;
+  final String campaignId; // the campaign it was delivered for, or ''
 
   /// Set while this card is a local upload that hasn't landed on the server
   /// yet (or failed) — drives the "Uploading… / Retry" overlay.
@@ -1036,6 +1045,8 @@ class _Post {
       isReel: isVideo,
       isMine: authorId.isNotEmpty && authorId == currentUserId,
       likedByMe: m['likedByMe'] == true,
+      isSponsored: m['isSponsored'] == true,
+      campaignId: (m['campaignId'] ?? '').toString(),
     );
   }
 
@@ -1058,6 +1069,8 @@ class _Post {
     isReel: isReel,
     isMine: isMine,
     likedByMe: likedByMe,
+    isSponsored: isSponsored,
+    campaignId: campaignId,
     pending: pending,
   );
 
@@ -1525,6 +1538,18 @@ class _PostCardState extends State<_PostCard> {
                                 ),
                               ),
                             ),
+                            if (p.isSponsored)
+                              Text(
+                                'Sponsored',
+                                style: body(
+                                  11,
+                                  weight: FontWeight.w600,
+                                  color: context.onBrightness(
+                                    light: AppColors.hint,
+                                    dark: AppColors.darkTextMuted,
+                                  ),
+                                ),
+                              ),
                             // Instagram-style: show a location line only when
                             // the author attached one — no role label, no
                             // native place.
