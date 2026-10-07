@@ -382,9 +382,7 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
       return _message(
         icon: Icons.person_pin_circle_outlined,
         title: _query.isEmpty ? t.invNoMembersYet : t.invNoMembersMatch(_query),
-        detail: _query.isEmpty
-            ? t.invNoMembersYetDetail
-            : t.invSearchMatchesDetail,
+        detail: _query.isEmpty ? null : t.invSearchMatchesDetail,
         action: t.invRefresh,
       );
     }
@@ -644,29 +642,41 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   Widget _message({
     required IconData icon,
     required String title,
-    required String detail,
+    String? detail,
     required String action,
   }) {
+    final accent = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.emerald,
+    );
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 34,
-              color: context.onBrightness(
-                light: AppColors.hint,
-                dark: AppColors.darkTextMuted,
+            // The glyph in a tinted disc rather than loose on the page: a bare
+            // grey icon over an empty screen reads as something that failed to
+            // load rather than as the illustration of a state.
+            Container(
+              width: 60,
+              height: 60,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: context.onBrightness(
+                  light: AppColors.sage,
+                  dark: AppColors.emerald.withValues(alpha: 0.10),
+                ),
               ),
+              child: Icon(icon, size: 28, color: accent),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: body(
-                14,
+                16,
                 weight: FontWeight.w700,
                 color: context.onBrightness(
                   light: AppColors.forest900,
@@ -674,21 +684,42 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              detail,
-              textAlign: TextAlign.center,
-              style: body(
-                12,
-                height: 1.4,
-                color: context.onBrightness(
-                  light: AppColors.textMuted,
-                  dark: AppColors.darkTextMuted,
+            if (detail != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                detail,
+                textAlign: TextAlign.center,
+                style: body(
+                  13,
+                  height: 1.5,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+            // An outlined pill, not a bare TextButton: this is the only thing
+            // on an otherwise empty screen, so it has to look tappable without
+            // competing with the real actions elsewhere in the app.
+            OutlinedButton.icon(
+              onPressed: _load,
+              icon: Icon(Icons.refresh_rounded, size: 18, color: accent),
+              label: Text(
+                action,
+                style: body(13.5, weight: FontWeight.w600, color: accent),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(color: accent.withValues(alpha: 0.45)),
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
               ),
             ),
-            const SizedBox(height: 14),
-            TextButton(onPressed: _load, child: Text(action)),
           ],
         ),
       ),
@@ -1110,83 +1141,94 @@ class _SummaryBar extends StatelessWidget {
       light: AppColors.textMuted,
       dark: AppColors.darkTextMuted,
     );
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: context.onBrightness(
-          light: AppColors.cream,
-          dark: AppColors.darkSurface,
-        ),
-        border: Border(
-          top: BorderSide(
+    return SafeArea(
+      top: false,
+      // A card floating clear of the nav bar rather than a full-width strip
+      // welded to it: there are two bars stacked here, and without the gap
+      // they read as one tall band of chrome.
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+          decoration: BoxDecoration(
             color: context.onBrightness(
-              light: AppColors.border,
-              dark: AppColors.darkBorder,
+              light: Colors.white,
+              dark: AppColors.darkSurface,
             ),
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.groups_rounded,
-                        size: 15,
-                        color: AppColors.forest700,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '$stops ${stops == 1 ? t.invStop : t.invStops}',
-                        style: body(
-                          14,
-                          weight: FontWeight.w700,
-                          color: context.onBrightness(
-                            light: AppColors.forest900,
-                            dark: AppColors.darkText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        planning ? Icons.sync_rounded : Icons.route_rounded,
-                        size: 13,
-                        color: mutedColor,
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          _tripLine(t),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: body(11, color: mutedColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: context.onBrightness(
+                light: AppColors.border,
+                dark: AppColors.darkBorder,
               ),
             ),
-            const SizedBox(width: 8),
-            ForestButton(
-              label: t.invStartNavigation,
-              icon: Icons.navigation_rounded,
-              onPressed: onStart,
-            ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: context.isDarkMode ? 0.26 : 0.07,
+                ),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.groups_rounded,
+                size: 22,
+                // Gold on the dark surface, where the forest green it uses on
+                // white would sink into the card.
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.champagne,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$stops ${stops == 1 ? t.invStop : t.invStops}',
+                      style: body(
+                        16,
+                        weight: FontWeight.w700,
+                        color: context.onBrightness(
+                          light: AppColors.forest900,
+                          dark: AppColors.darkText,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      _tripLine(t),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(12, color: mutedColor),
+                    ),
+                  ],
+                ),
+              ),
+              // The rule, not a gap: it separates the read-out from the action
+              // so a glance doesn't take "0 stops" as the button's own label.
+              Container(
+                width: 1,
+                height: 38,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
+              ForestButton(
+                label: t.invStartNavigation,
+                icon: Icons.navigation_rounded,
+                onPressed: onStart,
+              ),
+            ],
+          ),
         ),
       ),
     );

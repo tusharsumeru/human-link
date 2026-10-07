@@ -14,6 +14,8 @@ class PexelsImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.borderColor,
     this.borderWidth = 0,
+    this.fallbackColor,
+    this.fallbackTextColor,
   });
 
   final String? url;
@@ -23,6 +25,15 @@ class PexelsImage extends StatelessWidget {
   final BoxFit fit;
   final Color? borderColor;
   final double borderWidth;
+
+  /// Flat background for the initials tile instead of the forest gradient.
+  ///
+  /// For lists where every row falls back to initials — a column of identical
+  /// green tiles tells you nothing, while a colour per person makes a name you
+  /// have seen before findable by shape alone. Pass [fallbackTextColor] with
+  /// it; the gradient's white would not survive a pale tile.
+  final Color? fallbackColor;
+  final Color? fallbackTextColor;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +57,10 @@ class PexelsImage extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: br,
         border: borderWidth > 0
-            ? Border.all(color: borderColor ?? AppColors.forest700, width: borderWidth)
+            ? Border.all(
+                color: borderColor ?? AppColors.forest700,
+                width: borderWidth,
+              )
             : null,
       ),
       clipBehavior: Clip.antiAlias,
@@ -55,15 +69,22 @@ class PexelsImage extends StatelessWidget {
   }
 
   Widget _fallback() => Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(gradient: AppGradients.forest),
-        alignment: Alignment.center,
-        child: Text(
-          name.isEmpty ? '·' : initialsOf(name),
-          style: body(size * 0.34, weight: FontWeight.w700, color: Colors.white),
-        ),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: fallbackColor,
+      gradient: fallbackColor == null ? AppGradients.forest : null,
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      name.isEmpty ? '·' : initialsOf(name),
+      style: body(
+        size * 0.34,
+        weight: FontWeight.w700,
+        color: fallbackTextColor ?? Colors.white,
+      ),
+    ),
+  );
 }
 
 /// Convenience for avatar-key based portraits (e.g. "6", "elder").
@@ -84,10 +105,10 @@ class AvatarImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PexelsImage(
-        url: avatarUrl(avatarKey),
-        name: name,
-        size: size,
-        borderColor: borderColor,
-        borderWidth: borderWidth,
-      );
+    url: avatarUrl(avatarKey),
+    name: name,
+    size: size,
+    borderColor: borderColor,
+    borderWidth: borderWidth,
+  );
 }

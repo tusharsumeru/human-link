@@ -768,7 +768,11 @@ class _YourStory extends StatelessWidget {
         ),
       );
     }
-    final name = context.watch<AuthService>().user?.name ?? t.dashYou;
+    final name =
+        context.watch<AuthService>().user?.displayName(
+          Localizations.localeOf(context).languageCode,
+        ) ??
+        t.dashYou;
     return _StoryTile(
       label: t.dashYourStory,
       onTap: onTap,

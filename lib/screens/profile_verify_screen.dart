@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +7,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/digilocker_card.dart';
+import '../widgets/leaf_backdrop.dart';
 import '../widgets/ui_kit.dart';
 
 /// Verify Identity — real Aadhaar KYC via SurePass DigiLocker.
@@ -31,116 +33,211 @@ class _ProfileVerifyScreenState extends State<ProfileVerifyScreen> {
     _verified = context.read<AuthService>().user?.verified ?? false;
   }
 
+  // ── UI ────────────────────────────────────────────────────────────────────
+
+  // The palette this screen is drawn with, read off the botanical canvas
+  // rather than the default page surface.
+  Color get _ink =>
+      context.onBrightness(light: AppColors.forest900, dark: Colors.white);
+  Color get _gold => context.onBrightness(
+    light: AppColors.champagneDeep,
+    dark: AppColors.champagne,
+  );
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: context.onBrightness(
-        light: AppColors.cream,
-        dark: AppColors.darkBg,
-      ),
-      appBar: AppBar(
-        backgroundColor: AppColors.forest800,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/dashboard');
-            }
-          },
+    return LeafCanvas(
+      // Two cards and then empty space: the bottom half of this page is the
+      // backdrop, so the backdrop is worth painting properly.
+      lush: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          // Just short of opaque, so the leaves the canvas paints up here read
+          // faintly through the band. Only the canvas is behind the bar — the
+          // body starts below it — so nothing scrolling can show through.
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.forest800.withValues(alpha: 0.93),
+                  AppColors.forest700.withValues(alpha: 0.93),
+                ],
+              ),
+            ),
+          ),
+          shape: Border(
+            bottom: BorderSide(
+              color: AppColors.forest600.withValues(alpha: 0.55),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
+          title: Text(
+            t.verifyIdentityTitle,
+            style: display(20, color: Colors.white),
+          ),
         ),
-        title: Text(t.verifyIdentityTitle, style: display(18, color: Colors.white)),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 32),
+          children: [
+            _heading(t.verifyIdentityHeading),
+            const SizedBox(height: 12),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: LotusOrnament(ruleWidth: 56),
+            ),
+            const SizedBox(height: 26),
+            _panel(
+              child: DigilockerCard(
+                onVerified: (_) => setState(() => _verified = true),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _trustPanel(t),
+            if (_verified) ...[
+              const SizedBox(height: 24),
+              PillButton(
+                label: t.verifyBackToDashboard,
+                onPressed: () => context.go('/dashboard'),
+              ),
+            ],
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+    );
+  }
+
+  /// The page title, with its last word in champagne.
+  ///
+  /// Split on the final space rather than carried as two strings per locale:
+  /// "Identity Verification", "पहचान सत्यापन" and "ಗುರುತಿನ ಪರಿಶೀಲನೆ" all land
+  /// the same way, and a heading that has no space in it simply stays one
+  /// colour instead of breaking.
+  Widget _heading(String text) {
+    final cut = text.trimRight().lastIndexOf(' ');
+    final white = display(29, color: _ink);
+    if (cut <= 0) return Text(text, style: white);
+    return Text.rich(
+      TextSpan(
         children: [
-          Text(
-            t.verifyIdentityHeading,
-            style: display(
-              24,
-              color: context.onBrightness(
-                light: AppColors.forest900,
-                dark: AppColors.darkText,
-              ),
-            ),
+          TextSpan(text: text.substring(0, cut + 1), style: white),
+          TextSpan(
+            text: text.substring(cut + 1),
+            style: display(29, color: _gold),
           ),
-          const SizedBox(height: 6),
-          Text(
-            t.verifyIdentitySubtitle,
-            style: body(
-              13,
-              height: 1.5,
-              color: context.onBrightness(
-                light: AppColors.textMuted,
-                dark: AppColors.darkTextMuted,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          AppCard(
-            child: DigilockerCard(
-              onVerified: (_) => setState(() => _verified = true),
-            ),
-          ),
-          const SizedBox(height: 14),
-          _trustPanel(t),
-          const SizedBox(height: 20),
-          if (_verified)
-            ForestButton(
-              label: t.verifyBackToDashboard,
-              icon: Icons.check_circle_outline_rounded,
-              expand: true,
-              onPressed: () => context.go('/dashboard'),
-            ),
         ],
       ),
     );
   }
 
+  /// The card both panels are built on: a wash barely off the ground with a
+  /// green hairline, rather than the opaque surface [AppCard] uses — on the
+  /// botanical canvas a solid block would cover the leaves it is sitting on.
+  Widget _panel({required Widget child, EdgeInsets? padding}) => Container(
+    padding: padding ?? const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: context.onBrightness(
+        light: Colors.white.withValues(alpha: 0.75),
+        dark: AppColors.emerald.withValues(alpha: 0.05),
+      ),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: context.onBrightness(
+          light: AppColors.sageEdge,
+          dark: AppColors.emerald.withValues(alpha: 0.18),
+        ),
+      ),
+    ),
+    child: child,
+  );
+
+  /// The ringed gold disc every line in the trust panel opens with. Gold
+  /// rather than the green used on the form screens: this panel is about what
+  /// is being safeguarded, and the green discs elsewhere mean "a field".
+  Widget _disc(IconData icon, {double size = 40}) => Container(
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: _gold.withValues(alpha: 0.10),
+      border: Border.all(color: _gold.withValues(alpha: 0.38)),
+    ),
+    child: Icon(icon, size: size * 0.46, color: _gold),
+  );
+
+  Widget _hairline() => Container(
+    height: 1,
+    margin: const EdgeInsets.symmetric(horizontal: 16),
+    color: context.onBrightness(
+      light: AppColors.sageEdge,
+      dark: AppColors.emerald.withValues(alpha: 0.12),
+    ),
+  );
+
+  /// What we do and don't keep, said plainly next to the button that asks for
+  /// it. Ruled rather than spaced: three one-line promises run together as a
+  /// block of text, and the rules make each one a separate statement.
   Widget _trustPanel(AppLocalizations t) {
     final items = [
       (Icons.lock_outline, t.verifyTrustGovBacked),
-      (Icons.visibility_off_outlined, t.verifyTrustNeverStored),
-      (Icons.verified_user_outlined, t.verifyTrustMaskedOnly),
+      (Icons.verified_user_outlined, t.verifyTrustNeverStored),
+      (Icons.visibility_off_outlined, t.verifyTrustMaskedOnly),
     ];
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: AppGradients.deepForest,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return _panel(
+      padding: EdgeInsets.zero,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.shield_outlined,
-                  size: 16, color: AppColors.gold500),
-              const SizedBox(width: 8),
-              Text(t.identityTrustSecurity,
-                  style: body(13,
-                      weight: FontWeight.w700, color: AppColors.gold500)),
-            ],
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _disc(Icons.shield_outlined, size: 42),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    t.identityTrustSecurity,
+                    style: display(18, color: _ink),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          for (final (icon, text) in items)
+          for (final (icon, text) in items) ...[
+            _hairline(),
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Row(
                 children: [
-                  Icon(icon, size: 14, color: AppColors.forest500),
-                  const SizedBox(width: 8),
+                  _disc(icon),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child:
-                        Text(text, style: body(12, color: AppColors.forest300)),
+                    child: Text(
+                      text,
+                      style: body(14.5, height: 1.4, color: _ink),
+                    ),
                   ),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +8,7 @@ import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/leaf_backdrop.dart';
 import '../widgets/place_field.dart';
 
 /// Human-readable labels for the compatibility spec's `birthTimeAccuracy`
@@ -253,37 +255,70 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  // ── UI ────────────────────────────────────────────────────────────────────
+
+  // The palette this screen is drawn with, read off the botanical canvas
+  // rather than the default page surface — [LeafCanvas] puts a near-black
+  // green under everything in dark mode and a warm ivory in light.
+  Color get _ink =>
+      context.onBrightness(light: AppColors.forest900, dark: Colors.white);
+  Color get _inkMuted => context.onBrightness(
+    light: AppColors.textMuted,
+    dark: AppColors.darkTextMuted,
+  );
+  Color get _accent =>
+      context.onBrightness(light: AppColors.forest700, dark: AppColors.emerald);
+
+  TextStyle get _valueStyle =>
+      body(18, weight: FontWeight.w500, color: _ink, height: 1.35);
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: context.onBrightness(
-        light: AppColors.cream,
-        dark: AppColors.darkBg,
-      ),
-      appBar: AppBar(
-        backgroundColor: AppColors.forest800,
-        surfaceTintColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(t.birthTitle, style: display(18, color: Colors.white)),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _loadError != null
-          ? Center(
-              child: Text(
-                _loadError!,
-                style: body(
-                  14,
-                  color: context.onBrightness(
-                    light: AppColors.textMuted,
-                    dark: AppColors.darkTextMuted,
-                  ),
-                ),
+    final ready = !_loading && _loadError == null;
+    return LeafCanvas(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          // Just short of opaque, so the leaf the canvas paints up here reads
+          // faintly through the band instead of being cut off by it. Only the
+          // canvas is behind the bar — the body starts below it — so nothing
+          // scrolling can show through.
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.forest800.withValues(alpha: 0.93),
+                  AppColors.forest700.withValues(alpha: 0.93),
+                ],
               ),
-            )
-          : _form(t),
+            ),
+          ),
+          shape: Border(
+            bottom: BorderSide(
+              color: AppColors.forest600.withValues(alpha: 0.55),
+            ),
+          ),
+          title: Text(t.birthTitle, style: display(20, color: Colors.white)),
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _loadError != null
+            ? Center(
+                child: Text(_loadError!, style: body(14, color: _inkMuted)),
+              )
+            : _form(t),
+        // Nothing to save while the form is still loading or has failed, so
+        // the bar is absent rather than present-and-dead.
+        bottomNavigationBar: ready ? _saveBar(t) : null,
+      ),
     );
   }
 
@@ -294,24 +329,14 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     final role = _roleFor(gender);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
       children: [
-        Text(
-          t.birthDisclaimer,
-          style: body(
-            12,
-            color: context.onBrightness(
-              light: AppColors.textMuted,
-              dark: AppColors.darkTextMuted,
-            ),
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 16),
+        Text(t.birthDisclaimer, style: body(14, color: _inkMuted, height: 1.5)),
+        const SizedBox(height: 26),
 
         _label(t.birthFromProfile),
         _readOnlyRow(
-          icon: Icons.cake_outlined,
+          icon: Icons.calendar_today_rounded,
           label: t.birthDateOfBirth,
           value: dob.isEmpty ? t.birthNotSet : dob,
           warn: dob.isEmpty,
@@ -323,60 +348,206 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
           warn: role == null,
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 22),
         _label(t.birthBirthplace),
-        PlaceField(
-          label: t.birthCityLabel,
-          controller: _placeCtrl,
-          hint: t.birthCityHint,
-          onPlaceSelected: _onPlaceSelected,
-        ),
-        if (_latitude != null && _longitude != null) ...[
-          const SizedBox(height: 10),
-          _derivedSummary(t),
-        ],
-
-        const SizedBox(height: 16),
-        _label(t.birthTimeOfBirth),
-        _timeField(t),
-        const SizedBox(height: 14),
-        _accuracyField(t),
-
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 50,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.forest800,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _saving ? null : _save,
-            child: Text(
-              _saving ? t.birthSaving : t.birthSaveButton,
-              style: body(15, weight: FontWeight.w700, color: Colors.white),
-            ),
+        _row(
+          icon: Icons.place_rounded,
+          child: PlaceField(
+            label: t.birthCityLabel,
+            controller: _placeCtrl,
+            hint: t.birthCityHint,
+            onPlaceSelected: _onPlaceSelected,
+            bare: true,
           ),
         ),
+        if (_latitude != null && _longitude != null) _derivedSummary(t),
+
+        const SizedBox(height: 22),
+        _label(t.birthTimeOfBirth),
+        _timeField(t),
+        _accuracyField(t),
+
+        const SizedBox(height: 10),
+        const Center(child: LotusOrnament(ruleWidth: 52)),
       ],
     );
   }
 
+  /// The one primary action, held at the foot of the page rather than at the
+  /// end of the list. The bar fades to the canvas colour instead of being a
+  /// solid block, so the last row slides under it rather than hitting an edge.
+  Widget _saveBar(AppLocalizations t) {
+    final ground = context.onBrightness(
+      light: AppColors.ivoryLift,
+      dark: AppColors.darkCanvasLift,
+    );
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        22,
+        22,
+        22,
+        14 + MediaQuery.of(context).viewPadding.bottom,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [ground.withValues(alpha: 0), ground, ground],
+          stops: const [0, 0.5, 1],
+        ),
+      ),
+      child: Opacity(
+        opacity: _saving ? 0.6 : 1,
+        child: Container(
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.forest600, AppColors.forest500],
+            ),
+            // A green lift rather than a grey drop, so the one primary action
+            // on the page reads as lit from within.
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.forest500.withValues(alpha: 0.34),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: _saving ? null : _save,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _saving ? t.birthSaving : t.birthSaveButton,
+                      style: display(17, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    if (_saving)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _label(String label) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.only(bottom: 14),
     child: Text(
-      label,
+      // Upper-cased here rather than in the .arb files: Devanagari and
+      // Kannada have no case, so this is a no-op in hi/kn.
+      label.toUpperCase(),
       style: body(
         11,
         weight: FontWeight.w700,
         color: context.onBrightness(
-          light: AppColors.gold700,
-          dark: AppColors.goldSoft,
+          light: AppColors.champagneDeep,
+          dark: AppColors.champagne,
         ),
-        letterSpacing: 1.6,
+        letterSpacing: 2,
       ),
     ),
+  );
+
+  /// The round green disc every row opens with.
+  ///
+  /// It is also the only affordance these rows have — there are no boxes and
+  /// no rules on this page — so it carries the field's own subject rather
+  /// than a generic glyph.
+  Widget _disc(IconData icon) => Container(
+    width: 40,
+    height: 40,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: context.onBrightness(
+        light: AppColors.sage,
+        dark: AppColors.emerald.withValues(alpha: 0.12),
+      ),
+      shape: BoxShape.circle,
+    ),
+    child: Icon(icon, size: 19, color: _accent),
+  );
+
+  /// Disc on the left, the field's own content filling the rest, and an
+  /// optional chevron saying the row opens something.
+  Widget _row({
+    required IconData icon,
+    required Widget child,
+    VoidCallback? onTap,
+    bool chevron = false,
+  }) {
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _disc(icon),
+          const SizedBox(width: 14),
+          Expanded(child: child),
+          if (chevron)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, top: 8),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 24,
+                color: _inkMuted,
+              ),
+            ),
+        ],
+      ),
+    );
+    return onTap == null
+        ? content
+        : InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: content,
+          );
+  }
+
+  /// Caption over value, the shape every row on this page shares.
+  Widget _captioned(String label, String value, {bool warn = false}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: body(14, color: _inkMuted)),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: warn
+            ? _valueStyle.copyWith(
+                color: context.onBrightness(
+                  light: const Color(0xFFC62828),
+                  dark: const Color(0xFFEF9A9A),
+                ),
+              )
+            : _valueStyle,
+      ),
+    ],
   );
 
   Widget _readOnlyRow({
@@ -384,178 +555,161 @@ class _BirthDetailsScreenState extends State<BirthDetailsScreen> {
     required String label,
     required String value,
     bool warn = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: AppColors.gold700),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: body(
-                    11,
-                    color: context.onBrightness(
-                      light: AppColors.textMuted,
-                      dark: AppColors.darkTextMuted,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value,
-                  style: body(
-                    14,
-                    weight: FontWeight.w600,
-                    color: warn
-                        ? Colors.red.shade700
-                        : context.onBrightness(
-                            light: AppColors.ink,
-                            dark: AppColors.darkText,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  }) => _row(
+    icon: icon,
+    child: _captioned(label, value, warn: warn),
+  );
 
-  Widget _derivedSummary(AppLocalizations t) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FBF4),
-        borderRadius: BorderRadius.circular(12),
-      ),
+  /// What the geocoder made of the typed birthplace. Worth showing — these
+  /// coordinates are what the Jataka is actually cast from — but as a quiet
+  /// note under the city rather than the mint panel it used to be, which was
+  /// the only boxed thing left on the page.
+  Widget _derivedSummary(AppLocalizations t) => Padding(
+    padding: const EdgeInsets.only(left: 54, bottom: 4),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t.birthDerivedAutomatically,
+          style: body(
+            10.5,
+            weight: FontWeight.w700,
+            color: _accent,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          t.birthLatLon(
+            _latitude!.toStringAsFixed(4),
+            _longitude!.toStringAsFixed(4),
+            _timezone,
+          ),
+          style: body(12, color: _inkMuted, height: 1.5),
+        ),
+      ],
+    ),
+  );
+
+  Widget _timeField(AppLocalizations t) => _row(
+    icon: Icons.access_time_rounded,
+    onTap: _pickTime,
+    chevron: true,
+    child: _captioned(
+      t.birthTimeOfBirth,
+      _timeOfBirth == null ? t.birthNotSet : _timeOfBirth!.format(context),
+    ),
+  );
+
+  Widget _accuracyField(AppLocalizations t) {
+    final picked = _accuracy == null ? null : _accuracyOptionsOf(t)[_accuracy];
+    return _row(
+      icon: Icons.fact_check_outlined,
+      onTap: () => _pickAccuracy(t),
+      chevron: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(t.birthTimeAccuracy, style: body(14, color: _inkMuted)),
+          const SizedBox(height: 2),
           Text(
-            t.birthDerivedAutomatically,
-            style: body(
-              11,
-              weight: FontWeight.w700,
-              color: AppColors.forest700,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            t.birthLatLon(
-              _latitude!.toStringAsFixed(4),
-              _longitude!.toStringAsFixed(4),
-              _timezone,
-            ),
-            style: body(12, color: AppColors.forest800, height: 1.5),
+            picked ?? t.birthSelectAccuracy,
+            style: picked == null
+                ? _valueStyle.copyWith(
+                    color: _inkMuted,
+                    fontWeight: FontWeight.w400,
+                  )
+                : _valueStyle,
           ),
         ],
       ),
     );
   }
 
-  Widget _timeField(AppLocalizations t) {
-    return InkWell(
-      onTap: _pickTime,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(12),
+  /// Centred dialog rather than Material's own dropdown menu.
+  ///
+  /// That menu anchors itself over the field it was opened from and sizes to
+  /// its widest option, so on this page it covered the rows above it and still
+  /// had to clip the longest label. Centred, the list is free to be as wide as
+  /// the screen allows, every option wraps in full, and nothing underneath it
+  /// matters.
+  Future<void> _pickAccuracy(AppLocalizations t) async {
+    final options = _accuracyOptionsOf(t);
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
         ),
-        child: Row(
+        // Keeps a margin on every side at any screen size, so the dialog can
+        // never reach an edge however long the translated options run.
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.access_time_rounded,
-              size: 18,
-              color: AppColors.gold700,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Text(t.birthTimeAccuracy, style: display(17, color: _ink)),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _timeOfBirth == null
-                    ? t.birthNotSet
-                    : _timeOfBirth!.format(context),
-                style: body(
-                  14,
-                  weight: FontWeight.w600,
-                  color: _timeOfBirth == null ? AppColors.hint : AppColors.ink,
+            // Flexible + scroll: six options fit on any phone today, but a
+            // longer translation shouldn't overflow the dialog.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final e in options.entries)
+                      InkWell(
+                        onTap: () => Navigator.of(ctx).pop(e.key),
+                        child: Container(
+                          color: _accuracy == e.key
+                              ? _accent.withValues(alpha: 0.10)
+                              : null,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  e.value,
+                                  style: body(
+                                    15.5,
+                                    weight: _accuracy == e.key
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    height: 1.35,
+                                    color: _ink,
+                                  ),
+                                ),
+                              ),
+                              if (_accuracy == e.key)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 10),
+                                  child: Icon(
+                                    Icons.check_rounded,
+                                    size: 20,
+                                    color: _accent,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.hint,
-            ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
     );
-  }
-
-  Widget _accuracyField(AppLocalizations t) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t.birthTimeAccuracy,
-          style: body(
-            12,
-            weight: FontWeight.w600,
-            color: context.onBrightness(
-              light: AppColors.forest800,
-              dark: AppColors.forest300,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _accuracy,
-              isExpanded: true,
-              hint: Text(
-                t.birthSelectAccuracy,
-                style: body(14, color: AppColors.hint),
-              ),
-              icon: const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppColors.hint,
-              ),
-              style: body(13, color: AppColors.ink),
-              // The field itself is always white — pin the popup to match
-              // rather than let it inherit the app's dark theme surface,
-              // which would leave this same ink-colored text unreadable
-              // when open.
-              dropdownColor: Colors.white,
-              items: _accuracyOptionsOf(t).entries
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value, overflow: TextOverflow.ellipsis),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _accuracy = v),
-            ),
-          ),
-        ),
-      ],
-    );
+    if (chosen != null) setState(() => _accuracy = chosen);
   }
 }

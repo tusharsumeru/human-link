@@ -125,57 +125,109 @@ class _DigilockerCardState extends State<DigilockerCard> {
 
   @override
   Widget build(BuildContext context) {
+    final ink = context.onBrightness(
+      light: AppColors.forest900,
+      dark: Colors.white,
+    );
+    final inkMuted = context.onBrightness(
+      light: AppColors.textMuted,
+      dark: AppColors.darkTextMuted,
+    );
+    final accent = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.emerald,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.verified_user_outlined,
-              size: 18,
-              color: context.onBrightness(
-                light: AppColors.forest700,
-                dark: AppColors.forest300,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Aadhaar via DigiLocker',
-              style: display(
-                16,
-                color: context.onBrightness(
-                  light: AppColors.forest900,
-                  dark: AppColors.darkText,
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                // A white disc on a white card needs an edge; on the dark one
+                // the disc is already the brightest thing in the card.
+                border: Border.all(
+                  color: context.onBrightness(
+                    light: AppColors.border,
+                    dark: Colors.transparent,
+                  ),
                 ),
               ),
-            ),
-            const Spacer(),
-            if (_verified)
-              Pill(
-                'Verified',
-                icon: Icons.check_circle,
-                bg: AppColors.forest600.withValues(alpha: 0.14),
-                fg: AppColors.forest700,
+              // A stand-in, not DigiLocker's own mark — the brand asset isn't
+              // bundled, and inventing one would be worse than suggesting the
+              // idea: documents pulled down from a government locker.
+              child: const Icon(
+                Icons.cloud_download_rounded,
+                size: 24,
+                color: Color(0xFF4F46E5),
               ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Aadhaar via DigiLocker',
+                          style: display(19, color: ink),
+                        ),
+                      ),
+                      if (_verified)
+                        Pill(
+                          'Verified',
+                          icon: Icons.check_circle,
+                          bg: AppColors.forest600.withValues(alpha: 0.16),
+                          fg: accent,
+                        ),
+                    ],
+                  ),
+                  // No fallback copy: a host that wants the step framed
+                  // passes its own line, and one that doesn't gets a card that
+                  // is just the title and the button.
+                  if (!_verified && widget.description != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.description!,
+                      style: body(14, color: inkMuted, height: 1.5),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         if (_verified)
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FBF4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFB7E4C7)),
+              // The fixed mint was a soft panel on cream and a lit slab on
+              // near-black; it follows the theme now like everything else.
+              color: context.onBrightness(
+                light: const Color(0xFFF0FBF4),
+                dark: AppColors.emerald.withValues(alpha: 0.10),
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: context.onBrightness(
+                  light: const Color(0xFFB7E4C7),
+                  dark: AppColors.emerald.withValues(alpha: 0.28),
+                ),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  size: 18,
-                  color: AppColors.forest700,
-                ),
-                const SizedBox(width: 8),
+                Icon(Icons.check_circle, size: 18, color: accent),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _verifiedName.isNotEmpty
@@ -183,42 +235,30 @@ class _DigilockerCardState extends State<DigilockerCard> {
                         : _maskedAadhaar.isNotEmpty
                         ? 'Aadhaar verified · $_maskedAadhaar'
                         : 'Aadhaar verified successfully.',
-                    style: body(
-                      13,
-                      weight: FontWeight.w600,
-                      color: AppColors.forest700,
-                    ),
+                    style: body(13.5, weight: FontWeight.w600, color: accent),
                   ),
                 ),
               ],
             ),
           )
-        else ...[
-          Text(
-            widget.description ??
-                'You\'ll sign in to the official DigiLocker portal and consent '
-                    'to share your Aadhaar. We confirm verification automatically.',
-            style: body(
-              12,
-              color: context.onBrightness(
-                light: AppColors.textMuted,
-                dark: AppColors.darkTextMuted,
-              ),
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ForestButton(
+        else
+          PillButton(
             label: 'Verify with DigiLocker',
-            icon: Icons.shield_outlined,
-            expand: true,
             loading: _busy,
             onPressed: _busy ? null : _start,
           ),
-        ],
         if (_error.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(_error, style: body(12, color: Colors.red)),
+          const SizedBox(height: 10),
+          Text(
+            _error,
+            style: body(
+              12.5,
+              color: context.onBrightness(
+                light: const Color(0xFFC62828),
+                dark: const Color(0xFFEF9A9A),
+              ),
+            ),
+          ),
         ],
       ],
     );

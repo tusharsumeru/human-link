@@ -172,6 +172,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get registerFullNameHint => 'उदा. अदिति शानभाग राव';
 
   @override
+  String get registerNameKannada => 'कन्नड़ में नाम';
+
+  @override
+  String get registerNameHindi => 'हिंदी में नाम';
+
+  @override
+  String get registerNameScriptHint => 'स्वतः भरा गया, ज़रूरत हो तो सुधारें';
+
+  @override
   String get registerMobileNumber => 'मोबाइल नंबर';
 
   @override
@@ -1245,6 +1254,23 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get ftInviteLinkCopied => 'आमंत्रण लिंक कॉपी किया गया';
+
+  @override
+  String get ftShareWhatsapp => 'व्हाट्सएप';
+
+  @override
+  String get ftShareMore => 'अन्य ऐप्स';
+
+  @override
+  String ftInviteShareText(String link) {
+    return 'समाज पर मुझसे जुड़ें। आपका आमंत्रण लिंक: $link';
+  }
+
+  @override
+  String get ftInviteShareSubject => 'आपका समाज आमंत्रण';
+
+  @override
+  String get ftShareFailed => 'शेयर शीट नहीं खुल सकी';
 
   @override
   String get ftYourRelative => 'आपका रिश्तेदार';
@@ -2471,6 +2497,50 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String welfareDonateAmount(String amount) {
     return '₹$amount दान करें';
+  }
+
+  @override
+  String get welfareLoadFailed => 'अभियान लोड नहीं हो सके।';
+
+  @override
+  String get welfareEmailLabel => 'ईमेल (रसीद के लिए)';
+
+  @override
+  String get welfareEmailHint => 'you@example.com';
+
+  @override
+  String get welfareRetry => 'फिर कोशिश करें';
+
+  @override
+  String get welfareNoCampaigns => 'अभी कोई अभियान चल नहीं रहा है।';
+
+  @override
+  String get welfareOpenEnded => 'कोई अंतिम तिथि नहीं';
+
+  @override
+  String get welfareCampaignClosed =>
+      'यह अभियान अब दान स्वीकार नहीं कर रहा है।';
+
+  @override
+  String get welfarePaymentFailed => 'भुगतान विफल रहा। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get welfarePaymentVerifyFailed =>
+      'भुगतान प्राप्त हुआ लेकिन पुष्टि नहीं हो सकी। कृपया समाज कार्यालय से संपर्क करें; दोबारा भुगतान न करें।';
+
+  @override
+  String get welfareMessageOptional => 'संदेश (वैकल्पिक)';
+
+  @override
+  String get welfareMessageHint => 'अपने योगदान के साथ कुछ शब्द';
+
+  @override
+  String get welfareSecurePayment =>
+      'Razorpay के माध्यम से सुरक्षित भुगतान — UPI, कार्ड, नेट बैंकिंग और वॉलेट।';
+
+  @override
+  String welfareDonationFor(String title) {
+    return '$title के लिए दान';
   }
 
   @override
@@ -3822,7 +3892,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get birthAccuracyExactDocument =>
-      'सटीक - किसी दस्तावेज़ (जैसे जन्म प्रमाण पत्र) द्वारा सत्यापित';
+      'सटीक - किसी दस्तावेज़ द्वारा सत्यापित';
 
   @override
   String get birthAccuracyExactFamily => 'सटीक - परिवार द्वारा पुष्टि की गई';

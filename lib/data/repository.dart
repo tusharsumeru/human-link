@@ -7,6 +7,7 @@ import 'api_config.dart';
 import 'demo_data.dart';
 import 'follow_events.dart';
 import 'invitation_member.dart';
+import 'master_data.dart';
 import 'models/compatibility_astrology_modules.dart';
 import 'models/compatibility_models.dart';
 import 'models/compatibility_prerequisites.dart';
@@ -32,6 +33,23 @@ class Repository {
   /// FakeApiClient())` for a screen under test, then restore the real one —
   /// the app itself only ever assigns this once, at startup.
   static Repository instance = Repository();
+
+  /// GET `/api/master/<route>` — the admin-managed options for one pick list,
+  /// already filtered to the active entries and in the order the admin set.
+  ///
+  /// Anonymous: the member has to see Blood group before they have an account.
+  /// Throws [ApiException] when the route isn't registered on this deployment,
+  /// which [MasterData] turns into the bundled fallback list.
+  Future<List<MasterItem>> masterList(String route) async {
+    final data = await _api.getJson('/api/master/$route');
+    if (data is! List) {
+      throw ApiException('Unexpected response for master list "$route"');
+    }
+    return [
+      for (final row in data)
+        if (row is Map) MasterItem.fromJson(Map<String, dynamic>.from(row)),
+    ];
+  }
 
   /// POST /api/user/login/send-otp — dispatches the login OTP via 2Factor and
   /// returns the session id (2Factor's `Details` field) that
@@ -130,10 +148,18 @@ class Repository {
     String maritalStatus = '',
     Map<String, dynamic>? currentAddress,
     bool isPurohit = false,
+    String nameHi = '',
+    String nameKn = '',
   }) async {
     final data = await _api.postJson('/api/user/register', {
       'userName': userName.isNotEmpty ? userName : _deriveUserName(name, phone),
       'name': name,
+      // The name in the other scripts. Whatever is blank here the server
+      // fills by transliteration, so the account always has all three.
+      'nameLocalized': {
+        if (nameHi.isNotEmpty) 'hi': nameHi,
+        if (nameKn.isNotEmpty) 'kn': nameKn,
+      },
       'phone': phone,
       if (gotra.isNotEmpty) 'gotra': gotra,
       if (native.isNotEmpty) 'native': native,
@@ -152,6 +178,23 @@ class Repository {
       };
     }
     throw ApiException('Registration failed');
+  }
+
+  /// GET /api/user/name/transliterate — the Latin [name] written in Devanagari
+  /// and Kannada, as `{ en, hi, kn }`. Public (no token). A script comes back
+  /// "" when the lookup failed; callers leave that field for the member to type.
+  Future<Map<String, String>> transliterateName(String name) async {
+    final data = await _api.getJson(
+      '/api/user/name/transliterate?name=${Uri.encodeQueryComponent(name.trim())}',
+    );
+    if (data is Map) {
+      return {
+        'en': (data['en'] ?? '').toString(),
+        'hi': (data['hi'] ?? '').toString(),
+        'kn': (data['kn'] ?? '').toString(),
+      };
+    }
+    throw ApiException('Could not transliterate the name');
   }
 
   /// A backend-legal username (3–30 chars, lowercase letters/digits/._) derived

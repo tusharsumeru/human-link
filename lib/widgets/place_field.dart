@@ -17,11 +17,17 @@ class PlaceField extends StatefulWidget {
     required this.controller,
     this.hint,
     this.onPlaceSelected,
+    this.bare = false,
   });
 
   final String label;
   final TextEditingController controller;
   final String? hint;
+
+  /// Drops the outlined box, so the field is a caption with the place typed
+  /// under it. For screens that carry their own leading icon and lay every
+  /// row out the same way — the box would be the only one on the page.
+  final bool bare;
 
   /// Fires with the structured Nominatim result for whichever suggestion the
   /// user tapped — `{city, state, country, countryCode, latitude, longitude}`
@@ -73,10 +79,13 @@ class _PlaceFieldState extends State<PlaceField> {
         'https://nominatim.openstreetmap.org/search'
         '?format=json&addressdetails=1&limit=6&q=${Uri.encodeComponent(q)}',
       );
-      final res = await http.get(uri, headers: {
-        // Nominatim requires an identifying User-Agent.
-        'User-Agent': 'DaivajnaSamaja/1.0 (flutter app)',
-      });
+      final res = await http.get(
+        uri,
+        headers: {
+          // Nominatim requires an identifying User-Agent.
+          'User-Agent': 'DaivajnaSamaja/1.0 (flutter app)',
+        },
+      );
       if (!mounted) return;
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List;
@@ -107,8 +116,7 @@ class _PlaceFieldState extends State<PlaceField> {
     final name = place['display_name'].toString();
     _suppress = true;
     widget.controller.text = name;
-    widget.controller.selection =
-        TextSelection.collapsed(offset: name.length);
+    widget.controller.selection = TextSelection.collapsed(offset: name.length);
     setState(() => _suggestions = []);
     FocusScope.of(context).unfocus();
 
@@ -119,15 +127,16 @@ class _PlaceFieldState extends State<PlaceField> {
     // Broader results (a district, a state) don't carry city/town/village —
     // fall back through county/state_district, then finally the searched
     // place's own name, so a selection never comes back with an empty city.
-    final city = (addr['city'] ??
-            addr['town'] ??
-            addr['village'] ??
-            addr['municipality'] ??
-            addr['county'] ??
-            addr['state_district'] ??
-            place['name'] ??
-            '')
-        .toString();
+    final city =
+        (addr['city'] ??
+                addr['town'] ??
+                addr['village'] ??
+                addr['municipality'] ??
+                addr['county'] ??
+                addr['state_district'] ??
+                place['name'] ??
+                '')
+            .toString();
     final state = (addr['state'] ?? '').toString();
     final country = (addr['country'] ?? '').toString();
     final countryCode = (addr['country_code'] ?? '').toString();
@@ -146,22 +155,60 @@ class _PlaceFieldState extends State<PlaceField> {
 
   @override
   Widget build(BuildContext context) {
+    final bare = widget.bare;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label,
-            style:
-                body(12, weight: FontWeight.w600, color: AppColors.forest800)),
-        const SizedBox(height: 6),
+        Text(
+          widget.label,
+          style: bare
+              ? body(
+                  14,
+                  color: context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
+                )
+              : body(
+                  12,
+                  weight: FontWeight.w600,
+                  color: context.onBrightness(
+                    light: AppColors.forest800,
+                    dark: AppColors.forest300,
+                  ),
+                ),
+        ),
+        SizedBox(height: bare ? 2 : 6),
         TextField(
           controller: widget.controller,
           onChanged: _onChanged,
-          style: body(14, color: AppColors.ink),
+          style: body(
+            bare ? 18 : 14,
+            weight: bare ? FontWeight.w500 : FontWeight.w400,
+            height: bare ? 1.3 : null,
+            color: context.onBrightness(
+              light: AppColors.ink,
+              dark: AppColors.darkText,
+            ),
+          ),
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: body(14, color: AppColors.hint),
-            filled: true,
-            fillColor: Colors.white,
+            hintStyle: body(
+              bare ? 18 : 14,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted,
+              ),
+            ),
+            isDense: bare,
+            filled: !bare,
+            // Was a hardcoded white, which is the whole field glowing on a
+            // near-black page. The surface has to follow the theme like every
+            // other box in the app.
+            fillColor: context.onBrightness(
+              light: Colors.white,
+              dark: AppColors.darkSurface,
+            ),
             suffixIcon: _loading
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -171,28 +218,63 @@ class _PlaceFieldState extends State<PlaceField> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   )
-                : const Icon(Icons.place_outlined,
-                    size: 18, color: AppColors.gold700),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.forest700, width: 1.5),
-            ),
+                // The caller supplies the glyph in bare mode, so a second
+                // one inside the field would be the same thing said twice.
+                : bare
+                ? null
+                : Icon(
+                    Icons.place_outlined,
+                    size: 18,
+                    // The earth-brown gold disappears against the dark
+                    // surface; champagne is the tone that carries there.
+                    color: context.onBrightness(
+                      light: AppColors.gold700,
+                      dark: AppColors.champagne,
+                    ),
+                  ),
+            contentPadding: bare
+                ? EdgeInsets.zero
+                : const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            enabledBorder: bare
+                ? InputBorder.none
+                : OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
+                    ),
+                  ),
+            focusedBorder: bare
+                ? InputBorder.none
+                : OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.onBrightness(
+                        light: AppColors.forest700,
+                        dark: AppColors.emerald,
+                      ),
+                      width: 1.5,
+                    ),
+                  ),
           ),
         ),
         if (_suggestions.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.onBrightness(
+                light: Colors.white,
+                dark: AppColors.darkSurface,
+              ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(
+                color: context.onBrightness(
+                  light: AppColors.border,
+                  dark: AppColors.darkBorder,
+                ),
+              ),
               boxShadow: AppShadows.soft,
             ),
             child: Column(
@@ -202,17 +284,33 @@ class _PlaceFieldState extends State<PlaceField> {
                     onTap: () => _select(s),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.location_on_outlined,
-                              size: 15, color: AppColors.gold700),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 15,
+                            color: context.onBrightness(
+                              light: AppColors.gold700,
+                              dark: AppColors.champagne,
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(s['display_name'].toString(),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: body(12, color: AppColors.ink)),
+                            child: Text(
+                              s['display_name'].toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: body(
+                                12,
+                                color: context.onBrightness(
+                                  light: AppColors.ink,
+                                  dark: AppColors.darkText,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

@@ -1,6 +1,94 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// The full-width stadium action the redesigned screens lead with.
+///
+/// Distinct from [ForestButton], which is the compact rounded rectangle used
+/// inline all over the older screens: this one is always the width of its
+/// parent, carries a trailing arrow saying the tap goes somewhere, and is lit
+/// from within by a green shadow rather than dropped onto the page by a grey
+/// one. Use it where there is exactly one primary action in view.
+class PillButton extends StatelessWidget {
+  const PillButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon = Icons.arrow_forward_rounded,
+    this.loading = false,
+    this.height = 56,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final bool loading;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = !loading && onPressed != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.6,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.forest600, AppColors.forest500],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.forest500.withValues(alpha: 0.34),
+              blurRadius: 22,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: enabled ? onPressed : null,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body(
+                        15.5,
+                        weight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (loading)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  else
+                    Icon(icon, size: 20, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Forest-gradient primary button (web `.btn-forest`).
 class ForestButton extends StatelessWidget {
   const ForestButton({

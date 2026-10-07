@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// Small tappable thumbnail for a Kuladevata that has a bundled photo (see
-/// `kKuladevataImages` in `lib/data/kuladevatas.dart`) — shown inline right
+/// Small tappable thumbnail for a Kuladevata photo — shown inline right
 /// before the name, sized to match the surrounding text rather than the
 /// text being sized to it. Tapping it opens the full photo.
+///
+/// [source] is either a bundled asset path (`kKuladevataImages` in
+/// `lib/data/kuladevatas.dart`) or an `http(s)` URL uploaded through the admin
+/// panel's Dropdown Options screen. Which one it is is decided per call rather
+/// than per widget, so a list can mix the two — the admin gives a picture to
+/// some entries and the app still ships assets for the rest.
 class KuladevataThumb extends StatelessWidget {
   const KuladevataThumb({
     super.key,
-    required this.assetPath,
+    required this.source,
     required this.name,
     this.size = 16,
   });
 
-  final String assetPath;
+  final String source;
   final String name;
   final double size;
 
@@ -24,15 +29,16 @@ class KuladevataThumb extends StatelessWidget {
       onTap: () => showDialog<void>(
         context: context,
         barrierColor: Colors.black87,
-        builder: (_) => _KuladevataImageModal(assetPath: assetPath, name: name),
+        builder: (_) => _KuladevataImageModal(source: source, name: name),
       ),
       child: ClipOval(
-        child: Image.asset(
-          assetPath,
+        child: _KuladevataImage(
+          source: source,
           width: size,
           height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => SizedBox(width: size, height: size),
+          // A missing picture leaves the space it would have taken, so the
+          // names in a list stay aligned whether or not they have one.
+          fallback: SizedBox(width: size, height: size),
         ),
       ),
     );
@@ -42,9 +48,9 @@ class KuladevataThumb extends StatelessWidget {
 /// Dialog shown when tapping a [KuladevataThumb] — a round, zoomable photo
 /// over a dark scrim, dismissed by tapping outside it or the close button.
 class _KuladevataImageModal extends StatelessWidget {
-  const _KuladevataImageModal({required this.assetPath, required this.name});
+  const _KuladevataImageModal({required this.source, required this.name});
 
-  final String assetPath;
+  final String source;
   final String name;
 
   @override
@@ -59,7 +65,7 @@ class _KuladevataImageModal extends StatelessWidget {
             aspectRatio: 1,
             child: ClipOval(
               child: InteractiveViewer(
-                child: Image.asset(assetPath, fit: BoxFit.cover),
+                child: _KuladevataImage(source: source, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -77,5 +83,45 @@ class _KuladevataImageModal extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Draws [source] from wherever it lives: `Image.network` for an http(s) URL,
+/// `Image.asset` for anything else.
+class _KuladevataImage extends StatelessWidget {
+  const _KuladevataImage({
+    required this.source,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.fallback = const SizedBox.shrink(),
+  });
+
+  final String source;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final remote =
+        source.startsWith('http://') || source.startsWith('https://');
+    Widget errorBuilder(BuildContext _, Object __, StackTrace? ___) => fallback;
+    return remote
+        ? Image.network(
+            source,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: errorBuilder,
+          )
+        : Image.asset(
+            source,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: errorBuilder,
+          );
   }
 }
