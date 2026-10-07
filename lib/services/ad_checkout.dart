@@ -33,6 +33,8 @@ class AdCheckout {
   Future<AdCheckoutResult> promote({
     required String postId,
     required String planId,
+    String linkUrl = '',
+    String linkLabel = '',
     String name = '',
     String phone = '',
   }) async {
@@ -48,6 +50,8 @@ class AdCheckout {
       final res = await Repository.instance.createAdCampaign(
         postId: postId,
         planId: planId,
+        linkUrl: linkUrl,
+        linkLabel: linkLabel,
       );
       final payment = Map<String, dynamic>.from(res['payment'] as Map);
       _orderId = (payment['orderId'] ?? '').toString();

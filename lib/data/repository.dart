@@ -526,13 +526,28 @@ class Repository {
   Future<Map<String, dynamic>> createAdCampaign({
     required String postId,
     required String planId,
+    String linkUrl = '',
+    String linkLabel = '',
   }) async {
     final data = await _api.postJson('/api/ad-campaigns', {
       'postId': postId,
       'planId': planId,
+      // Optional destination (product / company / page) for a "Visit" button.
+      if (linkUrl.isNotEmpty) 'linkUrl': linkUrl,
+      if (linkUrl.isNotEmpty && linkLabel.isNotEmpty) 'linkLabel': linkLabel,
     });
     if (data is Map) return Map<String, dynamic>.from(data);
     throw ApiException('Could not start the sponsored post payment');
+  }
+
+  /// POST /api/ad-campaigns/:id/click — a viewer tapped a sponsored post's
+  /// link. Analytics only; never throws, never blocks the navigation.
+  Future<void> recordAdClick(String campaignId) async {
+    try {
+      await _api.postJson('/api/ad-campaigns/$campaignId/click', const {});
+    } catch (_) {
+      /* analytics only */
+    }
   }
 
   /// POST /api/ad-campaigns/verify — confirms the payment Razorpay Checkout

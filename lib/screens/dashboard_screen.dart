@@ -8,6 +8,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' show ClientException;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/api_client.dart';
@@ -957,6 +958,8 @@ class _Post {
     this.likedByMe = false,
     this.isSponsored = false,
     this.campaignId = '',
+    this.linkUrl = '',
+    this.linkLabel = '',
     this.pending,
   });
 
@@ -984,6 +987,10 @@ class _Post {
   // its ordinary place in the feed has this false.
   final bool isSponsored;
   final String campaignId; // the campaign it was delivered for, or ''
+  // Sponsored only: the advertiser's product / company / page, opened by the
+  // "Visit" button, and that button's text. '' when the campaign has no link.
+  final String linkUrl;
+  final String linkLabel;
 
   /// Set while this card is a local upload that hasn't landed on the server
   /// yet (or failed) — drives the "Uploading… / Retry" overlay.
@@ -1047,6 +1054,8 @@ class _Post {
       likedByMe: m['likedByMe'] == true,
       isSponsored: m['isSponsored'] == true,
       campaignId: (m['campaignId'] ?? '').toString(),
+      linkUrl: (m['linkUrl'] ?? '').toString(),
+      linkLabel: (m['linkLabel'] ?? '').toString(),
     );
   }
 
@@ -1071,6 +1080,8 @@ class _Post {
     likedByMe: likedByMe,
     isSponsored: isSponsored,
     campaignId: campaignId,
+    linkUrl: linkUrl,
+    linkLabel: linkLabel,
     pending: pending,
   );
 
@@ -1103,6 +1114,96 @@ String _timeAgo(AppLocalizations t, String? iso) {
   if (d.inDays < 7) return t.timeDaysAgo(d.inDays);
 
   return t.timeWeeksAgo((d.inDays / 7).floor());
+}
+
+/// The call-to-action on a sponsored post that carries a link. The tap is
+/// reported to the server first (fire-and-forget, so a slow network never
+/// delays the page opening), then the link opens in the external browser.
+class _SponsoredLinkButton extends StatelessWidget {
+  const _SponsoredLinkButton({
+    required this.campaignId,
+    required this.url,
+    required this.label,
+  });
+  final String campaignId;
+  final String url;
+  final String label;
+
+  Future<void> _open(BuildContext context) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (campaignId.isNotEmpty) {
+      unawaited(Repository.instance.recordAdClick(campaignId));
+    }
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open the link')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final host = Uri.tryParse(url)?.host ?? url;
+    return InkWell(
+      onTap: () => _open(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.forest700, width: 1.2),
+          color: context.onBrightness(
+            light: AppColors.forest700.withValues(alpha: 0.06),
+            dark: Colors.white.withValues(alpha: 0.04),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label.isNotEmpty ? label : 'Visit website',
+                    style: body(
+                      13,
+                      weight: FontWeight.w700,
+                      color: context.onBrightness(
+                        light: AppColors.forest800,
+                        dark: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    host,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: body(
+                      11,
+                      color: context.onBrightness(
+                        light: AppColors.hint,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.open_in_new_rounded,
+              size: 18,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: AppColors.darkText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PostCard extends StatefulWidget {
@@ -1790,6 +1891,17 @@ class _PostCardState extends State<_PostCard> {
             ],
           ),
         ),
+        // Sponsored post with a destination: a "Visit" button that counts the
+        // click for the advertiser and opens their page in the browser.
+        if (p.isSponsored && p.linkUrl.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: _SponsoredLinkButton(
+              campaignId: p.campaignId,
+              url: p.linkUrl,
+              label: p.linkLabel,
+            ),
+          ),
         // Caption
         if (p.caption.isNotEmpty)
           Padding(

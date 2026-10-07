@@ -74,7 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        // The server checks the account before sending the OTP, so an
+        // unknown number is reported here, at the phone step.
+        _error =
+            (e.statusCode == 404 || e.message == 'Phone number not registered')
+            ? t.loginErrorNotRegistered
+            : e.message;
         _loading = false;
       });
     } catch (_) {

@@ -187,6 +187,8 @@ Future<void> _composeAndUpload(
   final outcome = await AdCheckout.instance.promote(
     postId: postId,
     planId: (plan['id'] ?? '').toString(),
+    linkUrl: result.linkUrl,
+    linkLabel: result.linkLabel,
     name: user?.name ?? '',
     phone: user?.phone ?? '',
   );
@@ -212,7 +214,14 @@ List<String> _hashtagsIn(String caption) => RegExp(
 /// What the composer returns: the caption, the (optional) place the author
 /// attached (`location` is '' when none was picked), and whoever was tagged.
 class _ComposeResult {
-  const _ComposeResult(this.caption, this.location, this.tagged, this.adPlan);
+  const _ComposeResult(
+    this.caption,
+    this.location,
+    this.tagged,
+    this.adPlan, {
+    this.linkUrl = '',
+    this.linkLabel = '',
+  });
   final String caption;
   final String location;
   final List<Map<String, dynamic>> tagged;
@@ -220,6 +229,20 @@ class _ComposeResult {
   /// The plan picked for a sponsored post (`{ id, name, durationDays, price,
   /// currency }` from GET /api/ad-plans), or null for a normal post.
   final Map<String, dynamic>? adPlan;
+
+  /// Sponsored only: the product / company / page a "Visit" tap opens, and the
+  /// button text. Both '' when the advertiser added no link.
+  final String linkUrl;
+  final String linkLabel;
+}
+
+/// A link is accepted only as a full http(s) URL, so the server (which checks
+/// the same) never rejects the campaign after the post is already shared.
+bool _isHttpUrl(String value) {
+  final uri = Uri.tryParse(value.trim());
+  return uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty;
 }
 
 String _planPrice(Map<String, dynamic> plan) {
@@ -248,6 +271,9 @@ Future<_ComposeResult?> _composeCaption(
   bool loadingPlans = false;
   String? plansError;
   Map<String, dynamic>? plan; // the chosen plan
+  // Optional destination for a sponsored post (product / company / page).
+  final linkCtrl = TextEditingController();
+  final linkLabelCtrl = TextEditingController();
   return showModalBottomSheet<_ComposeResult>(
     context: context,
     isScrollControlled: true,
@@ -498,6 +524,12 @@ Future<_ComposeResult?> _composeCaption(
                         onSelect: (p) => setSheetState(() => plan = p),
                         onRetry: loadPlans,
                       ),
+                      const SizedBox(height: 10),
+                      _AdLinkFields(
+                        urlController: linkCtrl,
+                        labelController: linkLabelCtrl,
+                        onChanged: () => setSheetState(() {}),
+                      ),
                     ],
                     const SizedBox(height: 16),
                     ForestButton(
@@ -506,8 +538,13 @@ Future<_ComposeResult?> _composeCaption(
                           : t.postShareButton,
                       icon: Icons.send_rounded,
                       expand: true,
-                      // A sponsored post needs a plan before it can be shared.
-                      onPressed: sponsored && plan == null
+                      // A sponsored post needs a plan, and any link it adds
+                      // must be a valid URL, before it can be shared.
+                      onPressed:
+                          sponsored &&
+                              (plan == null ||
+                                  (linkCtrl.text.trim().isNotEmpty &&
+                                      !_isHttpUrl(linkCtrl.text)))
                           ? null
                           : () => Navigator.of(ctx).pop(
                               _ComposeResult(
@@ -519,6 +556,10 @@ Future<_ComposeResult?> _composeCaption(
                                 location,
                                 tagged,
                                 sponsored ? plan : null,
+                                linkUrl: sponsored ? linkCtrl.text.trim() : '',
+                                linkLabel: sponsored
+                                    ? linkLabelCtrl.text.trim()
+                                    : '',
                               ),
                             ),
                     ),
@@ -728,6 +769,82 @@ class _AdPlanPicker extends StatelessWidget {
           'completed it stays a normal post.',
           style: body(11, color: AppColors.hint),
         ),
+      ],
+    );
+  }
+}
+
+/// Optional link for a sponsored post: where a "Visit" tap on the post takes
+/// the viewer, plus the button text.
+class _AdLinkFields extends StatelessWidget {
+  const _AdLinkFields({
+    required this.urlController,
+    required this.labelController,
+    required this.onChanged,
+  });
+  final TextEditingController urlController;
+  final TextEditingController labelController;
+  final VoidCallback onChanged;
+
+  InputDecoration _decoration(String hint, {String? errorText}) =>
+      InputDecoration(
+        hintText: hint,
+        hintStyle: body(13, color: AppColors.hint),
+        errorText: errorText,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.forest700, width: 1.5),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final url = urlController.text.trim();
+    final bad = url.isNotEmpty && !_isHttpUrl(url);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Link (optional) — your product, company or page',
+          style: body(12, weight: FontWeight.w600, color: AppColors.hint),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: urlController,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+          onChanged: (_) => onChanged(),
+          style: body(13, color: AppColors.ink),
+          decoration: _decoration(
+            'https://example.com/your-page',
+            errorText: bad ? 'Enter a full link starting with https://' : null,
+          ),
+        ),
+        if (url.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: labelController,
+            maxLength: 40,
+            onChanged: (_) => onChanged(),
+            style: body(13, color: AppColors.ink),
+            decoration: _decoration(
+              'Button text, e.g. Visit website',
+            ).copyWith(counterText: ''),
+          ),
+        ],
       ],
     );
   }
