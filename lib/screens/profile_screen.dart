@@ -16,6 +16,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/leaf_backdrop.dart';
 import '../widgets/pexels_image.dart';
 import '../widgets/ui_kit.dart';
 import 'full_screen_image.dart';
@@ -144,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: context.onBrightness(
-          light: AppColors.cream,
+          light: AppColors.ivory,
           dark: AppColors.darkBg,
         ),
         body: const Center(
@@ -174,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: context.onBrightness(
-        light: AppColors.cream,
+        light: AppColors.ivory,
         dark: AppColors.darkBg,
       ),
       body: ListView(
@@ -244,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user == null) {
       return Scaffold(
         backgroundColor: context.onBrightness(
-          light: AppColors.cream,
+          light: AppColors.ivory,
           dark: AppColors.darkBg,
         ),
         body: Center(
@@ -275,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final archive = user.bio.trim();
     return Scaffold(
       backgroundColor: context.onBrightness(
-        light: AppColors.cream,
+        light: AppColors.ivory,
         dark: AppColors.darkBg,
       ),
       body: ListView(
@@ -293,7 +294,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             verified: user.verified,
             t: t,
             bio: archive,
-            onEditTap: () => context.push('/profile/edit'),
             onCameraTap: _pickPhoto,
             uploadingPhoto: _uploadingPhoto,
           ),
@@ -315,13 +315,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 16),
                 _statsCard(_dash(user.gotra), _dash(user.native), 'Active'),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const _PhonePrivacyCard(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const _AppearanceCard(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const _SavedCard(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
                 ForestButton(
                   label: t.profileEditProfile,
                   icon: Icons.edit_outlined,
@@ -351,7 +351,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 OutlineButtonX(
                   label: t.profileVerifyIdentityOptional,
                   expand: true,
-                  color: AppColors.gold700,
+                  color: context.onBrightness(
+                    light: AppColors.gold700,
+                    dark: AppColors.champagne,
+                  ),
                   onPressed: () => context.push('/profile/verify'),
                 ),
               ],
@@ -461,6 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     final t = AppLocalizations.of(context);
     return AppCard(
+      shadow: _glassShadow(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -510,30 +514,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Icon-badge + title + subtitle, the header every card on this screen
   /// after the first uses (see _aboutCard / _statsCard).
-  Widget _sectionHeader(IconData icon, String title, String subtitle) {
+  Widget _sectionHeader(
+    IconData icon,
+    String title,
+    String subtitle, {
+    Widget? trailing,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: context.onBrightness(
-              light: AppColors.gold700.withValues(alpha: 0.12),
-              dark: AppColors.goldSoft.withValues(alpha: 0.16),
-            ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: context.onBrightness(
-              light: AppColors.gold700,
-              dark: AppColors.goldSoft,
-            ),
-          ),
-        ),
+        _AccentBadge(icon),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -563,6 +553,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
+        ?trailing,
       ],
     );
   }
@@ -573,14 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: context.onBrightness(
-            light: AppColors.gold700,
-            dark: AppColors.goldSoft,
-          ),
-        ),
+        Icon(icon, size: 16, color: _accent),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
@@ -847,6 +831,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         light: AppColors.cream,
         dark: AppColors.darkSurface,
       ),
+      shadow: _glassShadow(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -854,6 +839,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icons.bar_chart_rounded,
             t.profileQuickStats,
             t.profileQuickStatsSubtitle,
+            // Decoration, not an affordance: the reference carries a chevron
+            // here and this card doesn't open anything, so it is drawn faint
+            // enough to read as a flourish rather than a button.
+            trailing: Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: context.onBrightness(
+                light: AppColors.hint,
+                dark: AppColors.darkTextMuted.withValues(alpha: 0.6),
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -880,17 +876,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
           color: context.onBrightness(
-            light: Colors.white,
-            dark: AppColors.darkBg,
+            light: AppColors.sage,
+            // Lifted off the card rather than punched into it — a tile
+            // darker than its own card reads as a hole on this ground.
+            dark: AppColors.emerald.withValues(alpha: 0.06),
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: context.onBrightness(
-              light: AppColors.border,
-              dark: AppColors.darkBorder,
+              light: AppColors.sageEdge,
+              dark: AppColors.emerald.withValues(alpha: 0.16),
             ),
           ),
         ),
@@ -898,13 +896,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Icon(
               icon,
-              size: 18,
+              size: 24,
               color: context.onBrightness(
                 light: AppColors.forest700,
-                dark: AppColors.forest300,
+                dark: AppColors.emerald,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               label,
               style: body(
@@ -943,14 +941,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          Icons.badge_outlined,
-          size: 16,
-          color: context.onBrightness(
-            light: AppColors.gold700,
-            dark: AppColors.goldSoft,
-          ),
-        ),
+        Icon(Icons.badge_outlined, size: 16, color: _accent),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -1008,18 +999,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Champagne on dark, earth-brown on cream: [AppColors.gold700] is a deep
+  /// brown that all but vanishes against a near-black card.
+  Color get _accent =>
+      context.onBrightness(light: AppColors.gold700, dark: AppColors.champagne);
+
   Widget _detailRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: context.onBrightness(
-            light: AppColors.gold700,
-            dark: AppColors.goldSoft,
-          ),
-        ),
+        Icon(icon, size: 16, color: _accent),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -1069,7 +1058,6 @@ class _Header extends StatelessWidget {
     required this.verified,
     required this.t,
     this.bio = '',
-    this.onEditTap,
     this.onCameraTap,
     this.uploadingPhoto = false,
   });
@@ -1088,9 +1076,6 @@ class _Header extends StatelessWidget {
   /// Shown as a short italic line under the pills — only ever passed on the
   /// self-view, where it's the member's own bio.
   final String bio;
-
-  /// Non-null → an "Edit Profile" pill shows top-right, self-view only.
-  final VoidCallback? onEditTap;
 
   /// Non-null → a camera badge replaces the verified badge, bottom-right of
   /// the avatar, self-view only (a family member's or another account's
@@ -1120,216 +1105,276 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(gradient: AppGradients.deepForest),
-      padding: EdgeInsets.fromLTRB(20, top + 8, 20, 28),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/dashboard');
-                  }
-                },
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              const Spacer(),
-              if (onEditTap != null)
-                TextButton.icon(
-                  onPressed: onEditTap,
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    t.profileEditProfile,
-                    style: body(
-                      13,
-                      weight: FontWeight.w600,
-                      color: Colors.white,
+    // The header sits on ivory in light mode and near-black in dark, so its
+    // own ink has to flip with it — white-on-ivory was the one thing the
+    // first pass of this design got wrong.
+    final ink = context.onBrightness(
+      light: AppColors.forest900,
+      dark: Colors.white,
+    );
+    final inkMuted = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.forest300,
+    );
+    final gold = context.onBrightness(
+      light: AppColors.champagneDeep,
+      dark: AppColors.champagne,
+    );
+    // The translucent chrome behind the back button and the metadata pills.
+    final chrome = context.onBrightness(
+      light: AppColors.sage,
+      dark: Colors.black.withValues(alpha: 0.28),
+    );
+    return LeafBackdrop(
+      // What the header curves away to reveal, so it reads as the page
+      // rising into it rather than a band laid on top.
+      pageColor: context.onBrightness(
+        light: AppColors.ivory,
+        dark: AppColors.darkBg,
+      ),
+      child: Container(
+        width: double.infinity,
+        // Deeper at the foot than the sides: the curve eats into that edge
+        // and the flourish has to clear it.
+        padding: EdgeInsets.fromLTRB(20, top + 8, 20, 44),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/dashboard');
+                    }
+                  },
+                  icon: Icon(Icons.arrow_back, color: ink),
+                  style: IconButton.styleFrom(
+                    backgroundColor: chrome,
+                    shape: CircleBorder(
+                      side: BorderSide(
+                        color: context.onBrightness(
+                          light: AppColors.sageEdge,
+                          dark: const Color(0x33FFFFFF),
+                        ),
+                      ),
                     ),
                   ),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 3,
+              ],
+            ),
+            const SizedBox(height: 8),
+            Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: gold.withValues(alpha: 0.9),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: context.onBrightness(
+                          light: Colors.black.withValues(alpha: 0.10),
+                          dark: AppColors.champagne.withValues(alpha: 0.18),
+                        ),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
+                  child: isLate
+                      ? ColorFiltered(
+                          colorFilter: const ColorFilter.matrix(<double>[
+                            0.6,
+                            0.3,
+                            0.1,
+                            0,
+                            0,
+                            0.6,
+                            0.3,
+                            0.1,
+                            0,
+                            0,
+                            0.6,
+                            0.3,
+                            0.1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            1,
+                            0,
+                          ]),
+                          child: _avatar(),
+                        )
+                      : _avatar(),
                 ),
-                child: isLate
-                    ? ColorFiltered(
-                        colorFilter: const ColorFilter.matrix(<double>[
-                          0.6,
-                          0.3,
-                          0.1,
-                          0,
-                          0,
-                          0.6,
-                          0.3,
-                          0.1,
-                          0,
-                          0,
-                          0.6,
-                          0.3,
-                          0.1,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          1,
-                          0,
-                        ]),
-                        child: _avatar(),
-                      )
-                    : _avatar(),
-              ),
-              if (onCameraTap != null)
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: GestureDetector(
-                    onTap: uploadingPhoto ? null : onCameraTap,
+                if (onCameraTap != null)
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
+                    child: GestureDetector(
+                      onTap: uploadingPhoto ? null : onCameraTap,
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: AppColors.forest600,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: uploadingPhoto
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                      ),
+                    ),
+                  )
+                else if (verified)
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
                     child: Container(
-                      padding: const EdgeInsets.all(7),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppColors.forest600,
+                        color: AppColors.gold500,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: uploadingPhoto
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 14,
-                              color: Colors.white,
-                            ),
+                      child: const Icon(
+                        Icons.check,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                )
-              else if (verified)
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold500,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (isLate)
-            Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                t.profileInMemoriam,
-                style: body(
-                  11,
-                  weight: FontWeight.w600,
-                  color: AppColors.forest300,
-                ),
-              ),
+              ],
             ),
-          Text(
-            '${isLate ? "${t.profileLate} " : ""}$name',
-            textAlign: TextAlign.center,
-            style: display(24, color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          Text(relation, style: body(13, color: AppColors.forest300)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              Pill(
-                gotra,
-                icon: Icons.spa_outlined,
-                bg: Colors.white.withValues(alpha: 0.14),
-                fg: Colors.white,
-              ),
-              Pill(
-                native.split(',').first.trim(),
-                icon: Icons.place_outlined,
-                bg: Colors.white.withValues(alpha: 0.14),
-                fg: Colors.white,
-              ),
-              if (verified)
-                Pill(
-                  t.profileVerifiedPill,
-                  icon: Icons.verified,
-                  bg: AppColors.gold500.withValues(alpha: 0.25),
-                  fg: AppColors.goldSoft,
+            const SizedBox(height: 12),
+            if (isLate)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
                 ),
-            ],
-          ),
-          if (bio.isNotEmpty) ...[
-            const SizedBox(height: 14),
+                decoration: BoxDecoration(
+                  color: chrome,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  t.profileInMemoriam,
+                  style: body(11, weight: FontWeight.w600, color: inkMuted),
+                ),
+              ),
             Text(
-              '"$bio"',
+              '${isLate ? "${t.profileLate} " : ""}$name',
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: body(
-                13,
-                color: AppColors.forest300,
-                height: 1.4,
-              ).copyWith(fontStyle: FontStyle.italic),
+              style: display(26, color: ink),
             ),
-            const SizedBox(height: 10),
-            Container(width: 32, height: 2, color: AppColors.forest500),
+            const SizedBox(height: 4),
+            Text(relation, style: body(13, color: inkMuted)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                Pill(gotra, icon: Icons.spa_outlined, bg: chrome, fg: ink),
+                Pill(
+                  native.split(',').first.trim(),
+                  icon: Icons.place_outlined,
+                  bg: chrome,
+                  fg: ink,
+                ),
+                if (verified)
+                  Pill(
+                    t.profileVerifiedPill,
+                    icon: Icons.verified,
+                    bg: AppColors.gold500.withValues(alpha: 0.25),
+                    fg: AppColors.goldSoft,
+                  ),
+              ],
+            ),
+            if (bio.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                '"$bio"',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: body(
+                  13.5,
+                  color: context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.emeraldSoft,
+                  ),
+                  height: 1.4,
+                ).copyWith(fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 12),
+              const LotusOrnament(),
+            ],
           ],
-        ],
+        ),
       ),
+    );
+  }
+}
+
+/// The lift every card on this screen shares: a soft drop rather than a glow,
+/// so cards separate from the botanical field behind them without any blur
+/// filter — which on a scrolling page is the one effect that would cost
+/// frames.
+List<BoxShadow> _glassShadow(BuildContext context) => [
+  BoxShadow(
+    color: Colors.black.withValues(alpha: context.isDarkMode ? 0.22 : 0.06),
+    blurRadius: 18,
+    offset: const Offset(0, 8),
+  ),
+];
+
+/// The circular champagne disc that opens every card header on this screen.
+///
+/// Circular, not a rounded square: it echoes the avatar above it, which is
+/// what ties the cards to the hero rather than leaving them as a separate
+/// stack of boxes.
+class _AccentBadge extends StatelessWidget {
+  const _AccentBadge(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    // Pale green disc with a forest icon on ivory; a champagne disc on the
+    // dark ground. The gold that carries on black is a brown smudge here.
+    final accent = context.onBrightness(
+      light: AppColors.forest700,
+      dark: AppColors.champagne,
+    );
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.14),
+        shape: BoxShape.circle,
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+      ),
+      child: Icon(icon, size: 19, color: accent),
     );
   }
 }
@@ -1435,10 +1480,10 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
   Widget _divider() {
     return Container(
       width: 1,
-      height: 30,
+      height: 34,
       color: context.onBrightness(
         light: AppColors.border,
-        dark: AppColors.darkBorder,
+        dark: AppColors.emerald.withValues(alpha: 0.14),
       ),
     );
   }
@@ -1451,26 +1496,38 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Column(
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: context.onBrightness(
-                  light: AppColors.forest700,
-                  dark: AppColors.forest300,
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: context.onBrightness(
+                    light: AppColors.sage,
+                    dark: AppColors.champagne.withValues(alpha: 0.12),
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 19,
+                  color: context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.champagne,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 _loading ? '—' : '$count',
                 style: display(
-                  18,
+                  21,
                   color: context.onBrightness(
                     light: AppColors.forest900,
                     dark: AppColors.darkText,
                   ),
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: body(
@@ -1491,19 +1548,29 @@ class _FollowStatsRowState extends State<_FollowStatsRow> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       decoration: BoxDecoration(
         color: context.onBrightness(
           light: Colors.white,
           dark: AppColors.darkSurface,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: context.onBrightness(
             light: AppColors.border,
-            dark: AppColors.darkBorder,
+            // A green hairline rather than the neutral one: it is what makes
+            // the card read as glass over the botanical field instead of a
+            // grey box sitting on it.
+            dark: AppColors.emerald.withValues(alpha: 0.16),
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1813,13 +1880,13 @@ class _MyPostsScreenState extends State<_MyPostsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.onBrightness(
-        light: AppColors.cream,
+        light: AppColors.ivory,
         dark: AppColors.darkBg,
       ),
       appBar: AppBar(
         title: const Text('My Posts'),
         backgroundColor: context.onBrightness(
-          light: AppColors.cream,
+          light: AppColors.ivory,
           dark: AppColors.darkBg,
         ),
         elevation: 0,
@@ -2009,20 +2076,14 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
     final t = AppLocalizations.of(context);
 
     return AppCard(
+      shadow: _glassShadow(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.phone_outlined,
-                size: 18,
-                color: context.onBrightness(
-                  light: AppColors.gold700,
-                  dark: AppColors.goldSoft,
-                ),
-              ),
-              const SizedBox(width: 8),
+              const _AccentBadge(Icons.phone_outlined),
+              const SizedBox(width: 12),
               Text(
                 t.profilePhoneNumber,
                 style: display(
@@ -2084,12 +2145,27 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
                         ),
                       ),
                     )
+                  // Still a Material Switch, restyled rather than
+                  // hand-rolled: it keeps the semantics, the drag gesture and
+                  // the accessibility behaviour a custom one would lose.
                   : Switch(
                       value: on,
-                      activeThumbColor: Colors.white,
+                      activeThumbColor: AppColors.champagneSoft,
                       activeTrackColor: AppColors.forest700,
-                      inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: AppColors.border,
+                      inactiveThumbColor: context.onBrightness(
+                        light: Colors.white,
+                        dark: AppColors.darkTextMuted,
+                      ),
+                      inactiveTrackColor: context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBg,
+                      ),
+                      trackOutlineColor: WidgetStatePropertyAll(
+                        context.onBrightness(
+                          light: AppColors.border,
+                          dark: AppColors.darkBorder,
+                        ),
+                      ),
                       onChanged: (v) => _toggle(auth, v),
                     ),
             ],
@@ -2098,18 +2174,29 @@ class _PhonePrivacyCardState extends State<_PhonePrivacyCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
+              // The "on" state used to be a pale mint panel in both themes,
+              // which on the dark card read as a white slab. Same meaning,
+              // stated as a tint of the accent instead.
               color: on
-                  ? const Color(0xFFF0FBF4)
+                  ? context.onBrightness(
+                      light: const Color(0xFFF0FBF4),
+                      dark: AppColors.emerald.withValues(alpha: 0.10),
+                    )
                   : context.onBrightness(
                       light: AppColors.cream,
-                      dark: AppColors.darkSurface,
+                      dark: AppColors.darkBg,
                     ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: context.onBrightness(
-                  light: AppColors.border,
-                  dark: AppColors.darkBorder,
-                ),
+                color: on
+                    ? context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.emerald.withValues(alpha: 0.26),
+                      )
+                    : context.onBrightness(
+                        light: AppColors.border,
+                        dark: AppColors.darkBorder,
+                      ),
               ),
             ),
             child: Row(
@@ -2166,20 +2253,14 @@ class _AppearanceCard extends StatelessWidget {
     final mode = context.watch<ThemeService>().mode;
 
     return AppCard(
+      shadow: _glassShadow(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.dark_mode_outlined,
-                size: 18,
-                color: context.onBrightness(
-                  light: AppColors.gold700,
-                  dark: AppColors.goldSoft,
-                ),
-              ),
-              const SizedBox(width: 8),
+              const _AccentBadge(Icons.dark_mode_outlined),
+              const SizedBox(width: 12),
               Text(
                 t.profileAppearance,
                 style: display(
@@ -2205,44 +2286,119 @@ class _AppearanceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(t.themeSystem, maxLines: 1),
-                ),
-                icon: const Icon(Icons.brightness_auto_outlined, size: 16),
-              ),
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(t.themeLight, maxLines: 1),
-                ),
-                icon: const Icon(Icons.light_mode_outlined, size: 16),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(t.themeDark, maxLines: 1),
-                ),
-                icon: const Icon(Icons.dark_mode_outlined, size: 16),
-              ),
-            ],
-            selected: {mode},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) =>
-                context.read<ThemeService>().setMode(selection.first),
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppColors.forest300,
-              selectedForegroundColor: AppColors.forest900,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
+          _ThemeSelector(
+            mode: mode,
+            // Unchanged: the same ThemeService call the SegmentedButton made.
+            onPick: (picked) => context.read<ThemeService>().setMode(picked),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The System / Light / Dark control.
+///
+/// A hand-built segmented control rather than Material's [SegmentedButton]:
+/// that widget carries its own outline, ripple and height, none of which can
+/// be pushed far enough to match the rest of these cards. The state it reads
+/// and writes is unchanged — [ThemeService] still owns the mode.
+class _ThemeSelector extends StatelessWidget {
+  const _ThemeSelector({required this.mode, required this.onPick});
+
+  final ThemeMode mode;
+  final ValueChanged<ThemeMode> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final options = <(ThemeMode, IconData, String)>[
+      (ThemeMode.system, Icons.brightness_auto_outlined, t.themeSystem),
+      (ThemeMode.light, Icons.light_mode_outlined, t.themeLight),
+      (ThemeMode.dark, Icons.dark_mode_outlined, t.themeDark),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: AppColors.ivory,
+          dark: AppColors.darkBg,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final (value, icon, label) in options)
+            Expanded(
+              child: _segment(
+                context,
+                icon: icon,
+                label: label,
+                selected: value == mode,
+                onTap: () => onPick(value),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final fg = selected
+        ? Colors.white
+        : context.onBrightness(
+            light: AppColors.textMuted,
+            dark: AppColors.darkTextMuted,
+          );
+    return GestureDetector(
+      // Opaque, so the gaps between labels are tappable too — a segment you
+      // can only hit on the word itself feels broken.
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.forest700 : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: fg),
+            const SizedBox(width: 6),
+            // Scales down rather than wrapping or overflowing when the
+            // translation is long or the text scale is turned up.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: body(
+                    12,
+                    weight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: fg,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2262,20 +2418,14 @@ class _SavedCard extends StatelessWidget {
         final t = AppLocalizations.of(context);
         final items = SavedStore.instance.items;
         return AppCard(
+          shadow: _glassShadow(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.bookmark_rounded,
-                    size: 18,
-                    color: context.onBrightness(
-                      light: AppColors.gold700,
-                      dark: AppColors.goldSoft,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  const _AccentBadge(Icons.bookmark_outline_rounded),
+                  const SizedBox(width: 12),
                   Text(
                     t.profileSaved,
                     style: display(

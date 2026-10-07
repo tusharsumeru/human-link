@@ -3822,7 +3822,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get birthAccuracyExactDocument =>
-      'सटीक - किसी दस्तावेज़ (जैसे जन्म प्रमाण पत्र) द्वारा सत्यापित';
+      'सटीक - किसी दस्तावेज़ द्वारा सत्यापित';
 
   @override
   String get birthAccuracyExactFamily => 'सटीक - परिवार द्वारा पुष्टि की गई';

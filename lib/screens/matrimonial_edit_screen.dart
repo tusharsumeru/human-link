@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show FilteringTextInputFormatter;
+import 'package:flutter/services.dart'
+    show FilteringTextInputFormatter, SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../data/master_data.dart';
 import '../theme/app_theme.dart';
+import '../widgets/leaf_backdrop.dart';
 import '../widgets/ui_kit.dart';
 
 /// The 27 nakshatras, in their fixed traditional order. Not localized — these
@@ -173,7 +176,13 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   int? _partnerAgeMin;
   int? _partnerAgeMax;
 
-  // Picked from [kAnnualIncomeOptions]; the string itself is what's saved
+  /// The brackets on offer, as the admin panel has them. Starts as the list
+  /// bundled in the app so the field works on the first frame, and is replaced
+  /// once /api/master/annual-incomes answers — [MasterData] falls back to this
+  /// same constant when that route isn't registered.
+  List<String> _incomeOptions = kAnnualIncomeOptions;
+
+  // Picked from [_incomeOptions]; the string itself is what's saved
   // into _c['income'] — the server only has a single free-text income field.
   String? _annualIncome;
 
@@ -197,6 +206,22 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   void initState() {
     super.initState();
     _load();
+    _loadIncomeOptions();
+  }
+
+  /// Pulls the admin-managed income brackets.
+  ///
+  /// Runs alongside [_load] rather than inside it: the two are independent,
+  /// and the member's saved bracket is folded in whichever lands first —
+  /// [namesWith] is applied against whatever [_annualIncome] holds at the time,
+  /// and [_load] re-applies it on the list this leaves behind.
+  Future<void> _loadIncomeOptions() async {
+    final items = await MasterData.instance.list(
+      MasterLists.annualIncomes,
+      fallback: kAnnualIncomeOptions,
+    );
+    if (!mounted) return;
+    setState(() => _incomeOptions = namesWith(items, _annualIncome));
   }
 
   @override
@@ -219,12 +244,15 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         for (final entry in _c.entries) {
           entry.value.text = (p[entry.key] ?? '').toString();
         }
-        // A saved value that predates this dropdown (free text typed by
-        // hand, or a bracket that's since changed) won't be one of the fixed
-        // options — same fallback-to-unset guard as [_star]/[_rashi] below.
-        _annualIncome = kAnnualIncomeOptions.contains(_c['income']!.text)
-            ? _c['income']!.text
-            : null;
+        // Free text typed by hand before this was a dropdown, or a bracket
+        // the admin has since renamed. Either way it is the member's own
+        // answer, so it is kept and made selectable rather than blanked —
+        // _loadIncomeOptions folds it into the list.
+        final savedIncome = _c['income']!.text.trim();
+        _annualIncome = savedIncome.isEmpty ? null : savedIncome;
+        _incomeOptions = namesWith([
+          for (final o in _incomeOptions) MasterItem.local(o),
+        ], _annualIncome);
         _expectations.text = _joinLines(p['partnerExpectations']);
         _gotraExclusions.text = _joinCommas(p['partnerGotraExclusions']);
         _preferredLocations.text = _joinCommas(p['partnerPreferredLocations']);
@@ -352,37 +380,150 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.onBrightness(
-        light: AppColors.cream,
-        dark: AppColors.darkBg,
-      ),
-      appBar: AppBar(
-        backgroundColor: AppColors.forest800,
-        surfaceTintColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          AppLocalizations.of(context).matEditTitle,
-          style: display(18, color: Colors.white),
+    final ready = !_loading && _error == null;
+    // The canvas wraps the Scaffold rather than sitting inside `body`, so the
+    // action bar at the foot is painted on the same ground as the form.
+    return LeafCanvas(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          // Green in both brightnesses, unlike the profile header: this screen
+          // has no hero of its own, so the band *is* the header — on ivory it
+          // is the only thing anchoring a page that is otherwise all form.
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          // Container, not DecoratedBox: flexibleSpace is laid out with loose
+          // constraints and a childless DecoratedBox takes `constraints
+          // .smallest` there, so the band collapses and never paints.
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(gradient: AppGradients.forest),
+          ),
+          // A hairline instead of a shadow: the header meets the form without
+          // the Material drop that would sit over the first field.
+          shape: Border(
+            bottom: BorderSide(
+              color: AppColors.forest600.withValues(alpha: 0.55),
+            ),
+          ),
+          title: Text(
+            AppLocalizations.of(context).matEditTitle,
+            style: display(20, color: Colors.white),
+          ),
         ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(
-              child: Text(
-                _error!,
-                style: body(
-                  14,
-                  color: context.onBrightness(
-                    light: AppColors.textMuted,
-                    dark: AppColors.darkTextMuted,
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(
+                child: Text(
+                  _error!,
+                  style: body(
+                    14,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
                   ),
                 ),
+              )
+            : _form(),
+        // Nothing to save while the form is still loading or has failed, so
+        // the bar is absent rather than present-and-dead.
+        bottomNavigationBar: ready
+            ? _saveBar(AppLocalizations.of(context))
+            : null,
+      ),
+    );
+  }
+
+  /// The one primary action, held at the foot of a form long enough that an
+  /// inline button spends most of the session scrolled off screen.
+  ///
+  /// The bar is a fade to the canvas colour rather than a solid block, so the
+  /// last field slides under it instead of hitting a hard edge.
+  Widget _saveBar(AppLocalizations t) {
+    final ground = context.onBrightness(
+      light: AppColors.ivoryLift,
+      dark: AppColors.darkCanvasLift,
+    );
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        22,
+        16,
+        14 + MediaQuery.of(context).viewPadding.bottom,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [ground.withValues(alpha: 0), ground, ground],
+          stops: const [0, 0.5, 1],
+        ),
+      ),
+      child: Opacity(
+        opacity: _saving ? 0.6 : 1,
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.forest800, AppColors.forest600],
+            ),
+            // A green lift rather than a grey drop, so the one primary action
+            // on the page reads as lit from within.
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.forest600.withValues(alpha: 0.34),
+                blurRadius: 22,
+                offset: const Offset(0, 9),
               ),
-            )
-          : _form(),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: _saving ? null : _save,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _saving ? t.matSaving2 : t.matSaveDetails,
+                      style: body(
+                        15.5,
+                        weight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    if (_saving)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -391,10 +532,15 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 8),
         children: [
           _label(t.matSectionCareer),
-          _text('education', t.matEducation, hint: t.matEducationHint),
+          _text(
+            'education',
+            t.matEducation,
+            hint: t.matEducationHint,
+            icon: Icons.school_rounded,
+          ),
           _enumDropdown(
             t.matOccupationType,
             _occupationTypeOptionsOf(t),
@@ -410,20 +556,22 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 _c['designation']!.clear();
               }
             }),
+            icon: Icons.business_center_rounded,
           ),
           if (_occupationType == 'SALARIED') ...[
-            _text('company', t.matCompanyOrg),
-            _text('designation', t.matDesignation),
+            _text('company', t.matCompanyOrg, icon: Icons.apartment_rounded),
+            _text('designation', t.matDesignation, icon: Icons.badge_outlined),
           ],
           _stringDropdown(
             t.matAnnualIncome,
             t.matAnnualIncomeHint,
-            kAnnualIncomeOptions,
+            _incomeOptions,
             _annualIncome,
             (v) => setState(() {
               _annualIncome = v;
               _c['income']!.text = v ?? '';
             }),
+            icon: Icons.currency_rupee_rounded,
           ),
 
           const SizedBox(height: 16),
@@ -439,8 +587,16 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             _familyType,
             (v) => setState(() => _familyType = v),
           ),
-          _text('fatherOccupation', t.matFathersOccupation),
-          _text('motherOccupation', t.matMothersOccupation),
+          _text(
+            'fatherOccupation',
+            t.matFathersOccupation,
+            icon: Icons.business_center_rounded,
+          ),
+          _text(
+            'motherOccupation',
+            t.matMothersOccupation,
+            icon: Icons.business_center_rounded,
+          ),
           _siblingsField(t),
 
           const SizedBox(height: 16),
@@ -451,6 +607,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             kNakshatraOptions,
             _star,
             (v) => setState(() => _star = v),
+            icon: Icons.auto_awesome_rounded,
           ),
           _stringDropdown(
             t.matRashi,
@@ -458,6 +615,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             kRashiOptions,
             _rashi,
             (v) => setState(() => _rashi = v),
+            icon: Icons.nightlight_round,
           ),
 
           const SizedBox(height: 16),
@@ -495,24 +653,28 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             _marriageIntentionOptionsOf(t),
             _marriageIntention,
             (v) => setState(() => _marriageIntention = v),
+            icon: Icons.favorite_border_rounded,
           ),
           _enumDropdown(
             t.matChildren,
             _childrenPreferenceOptionsOf(t),
             _childrenPreference,
             (v) => setState(() => _childrenPreference = v),
+            icon: Icons.child_care_rounded,
           ),
           _enumDropdown(
             t.matFamily2,
             _familyPreferenceOptionsOf(t),
             _familyPreference,
             (v) => setState(() => _familyPreference = v),
+            icon: Icons.home_rounded,
           ),
           _enumDropdown(
             t.matRelocation,
             _relocationPreferenceOptionsOf(t),
             _relocationPreference,
             (v) => setState(() => _relocationPreference = v),
+            icon: Icons.flight_takeoff_rounded,
           ),
 
           const SizedBox(height: 16),
@@ -522,30 +684,21 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             _foodPreferenceOptionsOf(t),
             _foodPreference,
             (v) => setState(() => _foodPreference = v),
+            icon: Icons.restaurant_rounded,
           ),
 
           const SizedBox(height: 16),
           _label(t.matSectionInterests),
-          _multiEnumDropdown(t.matInterests, _interestOptionsOf(t), _interests),
-
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 50,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.forest800,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: _saving ? null : _save,
-              child: Text(
-                _saving ? t.matSaving2 : t.matSaveDetails,
-                style: body(15, weight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
+          _multiEnumDropdown(
+            t.matInterests,
+            _interestOptionsOf(t),
+            _interests,
+            icon: Icons.interests_rounded,
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 18),
+          Center(child: LotusOrnament(ruleWidth: 52)),
+          const SizedBox(height: 14),
           Text(
             t.matSavedAsDraftNote,
             textAlign: TextAlign.center,
@@ -563,58 +716,115 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     );
   }
 
+  /// A short green rule, then the name of the section.
+  ///
+  /// The rule is doing the work: on a form this long the headings are the only
+  /// thing separating one group of fields from the next, and a bare line of
+  /// small caps is easy to scroll straight past. On the near-black canvas the
+  /// text goes champagne — the earth-brown gold reads as a smudge there.
   Widget _label(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Text(
-      t,
-      style: body(
-        11,
-        weight: FontWeight.w700,
-        color: context.onBrightness(
-          light: AppColors.gold700,
-          dark: AppColors.goldSoft,
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Row(
+      children: [
+        Container(
+          width: 3,
+          height: 15,
+          decoration: BoxDecoration(
+            color: context.onBrightness(
+              light: AppColors.forest700,
+              dark: AppColors.emerald,
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
-        letterSpacing: 1.6,
-      ),
+        const SizedBox(width: 10),
+        Text(
+          t.toUpperCase(),
+          style: body(
+            12,
+            weight: FontWeight.w800,
+            color: context.onBrightness(
+              light: AppColors.forest900,
+              dark: AppColors.champagne,
+            ),
+            letterSpacing: 1.8,
+          ),
+        ),
+      ],
     ),
   );
 
-  InputDecoration _dec(String? hint) => InputDecoration(
-    hintText: hint,
-    filled: true,
-    fillColor: context.onBrightness(
-      light: Colors.white,
-      dark: AppColors.darkSurface,
-    ),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
+  /// The accent a field takes while the keyboard is pointing at it.
+  Color get _accent =>
+      context.onBrightness(light: AppColors.forest700, dark: AppColors.emerald);
+
+  /// The round green disc a field wears on its left.
+  ///
+  /// Carrying the field's own subject rather than a generic glyph: on a form
+  /// of thirty near-identical boxes the icon is what the eye actually lands
+  /// on when scrolling back to one particular answer.
+  Widget _fieldIcon(IconData icon) => Padding(
+    padding: const EdgeInsets.only(left: 10, right: 10),
+    child: Container(
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
         color: context.onBrightness(
-          light: AppColors.border,
-          dark: AppColors.darkBorder,
+          light: AppColors.sage,
+          dark: AppColors.emerald.withValues(alpha: 0.12),
         ),
+        shape: BoxShape.circle,
       ),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: context.onBrightness(
-          light: AppColors.border,
-          dark: AppColors.darkBorder,
-        ),
-      ),
+      child: Icon(icon, size: 17, color: _accent),
     ),
   );
+
+  InputDecoration _dec(String? hint, {IconData? icon}) {
+    OutlineInputBorder outline(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: body(
+        14.5,
+        color: context.onBrightness(
+          light: AppColors.hint,
+          dark: AppColors.darkTextMuted,
+        ),
+      ),
+      filled: true,
+      // A shade under the page rather than over it, and no outline at all: on
+      // a form this long, sunken fields let the eye run down the labels
+      // instead of tripping over a stack of outlined boxes.
+      fillColor: context.onBrightness(
+        light: AppColors.sage.withValues(alpha: 0.5),
+        dark: AppColors.darkSurface,
+      ),
+      isDense: true,
+      contentPadding: EdgeInsets.fromLTRB(icon == null ? 16 : 0, 16, 16, 16),
+      prefixIcon: icon == null ? null : _fieldIcon(icon),
+      prefixIconConstraints: const BoxConstraints(minWidth: 54, minHeight: 54),
+      border: outline(Colors.transparent),
+      enabledBorder: outline(Colors.transparent),
+      // The focused field is the only one that gets an edge at all, so where
+      // the keyboard is pointing is never in doubt.
+      focusedBorder: outline(_accent, 1.5),
+    );
+  }
 
   /// Per-field caption sitting above a box, never floating onto its border —
   /// the same look [_choice]/[_enumChoice]/[_complexionField] already use for
   /// their own labels, just applied to the plain text/dropdown fields too.
   Widget _fieldLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.only(bottom: 8),
     child: Text(
       text,
       style: body(
-        13,
+        14,
+        weight: FontWeight.w500,
         color: context.onBrightness(
           light: AppColors.label,
           dark: AppColors.darkText,
@@ -629,6 +839,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     String? hint,
     int maxLines = 1,
     int? maxLength,
+    IconData? icon,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: Column(
@@ -639,17 +850,18 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c[key],
           maxLines: maxLines,
           maxLength: maxLength,
-          style: body(
-            14,
-            color: context.onBrightness(
-              light: AppColors.ink,
-              dark: AppColors.darkText,
-            ),
-          ),
-          decoration: _dec(hint),
+          style: _valueStyle,
+          // A disc centred on a four-line box would float beside nothing, so
+          // multi-line fields go without.
+          decoration: _dec(hint, icon: maxLines == 1 ? icon : null),
         ),
       ],
     ),
+  );
+
+  TextStyle get _valueStyle => body(
+    15,
+    color: context.onBrightness(light: AppColors.ink, dark: AppColors.darkText),
   );
 
   /// A plain count, not the old free-text "1 younger brother, B.Tech" field —
@@ -666,14 +878,8 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           controller: _c['siblings'],
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: body(
-            14,
-            color: context.onBrightness(
-              light: AppColors.ink,
-              dark: AppColors.darkText,
-            ),
-          ),
-          decoration: _dec(t.matSiblingsHint),
+          style: _valueStyle,
+          decoration: _dec(t.matSiblingsHint, icon: Icons.groups_rounded),
           validator: (v) {
             if (v == null || v.trim().isEmpty) return null;
             final n = int.tryParse(v.trim());
@@ -695,13 +901,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             TextFormField(
               controller: c,
               maxLines: 3,
-              style: body(
-                14,
-                color: context.onBrightness(
-                  light: AppColors.ink,
-                  dark: AppColors.darkText,
-                ),
-              ),
+              style: _valueStyle,
               decoration: _dec(hint),
             ),
           ],
@@ -740,15 +940,42 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                     o,
                     style: body(
                       13,
-                      color: context.onBrightness(
-                        light: AppColors.ink,
-                        dark: AppColors.darkText,
-                      ),
+                      weight: selected == o ? FontWeight.w700 : FontWeight.w500,
+                      // White on the filled chip; the ordinary text colour
+                      // on the rest.
+                      color: selected == o
+                          ? Colors.white
+                          : context.onBrightness(
+                              light: AppColors.ink,
+                              dark: AppColors.darkText,
+                            ),
                     ),
                   ),
                   selected: selected == o,
                   onSelected: (_) => onPick(o),
-                  selectedColor: AppColors.forest300,
+                  // No tick: the fill already says which one is chosen, and
+                  // the tick shifts every chip's width as it appears.
+                  showCheckmark: false,
+                  selectedColor: AppColors.forest700,
+                  backgroundColor: context.onBrightness(
+                    light: Colors.white,
+                    dark: AppColors.darkSurface,
+                  ),
+                  side: BorderSide(
+                    color: selected == o
+                        ? AppColors.forest700
+                        : context.onBrightness(
+                            light: AppColors.border,
+                            dark: AppColors.darkBorder,
+                          ),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
                 ),
             ],
           ),
@@ -785,17 +1012,23 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          // A Row of equal shares rather than a Wrap: four fixed-width cards
+          // overflow a narrow phone by a few pixels and drop the last one onto
+          // its own line, which reads as though Dark were a different kind of
+          // answer from the other three.
+          Row(
             children: [
-              for (final (label, face) in options)
-                _ComplexionOption(
-                  face: face,
-                  label: label,
-                  selected: _complexion == label,
-                  onTap: () => setState(() => _complexion = label),
+              for (var i = 0; i < options.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _ComplexionOption(
+                    face: options[i].$2,
+                    label: options[i].$1,
+                    selected: _complexion == options[i].$1,
+                    onTap: () => setState(() => _complexion = options[i].$1),
+                  ),
                 ),
+              ],
             ],
           ),
         ],
@@ -811,8 +1044,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     String label,
     Map<String, String> wireToLabel,
     String selectedWire,
-    ValueChanged<String> onPickWire,
-  ) {
+    ValueChanged<String> onPickWire, {
+    IconData? icon,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -822,24 +1056,21 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           DropdownButtonFormField<String>(
             initialValue: selectedWire.isEmpty ? null : selectedWire,
             isExpanded: true,
-            icon: const Icon(
+            icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: AppColors.hint,
-            ),
-            style: body(
-              14,
               color: context.onBrightness(
-                light: AppColors.ink,
-                dark: AppColors.darkText,
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
               ),
             ),
+            style: _valueStyle,
             // The closed field and the open popup share the same
             // theme-aware background, so they always match each other.
             dropdownColor: context.onBrightness(
               light: Colors.white,
               dark: AppColors.darkSurface,
             ),
-            decoration: _dec(null),
+            decoration: _dec(null, icon: icon),
             items: [
               for (final entry in wireToLabel.entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
@@ -863,8 +1094,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
     String? hint,
     List<String> options,
     String? selected,
-    ValueChanged<String?> onPick,
-  ) {
+    ValueChanged<String?> onPick, {
+    IconData? icon,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -874,22 +1106,19 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
           DropdownButtonFormField<String>(
             initialValue: selected,
             isExpanded: true,
-            icon: const Icon(
+            icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: AppColors.hint,
-            ),
-            style: body(
-              14,
               color: context.onBrightness(
-                light: AppColors.ink,
-                dark: AppColors.darkText,
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
               ),
             ),
+            style: _valueStyle,
             dropdownColor: context.onBrightness(
               light: Colors.white,
               dark: AppColors.darkSurface,
             ),
-            decoration: _dec(hint),
+            decoration: _dec(hint, icon: icon),
             items: [
               for (final o in options)
                 DropdownMenuItem(value: o, child: Text(o)),
@@ -912,8 +1141,9 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
   Widget _multiEnumDropdown(
     String label,
     Map<String, String> wireToLabel,
-    Set<String> selectedWires,
-  ) {
+    Set<String> selectedWires, {
+    IconData? icon,
+  }) {
     final summary = selectedWires.isEmpty
         ? null
         : selectedWires.map((w) => wireToLabel[w] ?? w).join(', ');
@@ -924,46 +1154,46 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         children: [
           _fieldLabel(label),
           InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             onTap: () => _pickMultiEnum(label, wireToLabel, selectedWires),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              // Hand-built rather than an InputDecorator, so the padding has
+              // to match _dec()'s by eye — this field has to sit in the stack
+              // without announcing that it isn't a real input.
+              padding: EdgeInsets.fromLTRB(icon == null ? 16 : 6, 14, 16, 14),
               decoration: BoxDecoration(
                 color: context.onBrightness(
-                  light: Colors.white,
+                  light: AppColors.sage.withValues(alpha: 0.5),
                   dark: AppColors.darkSurface,
                 ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: context.onBrightness(
-                    light: AppColors.border,
-                    dark: AppColors.darkBorder,
-                  ),
-                ),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
+                  if (icon != null) _fieldIcon(icon),
                   Expanded(
                     child: Text(
                       summary ??
                           AppLocalizations.of(context).matSelectInterests,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: body(
-                        14,
-                        color: summary == null
-                            ? AppColors.hint
-                            : context.onBrightness(
-                                light: AppColors.ink,
-                                dark: AppColors.darkText,
+                      style: summary == null
+                          ? _valueStyle.copyWith(
+                              color: context.onBrightness(
+                                light: AppColors.hint,
+                                dark: AppColors.darkTextMuted,
                               ),
-                      ),
+                            )
+                          : _valueStyle,
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.hint,
+                    color: context.onBrightness(
+                      light: AppColors.textMuted,
+                      dark: AppColors.darkTextMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1096,14 +1326,11 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightFeet?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(
-                    14,
-                    color: context.onBrightness(
-                      light: AppColors.ink,
-                      dark: AppColors.darkText,
-                    ),
+                  style: _valueStyle,
+                  decoration: _dec(
+                    t.matHeightFeetHint,
+                    icon: Icons.straighten_rounded,
                   ),
-                  decoration: _dec(t.matHeightFeetHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
                     final n = int.tryParse(v.trim());
@@ -1128,14 +1355,11 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _heightInches?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(
-                    14,
-                    color: context.onBrightness(
-                      light: AppColors.ink,
-                      dark: AppColors.darkText,
-                    ),
+                  style: _valueStyle,
+                  decoration: _dec(
+                    t.matHeightInchesHint,
+                    icon: Icons.straighten_rounded,
                   ),
-                  decoration: _dec(t.matHeightInchesHint),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
                     final n = int.tryParse(v.trim());
@@ -1244,13 +1468,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMin?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(
-                    14,
-                    color: context.onBrightness(
-                      light: AppColors.ink,
-                      dark: AppColors.darkText,
-                    ),
-                  ),
+                  style: _valueStyle,
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMin = int.tryParse(v.trim()),
                 ),
@@ -1266,13 +1484,7 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
                 TextFormField(
                   initialValue: _partnerAgeMax?.toString() ?? '',
                   keyboardType: TextInputType.number,
-                  style: body(
-                    14,
-                    color: context.onBrightness(
-                      light: AppColors.ink,
-                      dark: AppColors.darkText,
-                    ),
-                  ),
+                  style: _valueStyle,
                   decoration: _dec(null),
                   onChanged: (v) => _partnerAgeMax = int.tryParse(v.trim()),
                 ),
@@ -1307,11 +1519,16 @@ class _ComplexionOption extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
+          // A pale wash plus a green edge, not a solid forest fill: the emoji
+          // face is the whole point of the card, and a dark fill behind a
+          // skin-tone glyph fights the one thing it is there to show.
           color: selected
-              ? AppColors.forest300
+              ? context.onBrightness(
+                  light: AppColors.sage,
+                  dark: AppColors.emerald.withValues(alpha: 0.14),
+                )
               : context.onBrightness(
                   light: Colors.white,
                   dark: AppColors.darkSurface,
@@ -1319,7 +1536,10 @@ class _ComplexionOption extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
-                ? AppColors.forest700
+                ? context.onBrightness(
+                    light: AppColors.forest600,
+                    dark: AppColors.emerald,
+                  )
                 : context.onBrightness(
                     light: AppColors.creamDark,
                     dark: AppColors.darkBorder,
@@ -1340,10 +1560,15 @@ class _ComplexionOption extends StatelessWidget {
               style: body(
                 12,
                 weight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: context.onBrightness(
-                  light: AppColors.label,
-                  dark: AppColors.darkText,
-                ),
+                color: selected
+                    ? context.onBrightness(
+                        light: AppColors.forest800,
+                        dark: AppColors.emeraldSoft,
+                      )
+                    : context.onBrightness(
+                        light: AppColors.label,
+                        dark: AppColors.darkText,
+                      ),
               ),
             ),
           ],

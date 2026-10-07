@@ -1347,7 +1347,7 @@
   "birthNoTimezone": "Could not determine a timezone for that place - try a more specific search, including the country.",
   "birthChooseAccuracy": "Choose how confident you are about the time of birth.",
   "birthAddTimeOrUnknown": "Add the time of birth, or set the accuracy to \"Unknown\" if it's genuinely not known.",
-  "birthAccuracyExactDocument": "Exact - verified by a document (e.g. birth certificate)",
+  "birthAccuracyExactDocument": "Exact - verified by a document",
   "birthAccuracyExactFamily": "Exact - confirmed by family",
   "birthAccuracyApprox15": "Approximate - within 15 minutes",
   "birthAccuracyApprox30": "Approximate - within 30 minutes",

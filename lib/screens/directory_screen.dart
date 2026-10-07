@@ -261,23 +261,34 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             decoration: InputDecoration(
               isDense: true,
               hintText: t.dirSearchHint,
-              hintStyle: body(14, color: AppColors.hint),
-              prefixIcon: const Icon(
+              hintStyle: body(
+                14,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
+              ),
+              prefixIcon: Icon(
                 Icons.search_rounded,
-                size: 18,
-                color: AppColors.hint,
+                size: 20,
+                color: context.onBrightness(
+                  light: AppColors.hint,
+                  dark: AppColors.darkTextMuted,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
+                horizontal: 16,
+                vertical: 14,
               ),
               filled: true,
               fillColor: context.onBrightness(
                 light: Colors.white,
                 dark: AppColors.darkSurface,
               ),
+              // A stadium, not a rounded box: the search field and the round
+              // button beside it read as one control that way.
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(999),
                 borderSide: BorderSide(
                   color: context.onBrightness(
                     light: AppColors.border,
@@ -286,29 +297,48 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppColors.forest700,
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide(
+                  color: context.onBrightness(
+                    light: AppColors.forest700,
+                    dark: AppColors.emerald,
+                  ),
                   width: 1.5,
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         GestureDetector(
           onTap: () => _toast(context, t.dirAdvancedFiltersSoon),
           child: Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.forest700,
-              borderRadius: BorderRadius.circular(12),
+              // Filled green on the dark page where a pale disc would glow,
+              // a pale disc on cream where filled green would outshout the
+              // search field it sits next to.
+              color: context.onBrightness(
+                light: AppColors.sage,
+                dark: AppColors.forest600,
+              ),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: context.onBrightness(
+                  light: AppColors.sageEdge,
+                  dark: Colors.transparent,
+                ),
+              ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.tune_rounded,
-              color: Colors.white,
               size: 20,
+              color: context.onBrightness(
+                light: AppColors.forest700,
+                dark: Colors.white,
+              ),
             ),
           ),
         ),
@@ -324,23 +354,43 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   Widget _filterRow() {
     final t = AppLocalizations.of(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _chip(t.dirAllMembers, !_nearbyMode, () async {
-            if (_nearbyMode) {
-              setState(() {
-                _nearbyMode = false;
-                _loading = true;
-              });
-
-              await _load();
-            }
-          }),
+    // One track holding both halves rather than two separate chips: these are
+    // two views of the same list, and a segmented control says "either/or"
+    // where a pair of pills reads as two independent filters.
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: context.onBrightness(
+          light: Colors.white,
+          dark: AppColors.darkSurface,
         ),
-        const SizedBox(width: 8),
-        Expanded(child: _chip(t.dirNearbyMe, _nearbyMode, _loadNearbyMembers)),
-      ],
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: context.onBrightness(
+            light: AppColors.border,
+            dark: AppColors.darkBorder,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _chip(t.dirAllMembers, !_nearbyMode, () async {
+              if (_nearbyMode) {
+                setState(() {
+                  _nearbyMode = false;
+                  _loading = true;
+                });
+
+                await _load();
+              }
+            }),
+          ),
+          Expanded(
+            child: _chip(t.dirNearbyMe, _nearbyMode, _loadNearbyMembers),
+          ),
+        ],
+      ),
     );
   }
 
@@ -379,24 +429,32 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
+  /// One half of the segmented control in [_filterRow]. The fill is the whole
+  /// indicator — the track around it already supplies the edge.
   Widget _chip(String label, bool active, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? AppColors.forest700 : Colors.white,
+          color: active ? AppColors.forest700 : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active ? AppColors.forest700 : AppColors.border,
-          ),
         ),
         child: Text(
           label,
           style: body(
-            13,
-            weight: FontWeight.w600,
-            color: active ? Colors.white : AppColors.label,
+            14,
+            weight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active
+                ? Colors.white
+                : context.onBrightness(
+                    light: AppColors.textMuted,
+                    dark: AppColors.darkTextMuted,
+                  ),
           ),
         ),
       ),
@@ -412,12 +470,17 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
       children: [
-        _sectionHeader(AppLocalizations.of(context).dirAllMembers),
-        const SizedBox(height: 10),
+        _sectionHeader(
+          AppLocalizations.of(context).dirAllMembers,
+          trailing: AppLocalizations.of(
+            context,
+          ).dirMembersCount(filtered.length),
+        ),
+        const SizedBox(height: 12),
 
         for (final member in filtered) ...[
           _RowCard(member: member, onConnect: _connect, onView: _openMember),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
         ],
       ],
     );
@@ -429,7 +492,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         Text(
           title,
           style: display(
-            18,
+            20,
             color: context.onBrightness(
               light: AppColors.forest900,
               dark: AppColors.darkText,
@@ -441,9 +504,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           Text(
             trailing,
             style: body(
-              12,
-              weight: FontWeight.w600,
-              color: AppColors.forest700,
+              13,
+              weight: FontWeight.w500,
+              color: context.onBrightness(
+                light: AppColors.textMuted,
+                dark: AppColors.darkTextMuted,
+              ),
             ),
           ),
       ],
@@ -1028,18 +1094,22 @@ class _RowCard extends StatelessWidget {
       _placeOf(member, t),
     ].join(' · ');
 
+    final tint = _AvatarTint.of(name, context);
     return AppCard(
       padding: const EdgeInsets.all(12),
+      radius: 16,
       onTap: () => onView(member),
       child: Row(
         children: [
           PexelsImage(
             url: (member['profileUrl'] ?? '').toString(),
             name: name,
-            size: 46,
-            radius: BorderRadius.circular(12),
+            size: 52,
+            radius: BorderRadius.circular(14),
+            fallbackColor: tint.background,
+            fallbackTextColor: tint.foreground,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1049,21 +1119,21 @@ class _RowCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: body(
-                    14,
+                    15.5,
                     weight: FontWeight.w700,
                     color: context.onBrightness(
                       light: AppColors.forest900,
-                      dark: AppColors.darkText,
+                      dark: Colors.white,
                     ),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   sub,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: body(
-                    12,
+                    13,
                     color: context.onBrightness(
                       light: AppColors.textMuted,
                       dark: AppColors.darkTextMuted,
@@ -1077,22 +1147,77 @@ class _RowCard extends StatelessWidget {
           GestureDetector(
             onTap: () => onConnect(member),
             child: Container(
-              width: 34,
-              height: 34,
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FBF4),
-                borderRadius: BorderRadius.circular(10),
+                // The fixed mint read as a lit chip on the dark page — this
+                // follows the theme like the rest of the row.
+                color: context.onBrightness(
+                  light: const Color(0xFFF0FBF4),
+                  dark: AppColors.emerald.withValues(alpha: 0.12),
+                ),
+                shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_add_alt_1_outlined,
-                size: 18,
-                color: AppColors.forest700,
+                size: 19,
+                color: context.onBrightness(
+                  light: AppColors.forest700,
+                  dark: AppColors.emerald,
+                ),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+/// The colour a member's initials tile takes when they have no photo.
+///
+/// Derived from the name, so the same person is the same colour on every
+/// visit and in every list. A column of identical green tiles carries no
+/// information; a colour per person makes a row you have scrolled past before
+/// findable by shape before you have read a word of it.
+class _AvatarTint {
+  const _AvatarTint(this.background, this.foreground);
+
+  final Color background;
+  final Color foreground;
+
+  /// Pale tile, saturated letters on cream; the reverse on near-black, where
+  /// a pastel tile is the brightest thing on the screen.
+  static const _light = <_AvatarTint>[
+    _AvatarTint(Color(0xFFD9EFDD), Color(0xFF1B5E20)),
+    _AvatarTint(Color(0xFFFBD9DC), Color(0xFFB3261E)),
+    _AvatarTint(Color(0xFFD7E6FB), Color(0xFF1A4E8A)),
+    _AvatarTint(Color(0xFFE6DCFB), Color(0xFF5B3BA8)),
+    _AvatarTint(Color(0xFFFBE8C9), Color(0xFF8A5A12)),
+    _AvatarTint(Color(0xFFCFEDE9), Color(0xFF13615A)),
+  ];
+
+  static const _dark = <_AvatarTint>[
+    _AvatarTint(Color(0xFF1E4D2B), Color(0xFFBFE6C6)),
+    _AvatarTint(Color(0xFF5A2E31), Color(0xFFF2C2C6)),
+    _AvatarTint(Color(0xFF26405E), Color(0xFFC3DBF5)),
+    _AvatarTint(Color(0xFF3B3160), Color(0xFFD5C8F5)),
+    _AvatarTint(Color(0xFF5A4A1E), Color(0xFFF0DCA8)),
+    _AvatarTint(Color(0xFF1C4845), Color(0xFFB6E3DD)),
+  ];
+
+  static _AvatarTint of(String name, BuildContext context) {
+    final palette = context.isDarkMode ? _dark : _light;
+    if (name.isEmpty) return palette.first;
+    // Summed code units rather than String.hashCode: hashCode is only
+    // guaranteed stable within one run, and a member changing colour between
+    // launches would undo the point of colouring them at all.
+    var sum = 0;
+    for (final unit in name.codeUnits) {
+      sum = (sum + unit) % 1000003;
+    }
+    return palette[sum % palette.length];
   }
 }
 

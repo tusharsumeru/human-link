@@ -3815,8 +3815,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add the time of birth, or set the accuracy to \"Unknown\" if it\'s genuinely not known.';
 
   @override
-  String get birthAccuracyExactDocument =>
-      'Exact - verified by a document (e.g. birth certificate)';
+  String get birthAccuracyExactDocument => 'Exact - verified by a document';
 
   @override
   String get birthAccuracyExactFamily => 'Exact - confirmed by family';

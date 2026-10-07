@@ -3839,8 +3839,7 @@ class AppLocalizationsKn extends AppLocalizations {
       'ಜನ್ಮ ಸಮಯವನ್ನು ಸೇರಿಸಿ, ಅಥವಾ ಅದು ನಿಜವಾಗಿಯೂ ತಿಳಿದಿಲ್ಲದಿದ್ದರೆ ನಿಖರತೆಯನ್ನು \"ಅಜ್ಞಾತ\" ಎಂದು ಹೊಂದಿಸಿ.';
 
   @override
-  String get birthAccuracyExactDocument =>
-      'ನಿಖರ - ದಾಖಲೆಯಿಂದ ಪರಿಶೀಲಿಸಲಾಗಿದೆ (ಉದಾ. ಜನನ ಪ್ರಮಾಣಪತ್ರ)';
+  String get birthAccuracyExactDocument => 'ನಿಖರ - ದಾಖಲೆಯಿಂದ ಪರಿಶೀಲಿಸಲಾಗಿದೆ';
 
   @override
   String get birthAccuracyExactFamily => 'ನಿಖರ - ಕುಟುಂಬದಿಂದ ದೃಢಪಡಿಸಲಾಗಿದೆ';

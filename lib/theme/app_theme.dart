@@ -61,6 +61,35 @@ class AppColors {
   static const Color darkBorder = Color(0xFF2A3A31);
   static const Color darkText = Color(0xFFEDEFEC);
   static const Color darkTextMuted = Color(0xFFA9B3AD);
+
+  // Champagne + emerald — the accent pair the dark surfaces are drawn with.
+  // Distinct from [gold700]/[gold500] above, which are earth browns: they
+  // read as warmth on cream but go muddy, almost invisible, against a
+  // near-black ground. These are the tones that actually carry there.
+  static const Color champagne = Color(0xFFE8C56A);
+  static const Color champagneSoft = Color(0xFFF1D58A);
+
+  /// For champagne on ivory — the lighter tones above wash out on cream.
+  static const Color champagneDeep = Color(0xFFC9A94E);
+  static const Color emerald = Color(0xFF7DDB9B);
+  static const Color emeraldSoft = Color(0xFF9AE6B4);
+
+  // A deeper ground than [darkBg] for surfaces that carry the botanical
+  // motif, so the ornament has somewhere to sit without competing with the
+  // page behind it.
+  // Warm ivory for the light-mode canvas. Separate from [cream] (which is
+  // plain white and is the page background app-wide) so warming one screen
+  // doesn't warm every screen.
+  static const Color ivory = Color(0xFFFAF9F4);
+  static const Color ivoryLift = Color(0xFFF1F4EC);
+
+  // The pale green light-mode surfaces take: stat tiles, icon discs, the
+  // botanical leaves.
+  static const Color sage = Color(0xFFEAF4E7);
+  static const Color sageEdge = Color(0xFFCFE3CB);
+
+  static const Color darkCanvas = Color(0xFF03150F);
+  static const Color darkCanvasLift = Color(0xFF08281B);
 }
 
 /// Reads the current [Brightness] once per call site so a widget can pick

@@ -472,7 +472,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 KuladevataThumb(
-                                  assetPath: kKuladevataImages[k]!,
+                                  source: kKuladevataImages[k]!,
                                   name: k,
                                 ),
                                 const SizedBox(width: 6),

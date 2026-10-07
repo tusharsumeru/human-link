@@ -6985,7 +6985,7 @@ abstract class AppLocalizations {
   /// No description provided for @birthAccuracyExactDocument.
   ///
   /// In en, this message translates to:
-  /// **'Exact - verified by a document (e.g. birth certificate)'**
+  /// **'Exact - verified by a document'**
   String get birthAccuracyExactDocument;
 
   /// No description provided for @birthAccuracyExactFamily.
