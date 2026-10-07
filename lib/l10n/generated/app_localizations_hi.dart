@@ -4636,48 +4636,4 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get permSkip => 'अभी के लिए छोड़ें';
-
-  @override
-  String get welfareLoadFailed => 'अभियान लोड नहीं हो सके।';
-
-  @override
-  String get welfareEmailLabel => 'ईमेल (रसीद के लिए)';
-
-  @override
-  String get welfareEmailHint => 'you@example.com';
-
-  @override
-  String get welfareRetry => 'फिर कोशिश करें';
-
-  @override
-  String get welfareNoCampaigns => 'अभी कोई अभियान चल नहीं रहा है।';
-
-  @override
-  String get welfareOpenEnded => 'कोई अंतिम तिथि नहीं';
-
-  @override
-  String get welfareCampaignClosed =>
-      'यह अभियान अब दान स्वीकार नहीं कर रहा है।';
-
-  @override
-  String get welfarePaymentFailed => 'भुगतान विफल रहा। कृपया पुनः प्रयास करें।';
-
-  @override
-  String get welfarePaymentVerifyFailed =>
-      'भुगतान प्राप्त हुआ लेकिन पुष्टि नहीं हो सकी। कृपया समाज कार्यालय से संपर्क करें; दोबारा भुगतान न करें।';
-
-  @override
-  String get welfareMessageOptional => 'संदेश (वैकल्पिक)';
-
-  @override
-  String get welfareMessageHint => 'अपने योगदान के साथ कुछ शब्द';
-
-  @override
-  String get welfareSecurePayment =>
-      'Razorpay के माध्यम से सुरक्षित भुगतान — UPI, कार्ड, नेट बैंकिंग और वॉलेट।';
-
-  @override
-  String welfareDonationFor(String title) {
-    return '$title के लिए दान';
-  }
 }

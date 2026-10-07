@@ -4626,48 +4626,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permSkip => 'Skip for now';
-
-  @override
-  String get welfareLoadFailed => 'Could not load campaigns.';
-
-  @override
-  String get welfareEmailLabel => 'EMAIL (FOR RECEIPT)';
-
-  @override
-  String get welfareEmailHint => 'you@example.com';
-
-  @override
-  String get welfareRetry => 'Retry';
-
-  @override
-  String get welfareNoCampaigns => 'No campaigns are running right now.';
-
-  @override
-  String get welfareOpenEnded => 'Open-ended';
-
-  @override
-  String get welfareCampaignClosed =>
-      'This campaign is no longer accepting donations.';
-
-  @override
-  String get welfarePaymentFailed => 'Payment failed. Please try again.';
-
-  @override
-  String get welfarePaymentVerifyFailed =>
-      'Payment received but could not be confirmed. Please contact the Samaj office; do not pay again.';
-
-  @override
-  String get welfareMessageOptional => 'MESSAGE (OPTIONAL)';
-
-  @override
-  String get welfareMessageHint => 'A few words with your contribution';
-
-  @override
-  String get welfareSecurePayment =>
-      'Secure payment via Razorpay — UPI, cards, net banking and wallets.';
-
-  @override
-  String welfareDonationFor(String title) {
-    return 'Donation for $title';
-  }
 }

@@ -1708,19 +1708,5 @@
   "permLocationBody": "To tag a place on your posts and find nearby Samaj members.",
   "permRequesting": "Requesting…",
   "permContinue": "Continue",
-  "permSkip": "Skip for now",
-  "welfareLoadFailed": "Could not load campaigns.",
-  "welfareEmailLabel": "EMAIL (FOR RECEIPT)",
-  "welfareEmailHint": "you@example.com",
-  "welfareRetry": "Retry",
-  "welfareNoCampaigns": "No campaigns are running right now.",
-  "welfareOpenEnded": "Open-ended",
-  "welfareCampaignClosed": "This campaign is no longer accepting donations.",
-  "welfarePaymentFailed": "Payment failed. Please try again.",
-  "welfarePaymentVerifyFailed": "Payment received but could not be confirmed. Please contact the Samaj office; do not pay again.",
-  "welfareMessageOptional": "MESSAGE (OPTIONAL)",
-  "welfareMessageHint": "A few words with your contribution",
-  "welfareSecurePayment": "Secure payment via Razorpay — UPI, cards, net banking and wallets.",
-  "welfareDonationFor": "Donation for {title}",
-  "@welfareDonationFor": { "placeholders": { "title": { "type": "String" } } }
+  "permSkip": "Skip for now"
 }

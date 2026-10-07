@@ -1582,19 +1582,5 @@
   "permLocationBody": "ನಿಮ್ಮ ಪೋಸ್ಟ್‌ಗಳಲ್ಲಿ ಸ್ಥಳವನ್ನು ಟ್ಯಾಗ್ ಮಾಡಲು ಮತ್ತು ಹತ್ತಿರದ ಸಮಾಜ ಸದಸ್ಯರನ್ನು ಹುಡುಕಲು.",
   "permRequesting": "ವಿನಂತಿಸಲಾಗುತ್ತಿದೆ…",
   "permContinue": "ಮುಂದುವರಿಸಿ",
-  "permSkip": "ಈಗ ಬಿಟ್ಟುಬಿಡಿ",
-  "welfareLoadFailed": "ಅಭಿಯಾನಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ.",
-  "welfareEmailLabel": "ಇಮೇಲ್ (ರಸೀದಿಗಾಗಿ)",
-  "welfareEmailHint": "you@example.com",
-  "welfareRetry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  "welfareNoCampaigns": "ಈಗ ಯಾವುದೇ ಅಭಿಯಾನ ನಡೆಯುತ್ತಿಲ್ಲ.",
-  "welfareOpenEnded": "ಅಂತಿಮ ದಿನಾಂಕವಿಲ್ಲ",
-  "welfareCampaignClosed": "ಈ ಅಭಿಯಾನ ಇನ್ನು ದೇಣಿಗೆ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ.",
-  "welfarePaymentFailed": "ಪಾವತಿ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
-  "welfarePaymentVerifyFailed": "ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ ಆದರೆ ದೃಢೀಕರಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಸಮಾಜ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ; ಮತ್ತೆ ಪಾವತಿಸಬೇಡಿ.",
-  "welfareMessageOptional": "ಸಂದೇಶ (ಐಚ್ಛಿಕ)",
-  "welfareMessageHint": "ನಿಮ್ಮ ಕೊಡುಗೆಯೊಂದಿಗೆ ಕೆಲವು ಪದಗಳು",
-  "welfareSecurePayment": "Razorpay ಮೂಲಕ ಸುರಕ್ಷಿತ ಪಾವತಿ — UPI, ಕಾರ್ಡ್, ನೆಟ್ ಬ್ಯಾಂಕಿಂಗ್ ಮತ್ತು ವಾಲೆಟ್.",
-  "welfareDonationFor": "{title} ಗಾಗಿ ದೇಣಿಗೆ",
-  "@welfareDonationFor": { "placeholders": { "title": { "type": "String" } } }
+  "permSkip": "ಈಗ ಬಿಟ್ಟುಬಿಡಿ"
 }

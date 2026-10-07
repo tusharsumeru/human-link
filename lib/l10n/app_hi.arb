@@ -1582,19 +1582,5 @@
   "permLocationBody": "आपकी पोस्ट पर स्थान टैग करने और आस-पास के समाज सदस्यों को खोजने के लिए।",
   "permRequesting": "अनुरोध किया जा रहा है…",
   "permContinue": "जारी रखें",
-  "permSkip": "अभी के लिए छोड़ें",
-  "welfareLoadFailed": "अभियान लोड नहीं हो सके।",
-  "welfareEmailLabel": "ईमेल (रसीद के लिए)",
-  "welfareEmailHint": "you@example.com",
-  "welfareRetry": "फिर कोशिश करें",
-  "welfareNoCampaigns": "अभी कोई अभियान चल नहीं रहा है।",
-  "welfareOpenEnded": "कोई अंतिम तिथि नहीं",
-  "welfareCampaignClosed": "यह अभियान अब दान स्वीकार नहीं कर रहा है।",
-  "welfarePaymentFailed": "भुगतान विफल रहा। कृपया पुनः प्रयास करें।",
-  "welfarePaymentVerifyFailed": "भुगतान प्राप्त हुआ लेकिन पुष्टि नहीं हो सकी। कृपया समाज कार्यालय से संपर्क करें; दोबारा भुगतान न करें।",
-  "welfareMessageOptional": "संदेश (वैकल्पिक)",
-  "welfareMessageHint": "अपने योगदान के साथ कुछ शब्द",
-  "welfareSecurePayment": "Razorpay के माध्यम से सुरक्षित भुगतान — UPI, कार्ड, नेट बैंकिंग और वॉलेट।",
-  "welfareDonationFor": "{title} के लिए दान",
-  "@welfareDonationFor": { "placeholders": { "title": { "type": "String" } } }
+  "permSkip": "अभी के लिए छोड़ें"
 }
