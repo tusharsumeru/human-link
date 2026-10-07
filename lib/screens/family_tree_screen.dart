@@ -2939,6 +2939,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
@@ -3237,6 +3239,7 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         _showInviteDialog(
           result['name']?.toString() ?? t.ftYourRelative,
           result['inviteLink']?.toString() ?? '',
+          invite,
         );
       } else {
         _toast(result['message']?.toString() ?? t.ftMemberAdded);
@@ -3294,7 +3297,11 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
     await _load();
   }
 
-  void _showInviteDialog(String name, String link) {
+  /// Offer the three ways a member actually sends an invite: straight to
+  /// WhatsApp (the server already built a wa.me link pre-addressed to the
+  /// placeholder's phone), the OS share sheet for every other app, and the raw
+  /// link to copy.
+  void _showInviteDialog(String name, String link, String whatsappUrl) {
     final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
@@ -3313,7 +3320,40 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
               t.ftInviteDialogBody,
               style: body(13, color: AppColors.textMuted, height: 1.5),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                if (whatsappUrl.isNotEmpty) ...[
+                  Expanded(
+                    child: _shareTile(
+                      icon: Icons.chat_rounded,
+                      label: t.ftShareWhatsapp,
+                      background: const Color(0xFF25D366),
+                      foreground: Colors.white,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _shareToWhatsapp(whatsappUrl, link);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: _shareTile(
+                    icon: Icons.ios_share_rounded,
+                    label: t.ftShareMore,
+                    background: const Color(0xFFFBF8F3),
+                    foreground: AppColors.forest800,
+                    bordered: true,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _shareInvite(link);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -3346,6 +3386,75 @@ class _FamilyTreeScreenState extends State<FamilyTreeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _shareTile({
+    required IconData icon,
+    required String label,
+    required Color background,
+    required Color foreground,
+    required VoidCallback onTap,
+    bool bordered = false,
+  }) {
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: bordered ? Border.all(color: AppColors.border) : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: foreground),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(13, weight: FontWeight.w600, color: foreground),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// WhatsApp opens through its wa.me https link, which the manifest's existing
+  /// https VIEW intent filter already makes visible. If WhatsApp is not installed
+  /// the launch fails, so fall back to the share sheet rather than dead-ending
+  /// on a button that does nothing.
+  Future<void> _shareToWhatsapp(String whatsappUrl, String link) async {
+    try {
+      final ok = await launchUrl(
+        Uri.parse(whatsappUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (ok) return;
+    } catch (_) {
+      // Fall through to the share sheet below.
+    }
+    await _shareInvite(link);
+  }
+
+  Future<void> _shareInvite(String link) async {
+    final t = AppLocalizations.of(context);
+    try {
+      await Share.share(
+        t.ftInviteShareText(link),
+        subject: t.ftInviteShareSubject,
+      );
+    } catch (_) {
+      if (mounted) _toast(t.ftShareFailed);
+    }
   }
 
   void _toast(String msg) {
