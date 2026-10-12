@@ -23,7 +23,10 @@ class ApiConfig {
   // backend, so they 404 through this domain until the backend adds a global
   // `api` prefix. Login and anything already under `/api/user/...` works;
   // follow/unfollow will fail until that's fixed server-side.
-  static const String _override = 'http://192.168.31.92:4000';
+  // Set WITHOUT the `/api` segment on purpose — see the NOTE above. Requests
+  // resolve to https://daivajnasamaj.in/api/user/login and so on, because
+  // every path in Repository already carries the prefix.
+  static const String _override = 'https://daivajnasamaj.in';
 
   static String get _localDev {
     if (!kIsWeb && Platform.isAndroid) {
@@ -31,7 +34,6 @@ class ApiConfig {
     }
     return 'http://192.168.31.92:$_localDevPort';
   }
-
 
   static String get baseUrl {
     // Trailing slashes are stripped: request paths already start with `/`, and

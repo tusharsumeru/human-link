@@ -33,13 +33,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
-  // The name in Kannada and Hindi. Auto-filled from [_nameCtrl] by the
-  // server's transliteration while the member types; once they edit one of
-  // these by hand it stops being overwritten.
+  // The name in Kannada and Hindi — filled from [_nameCtrl] by the server's
+  // transliteration while the member types, and submitted with the rest of
+  // the form. No longer shown as fields, so there is no hand-edited value to
+  // protect from being overwritten and the fill is unconditional.
   final _nameKnCtrl = TextEditingController();
   final _nameHiCtrl = TextEditingController();
-  bool _nameKnEdited = false;
-  bool _nameHiEdited = false;
   Timer? _transliterateDebounce;
   int _transliterateSeq = 0;
   final _phoneCtrl = TextEditingController();
@@ -76,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   /// Ask the server for the name in Kannada and Hindi, a moment after the
-  /// member stops typing. Only fields the member has not edited are filled.
+  /// member stops typing.
   void _scheduleTransliteration() {
     _transliterateDebounce?.cancel();
     final name = _nameCtrl.text.trim();
@@ -87,14 +86,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final r = await Repository.instance.transliterateName(name);
         if (!mounted || seq != _transliterateSeq)
           return; // a newer keystroke won
-        setState(() {
-          if (!_nameKnEdited && (r['kn'] ?? '').isNotEmpty) {
-            _nameKnCtrl.text = r['kn']!;
-          }
-          if (!_nameHiEdited && (r['hi'] ?? '').isNotEmpty) {
-            _nameHiCtrl.text = r['hi']!;
-          }
-        });
+        // No setState: neither controller is rendered any more, so there is
+        // nothing on screen that changing them would need to repaint.
+        if ((r['kn'] ?? '').isNotEmpty) _nameKnCtrl.text = r['kn']!;
+        if ((r['hi'] ?? '').isNotEmpty) _nameHiCtrl.text = r['hi']!;
       } catch (_) {
         // Suggestions are a convenience; the member can type them, and the
         // server fills any blank script itself at registration.
@@ -355,20 +350,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           t.registerFullNameHint,
           onChanged: (_) => _scheduleTransliteration(),
         ),
-        const SizedBox(height: 14),
-        _label(t.registerNameKannada, hint: t.registerNameScriptHint),
-        _field(
-          _nameKnCtrl,
-          'ರಮೇಶ್ಕುಮಾರ್',
-          onChanged: (v) => _nameKnEdited = v.trim().isNotEmpty,
-        ),
-        const SizedBox(height: 14),
-        _label(t.registerNameHindi, hint: t.registerNameScriptHint),
-        _field(
-          _nameHiCtrl,
-          'रमेशकुमार',
-          onChanged: (v) => _nameHiEdited = v.trim().isNotEmpty,
-        ),
+        // The Kannada and Hindi spellings are not shown: they are derived from
+        // the name above and still transliterated, filled and submitted — the
+        // member just isn't asked to proofread a script they may not read.
         const SizedBox(height: 14),
         _label(t.registerMobileNumber, hint: t.registerAsPerAadhar),
         _field(

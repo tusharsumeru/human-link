@@ -2047,7 +2047,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get matMother => 'माता';
 
   @override
-  String get matSiblings => 'भाई-बहनों की संख्या';
+  String get matSiblings => 'भाई-बहनों की संख्या (स्वयं को छोड़कर)';
 
   @override
   String get matHoroscope => 'जन्म कुंडली';

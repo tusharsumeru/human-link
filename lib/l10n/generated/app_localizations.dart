@@ -3775,7 +3775,7 @@ abstract class AppLocalizations {
   /// No description provided for @matSiblings.
   ///
   /// In en, this message translates to:
-  /// **'Number of siblings'**
+  /// **'Number of Siblings (excluding yourself)'**
   String get matSiblings;
 
   /// No description provided for @matHoroscope.

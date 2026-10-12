@@ -2053,7 +2053,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get matMother => 'ತಾಯಿ';
 
   @override
-  String get matSiblings => 'ಒಡಹುಟ್ಟಿದವರ ಸಂಖ್ಯೆ';
+  String get matSiblings => 'ಒಡಹುಟ್ಟಿದವರ ಸಂಖ್ಯೆ (ನಿಮ್ಮನ್ನು ಹೊರತುಪಡಿಸಿ)';
 
   @override
   String get matHoroscope => 'ಜಾತಕ';

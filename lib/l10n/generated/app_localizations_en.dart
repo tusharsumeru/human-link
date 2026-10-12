@@ -2037,7 +2037,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get matMother => 'Mother';
 
   @override
-  String get matSiblings => 'Number of siblings';
+  String get matSiblings => 'Number of Siblings (excluding yourself)';
 
   @override
   String get matHoroscope => 'Horoscope';

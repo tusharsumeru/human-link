@@ -102,10 +102,14 @@ Map<String, String> _relocationPreferenceOptionsOf(AppLocalizations t) => {
   'NO': t.matRelocationNo,
   'MAYBE': t.matRelocationMaybe,
 };
+
+/// The occupation types on offer. 'UNEMPLOYED' is still a value the server
+/// accepts and may hold on existing profiles — it is simply no longer offered
+/// here, and [_enumDropdown] shows such a profile as unset rather than
+/// crashing on a value it has no item for.
 Map<String, String> _occupationTypeOptionsOf(AppLocalizations t) => {
   'SALARIED': t.matOccupationSalaried,
   'SELF_EMPLOYED': t.matOccupationSelfEmployed,
-  'UNEMPLOYED': t.matOccupationUnemployed,
 };
 Map<String, String> _foodPreferenceOptionsOf(AppLocalizations t) => {
   'VEGETARIAN': t.matFoodVegetarian,
@@ -1054,7 +1058,14 @@ class _MatrimonialEditScreenState extends State<MatrimonialEditScreen> {
         children: [
           _fieldLabel(label),
           DropdownButtonFormField<String>(
-            initialValue: selectedWire.isEmpty ? null : selectedWire,
+            // A stored value this list no longer offers — an option retired
+            // here, or an enum the server has moved on from — would otherwise
+            // trip DropdownButtonFormField's "value matches exactly one item"
+            // assert and take the whole screen down. Unset is survivable;
+            // a red screen on someone's saved profile is not.
+            initialValue: wireToLabel.containsKey(selectedWire)
+                ? selectedWire
+                : null,
             isExpanded: true,
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
