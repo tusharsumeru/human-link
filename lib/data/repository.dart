@@ -538,6 +538,18 @@ class Repository {
     throw ApiException('Could not load your profile');
   }
 
+  /// DELETE /api/user/me — permanently deletes the caller's own account
+  /// (hard delete of the `users` document, server-side). The backend refuses
+  /// admin accounts with a 400 — they are removed from the admin panel by
+  /// another admin — so that message is surfaced to the user as-is.
+  ///
+  /// The caller must discard the session afterwards; the token outlives the
+  /// account otherwise and every subsequent request 401s. See
+  /// AuthService.deleteAccount, which wraps this and clears the session.
+  Future<void> deleteAccount() async {
+    await _api.deleteJson('/api/user/me');
+  }
+
   /// GET /api/user/:id — one registered member's public (PII-safe) profile.
   Future<Map<String, dynamic>> userById(String id) async {
     final data = await _api.getJson('/api/user/$id');

@@ -1604,7 +1604,7 @@ class _MapView extends StatelessWidget {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.daivajna.daivajna_census',
+                  userAgentPackageName: 'com.credora.daivajnasamaj',
                 ),
                 MarkerLayer(markers: markers),
               ],

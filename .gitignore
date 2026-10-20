@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android release signing. android/.gitignore already covers the android/
+# subtree; these patterns make sure a keystore or key.properties dropped
+# anywhere else in the repo is never committed either.
+key.properties
+*.jks
+*.keystore

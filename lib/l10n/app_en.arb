@@ -263,6 +263,11 @@
   "profileEditProfile": "Edit Profile",
   "profileMatrimonialDetails": "Matrimonial Details",
   "profileVerifyIdentityOptional": "Verify Identity (optional)",
+  "profileDeleteAccount": "Delete my account",
+  "profileDeleteAccountTitle": "Delete your account?",
+  "profileDeleteAccountBody": "Your account and sign-in will be permanently deleted. This happens straight away, there is no waiting period, and it cannot be undone.",
+  "profileDeleteAccountConfirm": "Delete permanently",
+  "profileDeleteAccountFailed": "Could not delete your account. Please try again.",
   "profileVerifiedPill": "Verified",
   "profileAadhaarVerified": "Aadhaar Verified",
   "profileVerifiedViaDigilocker": "Verified via DigiLocker",
@@ -1708,5 +1713,11 @@
   "permLocationBody": "To tag a place on your posts and find nearby Samaj members.",
   "permRequesting": "Requesting…",
   "permContinue": "Continue",
-  "permSkip": "Skip for now"
+  "permSkip": "Skip for now",
+  "editSelectPhoto": "Select photo",
+  "editRemovePhoto": "Remove photo",
+  "editRemovePhotoTitle": "Remove profile photo?",
+  "editRemovePhotoBody": "Your photo will be removed and you will show as your initials instead. A photo is required for the matrimonial section.",
+  "editPhotoRemoved": "Photo removed",
+  "editCouldNotRemovePhoto": "Could not remove photo"
 }

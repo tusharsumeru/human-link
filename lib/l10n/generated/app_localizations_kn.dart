@@ -723,6 +723,23 @@ class AppLocalizationsKn extends AppLocalizations {
   String get profileVerifyIdentityOptional => 'ಗುರುತು ಪರಿಶೀಲಿಸಿ (ಐಚ್ಛಿಕ)';
 
   @override
+  String get profileDeleteAccount => 'ನನ್ನ ಖಾತೆಯನ್ನು ಅಳಿಸಿ';
+
+  @override
+  String get profileDeleteAccountTitle => 'ಖಾತೆಯನ್ನು ಅಳಿಸಬೇಕೇ?';
+
+  @override
+  String get profileDeleteAccountBody =>
+      'ನಿಮ್ಮ ಖಾತೆ ಮತ್ತು ಲಾಗಿನ್ ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲ್ಪಡುತ್ತದೆ. ಇದು ತಕ್ಷಣವೇ ನಡೆಯುತ್ತದೆ, ಯಾವುದೇ ಕಾಯುವ ಅವಧಿ ಇಲ್ಲ, ಮತ್ತು ಇದನ್ನು ಹಿಂಪಡೆಯಲಾಗುವುದಿಲ್ಲ.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ';
+
+  @override
+  String get profileDeleteAccountFailed =>
+      'ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಅಳಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
   String get profileVerifiedPill => 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ';
 
   @override
@@ -4655,4 +4672,23 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get permSkip => 'ಈಗ ಬಿಟ್ಟುಬಿಡಿ';
+
+  @override
+  String get editSelectPhoto => 'ಫೋಟೋ ಆಯ್ಕೆಮಾಡಿ';
+
+  @override
+  String get editRemovePhoto => 'ಫೋಟೋ ತೆಗೆದುಹಾಕಿ';
+
+  @override
+  String get editRemovePhotoTitle => 'ಪ್ರೊಫೈಲ್ ಫೋಟೋ ತೆಗೆದುಹಾಕುವುದೇ?';
+
+  @override
+  String get editRemovePhotoBody =>
+      'ನಿಮ್ಮ ಫೋಟೋವನ್ನು ತೆಗೆದುಹಾಕಲಾಗುತ್ತದೆ ಮತ್ತು ಅದರ ಬದಲಿಗೆ ನಿಮ್ಮ ಹೆಸರಿನ ಮೊದಲ ಅಕ್ಷರಗಳು ಕಾಣಿಸುತ್ತವೆ. ವೈವಾಹಿಕ ವಿಭಾಗಕ್ಕೆ ಫೋಟೋ ಅಗತ್ಯವಿದೆ.';
+
+  @override
+  String get editPhotoRemoved => 'ಫೋಟೋ ತೆಗೆದುಹಾಕಲಾಗಿದೆ';
+
+  @override
+  String get editCouldNotRemovePhoto => 'ಫೋಟೋ ತೆಗೆದುಹಾಕಲಾಗಲಿಲ್ಲ';
 }

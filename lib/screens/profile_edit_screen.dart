@@ -358,6 +358,100 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
+  /// The camera badge opens this rather than the picker directly, so choosing
+  /// a photo and removing the current one are offered in the same place.
+  /// "Remove" is only listed when there is something to remove.
+  Future<void> _photoOptions() async {
+    final t = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: Text(t.editSelectPhoto),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto();
+              },
+            ),
+            if (_photoUrl.isNotEmpty)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFB91C1C),
+                ),
+                title: Text(
+                  t.editRemovePhoto,
+                  style: const TextStyle(color: Color(0xFFB91C1C)),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _removePhoto();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Clears the profile photo. There is no DELETE route for it: the server's
+  /// PATCH applies every field that isn't absent, so an empty `profileUrl` is
+  /// what removes it — and [Repository.saveProfile] is the throwing variant,
+  /// so a server refusal reaches the member instead of being swallowed.
+  ///
+  /// Only the reference is cleared; the uploaded image itself stays in the
+  /// bucket, so a direct URL still resolves. Removing the object too needs a
+  /// server-side change.
+  Future<void> _removePhoto() async {
+    final t = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.editRemovePhotoTitle),
+        content: Text(t.editRemovePhotoBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB91C1C),
+            ),
+            child: Text(t.editRemovePhoto),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      await Repository.instance.saveProfile(profileUrl: '');
+      if (!mounted) return;
+      setState(() => _photoUrl = '');
+      // Persist straight away, for the same reason the upload path does: the
+      // server has already changed, so a stale session would keep showing the
+      // old picture until the next login.
+      final auth = context.read<AuthService>();
+      final u = auth.user;
+      if (u != null) await auth.updateUser(u.copyWith(photoUrl: ''));
+      _snack(t.editPhotoRemoved);
+    } catch (e) {
+      if (mounted) {
+        _snack(e is ApiException ? e.message : t.editCouldNotRemovePhoto);
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
   // ── Date of birth ─────────────────────────────────────────────────────────
 
   Future<void> _pickDob() async {
@@ -747,7 +841,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: _uploadingPhoto ? null : _pickPhoto,
+                  onTap: _uploadingPhoto ? null : _photoOptions,
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: _uploadingPhoto

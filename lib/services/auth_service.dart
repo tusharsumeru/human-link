@@ -593,6 +593,19 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Permanently deletes the account server-side, then tears the session down
+  /// exactly as [logout] does. Called from the profile screen's delete flow;
+  /// the web `/delete-account` page points members here.
+  ///
+  /// The order matters: the DELETE needs the bearer token, so the session is
+  /// only cleared once the server has confirmed. A failure (e.g. the backend's
+  /// 400 for admin accounts) propagates as an [ApiException] and leaves the
+  /// member signed in, so the screen can show why.
+  Future<void> deleteAccount() async {
+    await _repo.deleteAccount();
+    await logout();
+  }
+
   Future<void> logout() async {
     _user = null;
     _token = null;

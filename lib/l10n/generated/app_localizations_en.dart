@@ -716,6 +716,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileVerifyIdentityOptional => 'Verify Identity (optional)';
 
   @override
+  String get profileDeleteAccount => 'Delete my account';
+
+  @override
+  String get profileDeleteAccountTitle => 'Delete your account?';
+
+  @override
+  String get profileDeleteAccountBody =>
+      'Your account and sign-in will be permanently deleted. This happens straight away, there is no waiting period, and it cannot be undone.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'Delete permanently';
+
+  @override
+  String get profileDeleteAccountFailed =>
+      'Could not delete your account. Please try again.';
+
+  @override
   String get profileVerifiedPill => 'Verified';
 
   @override
@@ -4626,4 +4643,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permSkip => 'Skip for now';
+
+  @override
+  String get editSelectPhoto => 'Select photo';
+
+  @override
+  String get editRemovePhoto => 'Remove photo';
+
+  @override
+  String get editRemovePhotoTitle => 'Remove profile photo?';
+
+  @override
+  String get editRemovePhotoBody =>
+      'Your photo will be removed and you will show as your initials instead. A photo is required for the matrimonial section.';
+
+  @override
+  String get editPhotoRemoved => 'Photo removed';
+
+  @override
+  String get editCouldNotRemovePhoto => 'Could not remove photo';
 }

@@ -770,7 +770,7 @@ class _MapPanel extends StatelessWidget {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.daivajna.daivajna_census',
+                userAgentPackageName: 'com.credora.daivajnasamaj',
               ),
               if (routeLine.length >= 2)
                 PolylineLayer(

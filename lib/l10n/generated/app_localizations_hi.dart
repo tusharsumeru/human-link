@@ -723,6 +723,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profileVerifyIdentityOptional => 'पहचान सत्यापित करें (वैकल्पिक)';
 
   @override
+  String get profileDeleteAccount => 'मेरा खाता हटाएँ';
+
+  @override
+  String get profileDeleteAccountTitle => 'खाता हटाएँ?';
+
+  @override
+  String get profileDeleteAccountBody =>
+      'आपका खाता और लॉगिन स्थायी रूप से हटा दिया जाएगा। यह तुरंत होता है, कोई प्रतीक्षा अवधि नहीं है, और इसे वापस नहीं लिया जा सकता।';
+
+  @override
+  String get profileDeleteAccountConfirm => 'स्थायी रूप से हटाएँ';
+
+  @override
+  String get profileDeleteAccountFailed =>
+      'आपका खाता हटाया नहीं जा सका। कृपया फिर से प्रयास करें।';
+
+  @override
   String get profileVerifiedPill => 'सत्यापित';
 
   @override
@@ -4636,4 +4653,23 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get permSkip => 'अभी के लिए छोड़ें';
+
+  @override
+  String get editSelectPhoto => 'फ़ोटो चुनें';
+
+  @override
+  String get editRemovePhoto => 'फ़ोटो हटाएँ';
+
+  @override
+  String get editRemovePhotoTitle => 'प्रोफ़ाइल फ़ोटो हटाएँ?';
+
+  @override
+  String get editRemovePhotoBody =>
+      'आपकी फ़ोटो हटा दी जाएगी और उसकी जगह आपके नाम के पहले अक्षर दिखाए जाएँगे। वैवाहिक अनुभाग के लिए फ़ोटो आवश्यक है।';
+
+  @override
+  String get editPhotoRemoved => 'फ़ोटो हटा दी गई';
+
+  @override
+  String get editCouldNotRemovePhoto => 'फ़ोटो नहीं हटाई जा सकी';
 }

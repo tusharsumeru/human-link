@@ -225,6 +225,11 @@
   "profileEditProfile": "प्रोफ़ाइल संपादित करें",
   "profileMatrimonialDetails": "वैवाहिक विवरण",
   "profileVerifyIdentityOptional": "पहचान सत्यापित करें (वैकल्पिक)",
+  "profileDeleteAccount": "मेरा खाता हटाएँ",
+  "profileDeleteAccountTitle": "खाता हटाएँ?",
+  "profileDeleteAccountBody": "आपका खाता और लॉगिन स्थायी रूप से हटा दिया जाएगा। यह तुरंत होता है, कोई प्रतीक्षा अवधि नहीं है, और इसे वापस नहीं लिया जा सकता।",
+  "profileDeleteAccountConfirm": "स्थायी रूप से हटाएँ",
+  "profileDeleteAccountFailed": "आपका खाता हटाया नहीं जा सका। कृपया फिर से प्रयास करें।",
   "profileVerifiedPill": "सत्यापित",
   "profileAadhaarVerified": "आधार सत्यापित",
   "profileVerifiedViaDigilocker": "DigiLocker के माध्यम से सत्यापित",
@@ -1582,5 +1587,11 @@
   "permLocationBody": "आपकी पोस्ट पर स्थान टैग करने और आस-पास के समाज सदस्यों को खोजने के लिए।",
   "permRequesting": "अनुरोध किया जा रहा है…",
   "permContinue": "जारी रखें",
-  "permSkip": "अभी के लिए छोड़ें"
+  "permSkip": "अभी के लिए छोड़ें",
+  "editSelectPhoto": "फ़ोटो चुनें",
+  "editRemovePhoto": "फ़ोटो हटाएँ",
+  "editRemovePhotoTitle": "प्रोफ़ाइल फ़ोटो हटाएँ?",
+  "editRemovePhotoBody": "आपकी फ़ोटो हटा दी जाएगी और उसकी जगह आपके नाम के पहले अक्षर दिखाए जाएँगे। वैवाहिक अनुभाग के लिए फ़ोटो आवश्यक है।",
+  "editPhotoRemoved": "फ़ोटो हटा दी गई",
+  "editCouldNotRemovePhoto": "फ़ोटो नहीं हटाई जा सकी"
 }

@@ -58,6 +58,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _uploadingPhoto = false;
 
+  /// Guards the delete-account button while the DELETE is in flight, so a
+  /// second tap cannot fire a request against an account that is already gone.
+  bool _deletingAccount = false;
+
   @override
   void initState() {
     super.initState();
@@ -357,12 +361,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   onPressed: () => context.push('/profile/verify'),
                 ),
+                const SizedBox(height: 28),
+                // Play requires account deletion to be reachable from inside
+                // the app, and the public /delete-account page sends members
+                // here by name ("More → Profile → Delete my account") — keep
+                // the two in step if this label or its placement changes.
+                OutlineButtonX(
+                  label: t.profileDeleteAccount,
+                  expand: true,
+                  color: const Color(0xFFB91C1C),
+                  onPressed: _deletingAccount ? null : _confirmDeleteAccount,
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Confirms, then permanently deletes the account via
+  /// `DELETE /api/user/me` (see [AuthService.deleteAccount]).
+  ///
+  /// On success the session is already gone, so this routes to /login itself
+  /// rather than leaving the router to notice — the profile screen it is
+  /// standing on reads `auth.user`, which is now null.
+  Future<void> _confirmDeleteAccount() async {
+    final t = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.profileDeleteAccountTitle),
+        content: Text(t.profileDeleteAccountBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB91C1C),
+            ),
+            child: Text(t.profileDeleteAccountConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final auth = context.read<AuthService>();
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _deletingAccount = true);
+    try {
+      await auth.deleteAccount();
+      router.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deletingAccount = false);
+      messenger.showSnackBar(
+        SnackBar(
+          // The backend's own message is the useful one for the cases it
+          // refuses outright (an admin account), so prefer it when there is
+          // one and keep the generic line for network failures.
+          content: Text(
+            e is ApiException && e.message.isNotEmpty
+                ? e.message
+                : t.profileDeleteAccountFailed,
+          ),
+        ),
+      );
+    }
   }
 
   /// The camera badge on the self-view avatar — same pick-then-upload flow

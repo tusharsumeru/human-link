@@ -1390,6 +1390,36 @@ abstract class AppLocalizations {
   /// **'Verify Identity (optional)'**
   String get profileVerifyIdentityOptional;
 
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileDeleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get profileDeleteAccountTitle;
+
+  /// No description provided for @profileDeleteAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account and sign-in will be permanently deleted. This happens straight away, there is no waiting period, and it cannot be undone.'**
+  String get profileDeleteAccountBody;
+
+  /// No description provided for @profileDeleteAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get profileDeleteAccountConfirm;
+
+  /// No description provided for @profileDeleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete your account. Please try again.'**
+  String get profileDeleteAccountFailed;
+
   /// No description provided for @profileVerifiedPill.
   ///
   /// In en, this message translates to:
@@ -8456,6 +8486,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip for now'**
   String get permSkip;
+
+  /// No description provided for @editSelectPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Select photo'**
+  String get editSelectPhoto;
+
+  /// No description provided for @editRemovePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo'**
+  String get editRemovePhoto;
+
+  /// No description provided for @editRemovePhotoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove profile photo?'**
+  String get editRemovePhotoTitle;
+
+  /// No description provided for @editRemovePhotoBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photo will be removed and you will show as your initials instead. A photo is required for the matrimonial section.'**
+  String get editRemovePhotoBody;
+
+  /// No description provided for @editPhotoRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo removed'**
+  String get editPhotoRemoved;
+
+  /// No description provided for @editCouldNotRemovePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove photo'**
+  String get editCouldNotRemovePhoto;
 }
 
 class _AppLocalizationsDelegate
